@@ -80,9 +80,37 @@ def cmd_start(
         float | None,
         typer.Option("--budget-hours", help="전체 실험 예산. 경과 시 실행 중 trial 만 마무리"),
     ] = None,
+    objectives: Annotated[
+        Optional[str],
+        typer.Option(
+            "--objectives",
+            help="Multi-objective: 쉼표 구분 'metric:workload:direction' 리스트. "
+                 "예: 'throughput_tok_avg:short:maximize,ttft_p99:short:minimize'. "
+                 "지정 시 NSGA-II/III 등 multi-obj 샘플러 권장.",
+        ),
+    ] = None,
 ):
     sp = load_space(space)
     profile_slugs = [p.stem for p in profile]
+
+    # Parse multi-objective spec if provided.
+    obj_keys: list[Any] = []
+    directions_list: list[str] | None = None
+    if objectives:
+        from bench.search.objective_pareto import ObjectiveKey
+        for spec in objectives.split(","):
+            parts = [p.strip() for p in spec.split(":")]
+            if len(parts) != 3:
+                raise typer.BadParameter(
+                    f"bad --objectives entry '{spec}' (expected 'metric:workload:direction')"
+                )
+            metric, workload, d = parts
+            if d not in ("maximize", "minimize"):
+                raise typer.BadParameter(f"direction must be maximize|minimize, got '{d}'")
+            obj_keys.append(ObjectiveKey(metric, workload or None, d))
+        directions_list = [k.direction for k in obj_keys]
+        if len(directions_list) < 2:
+            raise typer.BadParameter("--objectives needs ≥2 entries for multi-objective")
 
     # Build adapter early so SearchSpace active_if can be gated by adapter_label.
     adapter_obj = None
@@ -103,6 +131,7 @@ def cmd_start(
         space=sp,
         metric_name=metric_name,
         direction=direction,
+        directions=directions_list,
         endpoint_slug=None,
         profile_slugs=profile_slugs,
         seed=seed,
@@ -142,11 +171,20 @@ def cmd_start(
     else:
         if not endpoint or not profile:
             raise typer.BadParameter("endpoint 와 profile 은 --dry-run 이 아닌 경우 필수")
-        objective = BenchScoreObjective(
+        base_objective = BenchScoreObjective(
             endpoint_path=endpoint,
             profile_paths=[Path(p) for p in profile],
             adapter=adapter_obj,
         )
+        if obj_keys:
+            from bench.search.objective_pareto import ParetoObjective
+            objective = ParetoObjective(base_objective, obj_keys)
+            console.print(
+                f"[green]multi-objective[/]: {len(obj_keys)} objectives "
+                f"({', '.join(f'{k.metric}|{k.workload or 'agg'}:{k.direction}' for k in obj_keys)})"
+            )
+        else:
+            objective = base_objective
         if adapter_obj is not None:
             console.print(f"[green]adapter[/]: {adapter_obj.adapter_label} (params will be applied to endpoint each trial)")
 
