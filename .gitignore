@@ -53,3 +53,9 @@ autoresearch.ideas.md
 data/autotune/experiments*.jsonl
 data/autotune/*.duckdb*
 /tmp/vllm_autotune_*.log
+
+# Phase S0 archive — large artifacts excluded from git, small text kept
+data/archive/**/*.duckdb*
+data/archive/**/*.jsonl
+data/archive/**/*.log
+data/archive/**/raw/
