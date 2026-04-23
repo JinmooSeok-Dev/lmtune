@@ -39,6 +39,7 @@ search = [
     "optuna>=3.5",
     "scipy>=1.11",
     "scikit-learn>=1.3",
+    "SALib>=1.5",    # Phase S5 Sobol / Morris / FAST sensitivity
 ]
 distributed = [
     # Phase S3 K8s Job backend. kubernetes-client 필요; Ray 는 non-goal.

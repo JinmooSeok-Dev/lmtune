@@ -92,4 +92,10 @@ def make_sampler(
     if s in ("ucb", "ucb1", "bandit"):
         from bench.search.samplers.ucb_bandit import make_ucb1
         return make_ucb1(space=space, seed=seed, context=context), None
+    if s in ("nsga2", "nsga-ii", "nsgaii"):
+        from bench.search.samplers.nsga2 import make_nsga2
+        return make_nsga2(seed=seed), None
+    if s in ("nsga3", "nsga-iii", "nsgaiii"):
+        from bench.search.samplers.nsga2 import make_nsga3
+        return make_nsga3(seed=seed), None
     raise ValueError(f"unknown strategy: {strategy}")

@@ -368,6 +368,114 @@ def _apply_recommendations(space, anova_list, importance, shrink) -> object:
     return SearchSpace(name=f"{space.name}-narrowed", axes=keep)
 
 
+@app.command("pareto")
+def cmd_pareto(
+    study_id: Annotated[str, typer.Argument()],
+    out: Annotated[Path, typer.Option("--out", help="PNG output path")] = Path("pareto.png"),
+):
+    """Non-dominated front over (obj1, obj2) stored in trial_metrics.
+
+    Looks up trial_metrics entries with workload='short' (or 'aggregate') for
+    'throughput_tok_avg' (maximize) and 'ttft_p99' (minimize) — the canonical
+    goodput Pareto. Emits the front as JSON + saves a plot.
+    """
+    import json as _json
+    from bench.visualization.plots.pareto import plot_pareto, non_dominated
+
+    store = DuckDBStore(_default_db_path())
+    rows = store.list_trials(study_id)
+    points: list[list[float]] = []
+    labels: list[str] = []
+    directions = ["maximize", "minimize"]
+    for trial_id, seq, params_json, status, score, _c, _b, _e in rows:
+        if status != "completed":
+            continue
+        tm = store.get_trial_metrics(trial_id)
+        thr = (tm.get("throughput_tok_avg") or {}).get("short")
+        if thr is None:
+            thr = (tm.get("throughput_tok_avg") or {}).get("aggregate")
+        ttft = (tm.get("ttft_p99") or {}).get("short")
+        if ttft is None:
+            ttft = (tm.get("ttft_p99") or {}).get("aggregate")
+        if thr is None or ttft is None:
+            continue
+        points.append([float(thr), float(ttft)])
+        labels.append(f"#{seq}")
+
+    if not points:
+        console.print("[yellow]no trial_metrics with both throughput and ttft[/]")
+        return
+
+    nd = non_dominated(points, directions)
+    front = [{"seq": labels[i], "throughput_tok_avg": points[i][0], "ttft_p99": points[i][1]} for i in nd]
+    console.print_json(data={"n_trials": len(points), "pareto_size": len(nd), "front": front})
+    plot_pareto(points, directions, labels=labels, out_path=out)
+    console.print(f"[green]saved[/]: {out}")
+
+
+@app.command("sensitivity")
+def cmd_sensitivity(
+    study_id: Annotated[str, typer.Argument()],
+    out: Annotated[Path, typer.Option("--out")] = Path("sobol.png"),
+    n_saltelli: Annotated[int, typer.Option("--n-saltelli")] = 1024,
+):
+    """Global Sobol sensitivity over continuous axes (post-hoc via RF surrogate)."""
+    import json as _json
+    from bench.search.analysis.sobol import sobol_from_history
+    from bench.search.space import parse_space
+    from bench.visualization.plots.sobol_bar import plot_sobol
+
+    store = DuckDBStore(_default_db_path())
+    hdr = store.get_study(study_id)
+    if not hdr:
+        raise typer.BadParameter(f"study not found: {study_id}")
+    sp = parse_space(yaml.safe_load(hdr[3])) if hdr[3] else None
+    if sp is None:
+        raise typer.BadParameter("study has no space_yaml")
+
+    raw = store.list_trials(study_id)
+    trials: list[dict] = []
+    for trial_id, seq, params_json, status, score, _c, _b, _e in raw:
+        try: p = _json.loads(params_json or "{}")
+        except _json.JSONDecodeError: p = {}
+        trials.append({"params": p, "score": score, "status": status})
+
+    axes_spec = [{"name": a.name, "kind": a.kind, "low": a.low, "high": a.high} for a in sp.axes]
+    results = sobol_from_history(trials, axes_spec, n_saltelli=n_saltelli)
+    if not results:
+        console.print("[yellow]not enough continuous axes / completed trials for Sobol[/]")
+        return
+
+    report = [{
+        "axis": r.axis, "S1": r.S1, "ST": r.ST,
+        "S1_conf": r.S1_conf, "ST_conf": r.ST_conf,
+        "interaction_gap": r.interaction_gap,
+    } for r in results]
+    console.print_json(data={"study_id": study_id, "n_axes": len(results), "sobol": report})
+    plot_sobol(results, out_path=out)
+    console.print(f"[green]saved[/]: {out}")
+
+
+@app.command("trace")
+def cmd_trace(
+    study_id: Annotated[str, typer.Argument()],
+    out: Annotated[Path, typer.Option("--out")] = Path("search_trace.png"),
+):
+    """Running best score over trial sequence — visual 'is the sampler converging?'"""
+    from bench.visualization.plots.search_trace import plot_search_trace
+
+    store = DuckDBStore(_default_db_path())
+    hdr = store.get_study(study_id)
+    if not hdr:
+        raise typer.BadParameter(f"study not found: {study_id}")
+    direction = hdr[7]
+    rows = store.list_trials(study_id)
+    seqs = [r[1] for r in rows]
+    scores = [r[4] for r in rows]
+    plot_search_trace(seqs, scores, direction=direction, out_path=out)
+    console.print(f"[green]saved[/]: {out}")
+
+
 @app.command("ls")
 def cmd_ls(limit: Annotated[int, typer.Option("--limit")] = 20):
     store = DuckDBStore(_default_db_path())
