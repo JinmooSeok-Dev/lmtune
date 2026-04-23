@@ -52,7 +52,7 @@ def run_once(bench_bin: str, profile: Path, endpoint: Path, db: Path | None) -> 
         cmd += ["--db", str(db)]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0 and not proc.stdout:
-        raise RuntimeError(f"bench run failed: {proc.stderr.strip() or proc.returncode}")
+        raise RuntimeError(f"bench run failed: {proc.stderr.strip()[-400:] or proc.returncode}")
     # Last non-empty line that parses as JSON.
     for line in reversed(proc.stdout.splitlines()):
         line = line.strip()
@@ -62,7 +62,13 @@ def run_once(bench_bin: str, profile: Path, endpoint: Path, db: Path | None) -> 
             return json.loads(line)
         except json.JSONDecodeError:
             continue
-    raise RuntimeError("no JSON summary line found in bench run stdout")
+    # Diagnostic: show the tail of stdout + stderr so the caller can see the real cause.
+    tail_out = "\n".join(proc.stdout.splitlines()[-5:])
+    tail_err = "\n".join(proc.stderr.splitlines()[-5:])
+    raise RuntimeError(
+        f"no JSON summary line (rc={proc.returncode}); stdout_tail=<{tail_out!r}>; "
+        f"stderr_tail=<{tail_err!r}>"
+    )
 
 
 def collect(bench_bin: str, profile: Path, endpoint: Path, n: int, db: Path | None) -> list[dict]:

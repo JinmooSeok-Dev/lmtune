@@ -192,10 +192,18 @@ class Study:
                 log.info("study %s: ask() exhausted at seq=%d: %s", self.study_id, i + 1, e)
                 break
             t0 = time.time()
+            # Release DuckDB file lock for the duration of the subprocess
+            # (bench run → DuckDB). Reacquire to persist the result.
+            self.storage.suspend()
             try:
-                result = objective(trial.params)
-            except Exception as e:  # noqa: BLE001
-                result = ObjectiveResult(score=0.0, error=f"objective raised: {e}", accepted=False)
+                try:
+                    result = objective(trial.params)
+                except Exception as e:  # noqa: BLE001
+                    result = ObjectiveResult(
+                        score=0.0, error=f"objective raised: {e}", accepted=False
+                    )
+            finally:
+                self.storage.resume()
             dt = time.time() - t0
             self.tell(trial, result)
             log.info(

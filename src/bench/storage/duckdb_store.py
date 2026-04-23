@@ -340,6 +340,17 @@ class DuckDBStore:
     def close(self):
         self.conn.close()
 
+    # S1 shim until S3 writer_queue: release DuckDB file lock so a child
+    # process (e.g. subprocess bench run) can open the same DB briefly.
+    def suspend(self):
+        if getattr(self, "conn", None) is not None:
+            self.conn.close()
+            self.conn = None  # type: ignore[assignment]
+
+    def resume(self):
+        if self.conn is None:
+            self.conn = duckdb.connect(str(self.db_path))
+
 
 def _endpoint_meta(ep: EndpointSpec) -> dict:
     meta = ep.model_dump(mode="json")

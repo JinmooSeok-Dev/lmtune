@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Protocol
@@ -86,13 +87,23 @@ class BenchScoreObjective:
         self.profile_paths = [Path(p) for p in profile_paths]
         self.repeats = int(repeats)
         self.ttft_slo_ms = float(ttft_slo_ms)
+        # Resolve bench CLI: explicit > BENCH_BIN env > venv(sys.executable) > PATH
+        if bench_bin is None:
+            import os as _os
+            env_bin = _os.environ.get("BENCH_BIN")
+            venv_bench = Path(sys.executable).parent / "bench"
+            if env_bin:
+                bench_bin = env_bin
+            elif venv_bench.exists():
+                bench_bin = str(venv_bench)
         self.bench_bin = bench_bin
-        self.python_bin = python_bin or shutil.which("python") or "python3"
+        self.python_bin = python_bin or sys.executable or shutil.which("python") or "python3"
         self.script = Path(__file__).resolve().parents[3] / "scripts" / "bench_score.py"
         if not self.script.exists():
             raise FileNotFoundError(self.script)
 
     def _run_one(self, profile: Path) -> dict:
+        import os as _os
         cmd = [
             self.python_bin, str(self.script),
             "-p", str(profile),
@@ -102,7 +113,11 @@ class BenchScoreObjective:
         ]
         if self.bench_bin:
             cmd += ["--bench-bin", self.bench_bin]
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        # Propagate venv bin through PATH so sub-subprocess (bench → guidellm) can resolve.
+        env = _os.environ.copy()
+        venv_bin = str(Path(self.python_bin).parent)
+        env["PATH"] = venv_bin + _os.pathsep + env.get("PATH", "")
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
         last = ""
         for line in reversed(proc.stdout.splitlines()):
             if line.strip():
@@ -122,14 +137,21 @@ class BenchScoreObjective:
         # configured for these params upstream.
         del params
 
+        import logging
+        _log = logging.getLogger(__name__)
+
         total = 0.0
         metrics: dict[tuple[str, str | None], float] = {}
         accepted_all = True
         any_fail = False
+        first_error: str | None = None
         for prof in self.profile_paths:
             res = self._run_one(prof)
             if "error" in res:
                 any_fail = True
+                _log.warning("bench_score fail (%s): %s", prof.name, res.get("error"))
+                if first_error is None:
+                    first_error = f"{prof.stem}: {res['error']}"
                 continue
             wl = prof.stem
             score = float(res.get("score") or 0.0)
@@ -143,11 +165,13 @@ class BenchScoreObjective:
                 accepted_all = False
             if res.get("slo_pass") is False:
                 any_fail = True
+                if first_error is None:
+                    first_error = f"{wl}: slo_pass=False"
 
         metrics[("score", None)] = total
         return ObjectiveResult(
             score=total,
             metrics=metrics,
             accepted=accepted_all and not any_fail,
-            error=None if not any_fail else "slo-or-crash in >=1 workload",
+            error=first_error if any_fail else None,
         )
