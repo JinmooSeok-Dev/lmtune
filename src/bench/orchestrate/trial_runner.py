@@ -61,7 +61,21 @@ def run_trial_locally(payload: TrialPayload) -> TrialResult:
 
 
 def _main_k8s() -> int:
-    """K8s Job entrypoint (Phase S4 hookup). Reads env → runs one trial → prints JSON."""
+    """K8s Job entrypoint (Phase S4 hookup). Reads env → runs one trial → prints JSON.
+
+    BENCH_DUMMY_RESULT (optional): if set, echo it as the result and exit 0.
+    Used for K8s Job plumbing smokes where we don't want to actually run vLLM
+    inside the cluster (the llm-d helmfile deployment is a separate concern).
+    """
+    if (dummy := os.environ.get("BENCH_DUMMY_RESULT")):
+        # Validate shape, then pass through.
+        data = json.loads(dummy)
+        data.setdefault("trial_id", os.environ.get("TRIAL_ID", "tr-dummy"))
+        data.setdefault("backend", "k8s-job")
+        data.setdefault("worker_id", "dummy")
+        data.setdefault("metrics", {})
+        print(json.dumps(data))
+        return 0
     params = json.loads(os.environ["PARAMS_JSON"])
     payload = TrialPayload(
         trial_id=os.environ["TRIAL_ID"],

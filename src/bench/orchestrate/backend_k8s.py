@@ -19,6 +19,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
+import subprocess
 import time
 from pathlib import Path
 from typing import Any
@@ -140,6 +142,9 @@ class K8sJobBackend(TrialBackend):
             return None
 
         # Fetch the last pod logs and parse the final JSON line.
+        # The kubernetes-client Python SDK mangles JSON-looking lines in
+        # read_namespaced_pod_log (it applies literal_eval-style conversion),
+        # so we shell out to `kubectl logs` which streams the bytes verbatim.
         pods = self._core.list_namespaced_pod(
             namespace=self._ns,
             label_selector=f"job-name={handle.ref}",
@@ -147,12 +152,23 @@ class K8sJobBackend(TrialBackend):
         log_text = ""
         if pods.items:
             pod_name = pods.items[-1].metadata.name
-            try:
-                log_text = self._core.read_namespaced_pod_log(
-                    name=pod_name, namespace=self._ns, tail_lines=200
-                ) or ""
-            except Exception as e:  # noqa: BLE001
-                log.warning("failed to read pod log %s: %s", pod_name, e)
+            kubectl = shutil.which("kubectl")
+            if kubectl is not None:
+                try:
+                    p = subprocess.run(
+                        [kubectl, "-n", self._ns, "logs", pod_name, "--tail=200"],
+                        capture_output=True, text=True, timeout=20,
+                    )
+                    log_text = p.stdout or ""
+                except Exception as e:  # noqa: BLE001
+                    log.warning("kubectl logs %s failed: %s", pod_name, e)
+            if not log_text:
+                try:
+                    log_text = self._core.read_namespaced_pod_log(
+                        name=pod_name, namespace=self._ns, tail_lines=200
+                    ) or ""
+                except Exception as e:  # noqa: BLE001
+                    log.warning("failed to read pod log %s: %s", pod_name, e)
 
         parsed: dict[str, Any] | None = None
         for line in reversed(log_text.splitlines()):

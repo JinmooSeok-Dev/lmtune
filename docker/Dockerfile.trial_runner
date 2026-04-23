@@ -9,7 +9,13 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 COPY scripts ./scripts
 
-RUN pip install --no-cache-dir -e ".[search,runners,distributed]" && \
+# Remove any host-baked __pycache__ that may shadow the current source so Python
+# doesn't load stale bytecode under a different runAsUser inside the pod.
+RUN find /app -type d -name __pycache__ -prune -exec rm -rf {} +
+
+# Phase S4 smoke: search + distributed is enough (dummy mode uses neither).
+# For full bench-inside-pod runs add `runners` (guidellm) + a PVC-mounted repo.
+RUN pip install --no-cache-dir -e ".[search,distributed]" && \
     chown -R app:app /app
 
 USER app
