@@ -30,6 +30,10 @@ from bench.visualization import render_run_report
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="LLM endpoint 벤치마크 자동화 CLI")
 console = Console()
 
+# Phase S1: search subcommand group
+from bench.cli_search import app as _search_app  # noqa: E402
+app.add_typer(_search_app, name="search")
+
 
 def _default_db_path() -> Path:
     return Path(os.environ.get("BENCH_DB", "data/db/bench.duckdb"))

@@ -1,0 +1,80 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from bench.search import CallableObjective, SearchSpace, Study, StudyConfig
+from bench.search.space import Axis
+from bench.storage.duckdb_store import DuckDBStore
+
+
+def _store(tmp_path: Path) -> DuckDBStore:
+    return DuckDBStore(tmp_path / "bench.duckdb")
+
+
+def test_study_grid_exhausts_and_completes(tmp_path: Path):
+    sp = SearchSpace(
+        name="g",
+        axes=[
+            Axis("x", "categorical", values=[1, 2, 4]),
+            Axis("p", "bool"),
+        ],
+    )
+    # grid = 3 * 2 = 6
+    store = _store(tmp_path)
+    cfg = StudyConfig(name="grid-demo", strategy="grid", space=sp)
+    study = Study(cfg, store)
+    trials = study.run(
+        CallableObjective(lambda p: p["x"] * (2.0 if p["p"] else 1.0)),
+        max_trials=100,
+    )
+    assert len(trials) == 6
+    hdr = store.get_study(study.study_id)
+    assert hdr[8] == "completed"  # status column
+    top = store.top_trials(study.study_id, direction="maximize", k=1)
+    assert top[0][3] == 8.0  # x=4, p=True
+
+
+def test_study_random_deterministic(tmp_path: Path):
+    sp = SearchSpace(
+        name="r",
+        axes=[Axis("lr", "float", low=0.0, high=1.0)],
+    )
+    store_a = _store(tmp_path / "a")
+    store_b = _store(tmp_path / "b")
+
+    def run(store):
+        cfg = StudyConfig(name="rnd", strategy="random", space=sp, seed=7)
+        s = Study(cfg, store)
+        ts = s.run(CallableObjective(lambda p: -abs(p["lr"] - 0.3)), max_trials=8)
+        return [t.params["lr"] for t in ts]
+
+    assert run(store_a) == run(store_b)
+
+
+def test_study_lhc_enqueues_prefetch_first(tmp_path: Path):
+    sp = SearchSpace(
+        name="l",
+        axes=[Axis("x", "categorical", values=[1, 2, 4, 8])],
+    )
+    store = _store(tmp_path)
+    cfg = StudyConfig(name="lhc", strategy="lhc", space=sp, seed=1, n_samples=4)
+    study = Study(cfg, store)
+    trials = study.run(CallableObjective(lambda p: float(p["x"])), max_trials=4)
+    xs = [t.params["x"] for t in trials]
+    # LHC stratifies: all 4 categorical options must appear in exactly 4 trials
+    assert sorted(xs) == [1, 2, 4, 8]
+
+
+def test_study_warmstart_seeds_top_trial(tmp_path: Path):
+    sp = SearchSpace(
+        name="w",
+        axes=[Axis("x", "categorical", values=[1, 2, 4, 8, 16])],
+    )
+    store = _store(tmp_path)
+    cfg = StudyConfig(name="warm", strategy="random", space=sp, seed=3)
+    study = Study(cfg, store)
+    # Tell optuna x=16 already scored very high.
+    study.enqueue_warmstart([({"x": 16}, 999.0)])
+    ts = study.run(CallableObjective(lambda p: float(p["x"])), max_trials=5)
+    # The first trial's optuna-known best should include 16 because we enqueued it.
+    assert any(t.params["x"] == 16 for t in ts)

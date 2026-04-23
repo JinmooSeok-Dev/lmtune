@@ -27,6 +27,14 @@ class DuckDBStore:
             s = stmt.strip()
             if s:
                 self.conn.execute(s)
+        # Phase S1 compat: older DBs have runs without trial_id column.
+        # PRAGMA table_info returns (cid, name, type, notnull, dflt_value, pk).
+        existing_cols = {
+            r[1]
+            for r in self.conn.execute("PRAGMA table_info('runs')").fetchall()
+        }
+        if "trial_id" not in existing_cols:
+            self.conn.execute("ALTER TABLE runs ADD COLUMN trial_id TEXT")
 
     def record_run(
         self,
@@ -139,6 +147,138 @@ class DuckDBStore:
                 """,
                 trows,
             )
+
+    # ---- Phase S1: studies / trials / trial_metrics ------------------------
+
+    def record_study(
+        self,
+        study_id: str,
+        name: str,
+        strategy: str,
+        metric_name: str,
+        direction: str,
+        space_yaml: str | None = None,
+        endpoint_slug: str | None = None,
+        profile_slugs: list[str] | None = None,
+        status: str = "running",
+        notes: str | None = None,
+    ):
+        self.conn.execute(
+            """
+            INSERT OR REPLACE INTO studies
+              (study_id, name, strategy, space_yaml, endpoint_slug, profile_slugs,
+               metric_name, direction, status, notes)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+            """,
+            [
+                study_id, name, strategy, space_yaml, endpoint_slug,
+                json.dumps(profile_slugs) if profile_slugs else None,
+                metric_name, direction, status, notes,
+            ],
+        )
+
+    def set_study_status(self, study_id: str, status: str, finished: bool = False):
+        if finished:
+            self.conn.execute(
+                "UPDATE studies SET status=?, finished_at=CURRENT_TIMESTAMP WHERE study_id=?",
+                [status, study_id],
+            )
+        else:
+            self.conn.execute(
+                "UPDATE studies SET status=? WHERE study_id=?",
+                [status, study_id],
+            )
+
+    def get_study(self, study_id: str):
+        return self.conn.execute(
+            "SELECT * FROM studies WHERE study_id = ?", [study_id]
+        ).fetchone()
+
+    def list_studies(self, limit: int = 20):
+        return self.conn.execute(
+            """
+            SELECT study_id, name, strategy, endpoint_slug, status, created_at, finished_at
+            FROM studies ORDER BY created_at DESC NULLS LAST LIMIT ?
+            """,
+            [int(limit)],
+        ).fetchall()
+
+    def record_trial(
+        self,
+        trial_id: str,
+        study_id: str,
+        seq: int,
+        params: dict,
+        status: str,
+        score: float | None = None,
+        backend: str | None = None,
+        worker_id: str | None = None,
+        error: str | None = None,
+        completed: bool = False,
+    ):
+        completed_at = "CURRENT_TIMESTAMP" if completed else "NULL"
+        self.conn.execute(
+            f"""
+            INSERT OR REPLACE INTO trials
+              (trial_id, study_id, seq, params, status, score,
+               backend, worker_id, error, completed_at)
+            VALUES (?,?,?,?,?,?,?,?,?, {completed_at})
+            """,
+            [
+                trial_id, study_id, int(seq), json.dumps(params, sort_keys=True),
+                status, score, backend, worker_id, error,
+            ],
+        )
+
+    def record_trial_metrics(self, trial_id: str, metrics: dict[tuple[str, str | None], float]):
+        """metrics keyed by (metric_name, workload). None workload → 'aggregate'."""
+        rows = [
+            (trial_id, m, wl or "aggregate", float(v))
+            for (m, wl), v in metrics.items()
+            if v is not None
+        ]
+        if rows:
+            self.conn.executemany(
+                """
+                INSERT OR REPLACE INTO trial_metrics (trial_id, metric, workload, value)
+                VALUES (?,?,?,?)
+                """,
+                rows,
+            )
+
+    def list_trials(self, study_id: str, limit: int | None = None):
+        sql = (
+            "SELECT trial_id, seq, params, status, score, completed_at, backend, error "
+            "FROM trials WHERE study_id = ? ORDER BY seq ASC"
+        )
+        args: list = [study_id]
+        if limit is not None:
+            sql += " LIMIT ?"
+            args.append(int(limit))
+        return self.conn.execute(sql, args).fetchall()
+
+    def top_trials(self, study_id: str, direction: str = "maximize", k: int = 5):
+        order = "DESC" if direction == "maximize" else "ASC"
+        return self.conn.execute(
+            f"""
+            SELECT trial_id, seq, params, score, status
+            FROM trials WHERE study_id = ? AND score IS NOT NULL AND status = 'completed'
+            ORDER BY score {order} LIMIT ?
+            """,
+            [study_id, int(k)],
+        ).fetchall()
+
+    def get_trial_metrics(self, trial_id: str) -> dict[str, dict[str | None, float]]:
+        rows = self.conn.execute(
+            "SELECT metric, workload, value FROM trial_metrics WHERE trial_id = ?",
+            [trial_id],
+        ).fetchall()
+        out: dict[str, dict[str | None, float]] = {}
+        for m, wl, v in rows:
+            out.setdefault(m, {})[wl] = float(v)
+        return out
+
+    # ---- detections (기존) -------------------------------------------------
 
     def record_detections(self, run_id: str, detections: list[dict]):
         for d in detections:

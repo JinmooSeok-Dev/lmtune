@@ -97,3 +97,45 @@ CREATE TABLE IF NOT EXISTS detections (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_detections_run ON detections(run_id);
+
+-- Phase S1 search framework. Existing runs table keeps its schema;
+-- runs.trial_id is added via ALTER in duckdb_store._init_schema() for
+-- backward-compat with earlier DBs.
+
+CREATE TABLE IF NOT EXISTS studies (
+  study_id      TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  strategy      TEXT NOT NULL,          -- grid | random | lhc | tpe | cma_es | nsga2
+  space_yaml    TEXT,                   -- frozen snapshot at start
+  endpoint_slug TEXT,
+  profile_slugs JSON,                   -- e.g. ["autotune-short","autotune-medium","autotune-long"]
+  metric_name   TEXT NOT NULL,          -- default: total_score
+  direction     TEXT NOT NULL,          -- maximize | minimize
+  status        TEXT NOT NULL DEFAULT 'running',  -- running | paused | completed | aborted
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  finished_at   TIMESTAMP,
+  notes         TEXT
+);
+
+CREATE TABLE IF NOT EXISTS trials (
+  trial_id      TEXT PRIMARY KEY,
+  study_id      TEXT NOT NULL,
+  seq           INTEGER NOT NULL,       -- 1-indexed within study
+  params        JSON NOT NULL,
+  status        TEXT NOT NULL,          -- pending | running | completed | pruned | crash
+  score         DOUBLE,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at  TIMESTAMP,
+  backend       TEXT,                   -- inline | process-pool | k8s-job
+  worker_id     TEXT,
+  error         TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_trials_study ON trials(study_id, seq);
+
+CREATE TABLE IF NOT EXISTS trial_metrics (
+  trial_id TEXT NOT NULL,
+  metric   TEXT NOT NULL,
+  workload TEXT NOT NULL DEFAULT 'aggregate',  -- short | medium | long | aggregate
+  value    DOUBLE,
+  PRIMARY KEY (trial_id, metric, workload)
+);

@@ -1,0 +1,29 @@
+apiVersion: bench/search/v1alpha1
+kind: SearchSpace
+name: vllm-engine-args-grid-tier1
+
+# Grid 전용: float 축 제거, 이산값만. Round 1 재현 + 약간 확장.
+# 총 조합: 4 * 2 * 2 * 3 * 3 = 144 (single-GPU active 기준 144개 grid size)
+
+axes:
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256]
+
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  gpu_memory_utilization:
+    type: categorical
+    values: [0.80, 0.85, 0.90]
+
+  max_model_len:
+    type: categorical
+    values: [2048, 4096, 8192]
+
+  kv_cache_dtype:
+    type: categorical
+    values: [auto, fp8]
