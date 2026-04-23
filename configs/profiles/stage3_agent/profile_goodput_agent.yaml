@@ -1,0 +1,28 @@
+slug: profile-goodput-agent
+name: "Goodput Agent — SLO 5s TTFT / 60s E2E"
+stage: 3
+description: |
+  Profile C 패턴 + goodput SLO (TTFT 5s, E2E 60s). Agent 세션에 대한
+  SLO-내 완료율 측정. 동시 세션 경쟁 하 처리량의 실질 품질 평가.
+references: [S-10, S-14, S-17]
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  synthetic_input_tokens_mean: 1200
+  output_tokens_mean: 300
+  conversation_num: 5
+  conversation_turn_mean: 12
+  conversation_turn_stddev: 2
+  num_users: 1
+  user_centric_rate: 2.0
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 5000
+  e2e_p99_ms: 60000
+
+goodput_spec: "time_to_first_token:5000 request_latency:60000"
+
+tags: [stage3, goodput, agent-loop, slo]

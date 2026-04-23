@@ -1,0 +1,21 @@
+apiVersion: bench/v1alpha1
+slug: local-vllm-smoke
+name: "로컬 vLLM smoke (RTX 5060 Ti 16GB + Qwen2.5-1.5B-Instruct)"
+url: http://localhost:8000/v1
+model: Qwen/Qwen2.5-1.5B-Instruct
+tokenizer: Qwen/Qwen2.5-1.5B-Instruct
+api_type: openai
+metrics_url: http://localhost:8000/metrics
+
+deployment:
+  engine: vllm
+  parallelism:
+    tp: 1
+    dp: 1
+  engine_args:
+    enable_prefix_caching: true
+    max_model_len: 4096
+    gpu_memory_utilization: 0.85
+
+notes: "RTX 5060 Ti (CUDA_VISIBLE_DEVICES=1) 에서 직접 vllm serve. HW 메타는 slug 로만."
+tags: [smoke, vllm, local, rtx5060ti]

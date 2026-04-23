@@ -1,0 +1,39 @@
+apiVersion: bench/v1alpha1
+slug: research-agent-phase-breakdown
+name: "Agent Framework 비교 — phase 별 token 비중"
+stage: 3
+description: |
+  "A Comprehensive Empirical Evaluation of Agent Frameworks" (arXiv:2511.00872) —
+  OpenHands / SWE-Agent / Trae 등에서 editing 45-49%, execution 37-51% 비중.
+  본 preset 은 단일 agent loop 를 synthetic 으로 돌리고 phase 분포를
+  stacked bar + pie 로 시각화.
+references: []
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 2000
+  output_tokens_mean: 500
+  conversation_num: 5
+  conversation_turn_mean: 12
+  num_users: 1
+  user_centric_rate: 1.5
+
+analysis:
+  group_by: [phase]
+  metrics: [input_tokens, output_tokens, tool_call_count, e2e_ms]
+  plots:
+    - kind: phase_breakdown
+      metric: input_tokens
+      title: "Input Tokens by Phase"
+    - kind: phase_breakdown
+      metric: output_tokens
+      title: "Output Tokens by Phase"
+    - kind: phase_breakdown
+      metric: tool_call_count
+      title: "Tool Calls by Phase"
+  sinks: [markdown, csv]
+
+tags: [research, agent-framework, phase]

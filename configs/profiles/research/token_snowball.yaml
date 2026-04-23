@@ -1,0 +1,31 @@
+apiVersion: bench/v1alpha1
+slug: research-token-snowball
+name: "SWE-Effi Token Snowball Effect 재현 — 턴별 선형 누적"
+stage: 3
+description: |
+  "SWE-Effi" (arXiv:2509.09853) — 매 LLM call 마다 이전 히스토리가 prompt 에 누적되어
+  선형 증가. 본 preset 은 15턴 agent 에서 input_tokens 을 turn 별로 plot, linear fit.
+references: []
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1500
+  output_tokens_mean: 300
+  conversation_num: 5
+  conversation_turn_mean: 15
+  conversation_turn_stddev: 0
+  num_users: 1
+  user_centric_rate: 2.0
+
+analysis:
+  group_by: [turn_idx]
+  metrics: [input_tokens, ttft_ms]
+  plots:
+    - kind: token_snowball
+    - kind: ttft_vs_turn
+  sinks: [markdown, csv, parquet]
+
+tags: [research, snowball, context-growth]

@@ -1,0 +1,20 @@
+slug: smoke
+name: "Smoke test — 단일 요청 최소 부하"
+stage: 1
+description: "파이프라인 검증용. 5 요청 × concurrency 1."
+references: []
+
+runner: aiperf
+mode: concurrency
+
+workload:
+  synthetic_input_tokens_mean: 200
+  output_tokens_mean: 50
+  concurrency: 1
+  request_count: 5
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 10000
+
+tags: [smoke]

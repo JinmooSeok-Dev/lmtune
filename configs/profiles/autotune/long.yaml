@@ -1,0 +1,25 @@
+apiVersion: bench/v1alpha1
+slug: autotune-long
+name: "Autotune — long (4096/512, 긴 컨텍스트)"
+stage: 1
+description: "긴 입력. KV cache 압박이 큼. prefix_caching/chunked_prefill 효과 뚜렷."
+references: []
+
+runner: guidellm
+mode: concurrency
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 3072
+  output_tokens_mean: 512
+  concurrency: 4
+  request_count: 15
+  request_rate: 2.0
+  rate_type: constant
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 500
+  e2e_p99_ms: 30000
+
+tags: [autotune, long]

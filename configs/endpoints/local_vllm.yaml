@@ -1,0 +1,20 @@
+apiVersion: bench/v1alpha1
+slug: local-vllm
+name: "로컬 vLLM (port-forward/직접 실행)"
+url: http://localhost:8000/v1
+model: Qwen/Qwen2.5-Coder-3B-Instruct-GPTQ-Int4
+tokenizer: Qwen/Qwen2.5-Coder-3B-Instruct-GPTQ-Int4
+api_type: openai
+metrics_url: http://localhost:8000/metrics
+
+deployment:
+  engine: vllm
+  parallelism:
+    tp: 1
+    dp: 1
+  engine_args:
+    enable_prefix_caching: true
+    max_model_len: 8192
+
+notes: "vllm serve 로 직접 띄운 endpoint. HW 상세는 slug/deployment 로만 태깅."
+tags: [sample, vllm, local]

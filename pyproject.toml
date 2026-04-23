@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bench"
+version = "0.1.0"
+description = "Coding agent 워크로드 기반 LLM endpoint 벤치마크 자동화 시스템"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "jinmoo" }]
+dependencies = [
+    "typer>=0.12",
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+    "duckdb>=1.0",
+    "pandas>=2.2",
+    "pyarrow>=15",
+    "matplotlib>=3.8",
+    "prometheus-api-client>=0.5.5",
+    "requests>=2.31",
+    "python-ulid>=2.2",
+    "rich>=13.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "ruff>=0.4",
+]
+runners = [
+    # 외부 벤치마크 도구. aiperf 는 pip 배포가 안정적이지 않으므로 git 설치 안내만 README 참조.
+    "guidellm>=0.2.0",
+]
+
+[project.scripts]
+bench = "bench.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"bench.storage" = ["*.sql"]
+"bench.visualization" = ["grafana/*.json"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

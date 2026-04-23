@@ -1,0 +1,26 @@
+slug: smoke-guidellm
+name: "Smoke (GuideLLM) — 외부 도구 없이 바로 테스트"
+stage: 1
+description: |
+  GuideLLM 기반 1턴 smoke. AIPerf 설치 없이 pip 로 깔리는 guidellm 으로
+  엔드포인트 연결 + 파이프라인 (runner → storage → report) 검증.
+  소형 Int4 모델 (3B~14B) 에 권장.
+references: []
+
+runner: guidellm
+mode: concurrency
+
+workload:
+  synthetic_input_tokens_mean: 256
+  output_tokens_mean: 64
+  concurrency: 2
+  request_count: 10
+  request_rate: 2.0
+  rate_type: constant
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 10000
+  e2e_p99_ms: 60000
+
+tags: [smoke, guidellm]

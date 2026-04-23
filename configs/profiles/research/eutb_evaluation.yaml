@@ -1,0 +1,47 @@
+apiVersion: bench/v1alpha1
+slug: research-eutb-evaluation
+name: "EuTB (Effectiveness under Token Budget) 측정"
+stage: 3
+description: |
+  "SWE-Effi" (arXiv:2509.09853) 제안 메트릭 EuTB = success_rate / total_input_tokens.
+  본 preset 은 agent 세션의 success/fail, total_input_tokens 을 사용해 EuTB
+  derived metric 으로 계산하고, 여러 profile 비교 지표로 사용할 수 있게 한다.
+  SWE-Pruner (arXiv:2601.16746) 의 23-38% 토큰 절감 비교에도 활용 가능.
+references: []
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1500
+  output_tokens_mean: 400
+  conversation_num: 10
+  conversation_turn_mean: 12
+  conversation_turn_stddev: 2
+  num_users: 1
+  user_centric_rate: 2.0
+
+slo:
+  ttft_p99_ms: 5000
+  checks:
+    - metric: eutb
+      p: avg
+      op: ">="
+      value: 1.0e-4
+      severity: warning
+      label: "EuTB ≥ 1e-4 (baseline 기준)"
+
+analysis:
+  metrics: [ttft, e2e, input_tokens, output_tokens]
+  plots:
+    - kind: cdf
+      metric: e2e_ms
+    - kind: token_snowball
+  sinks: [markdown, csv, parquet]
+  derived:
+    - name: eutb
+    - name: tokens_per_usd
+    - name: energy_per_token
+
+tags: [research, eutb, token-efficiency]

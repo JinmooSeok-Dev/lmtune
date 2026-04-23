@@ -1,0 +1,88 @@
+[
+  {
+    "label": "qwen25-1.5b-winner",
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": true,
+      "max_num_seqs": 128,
+      "gpu_memory_utilization": 0.85,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "qwen3-0.6b-winner",
+    "model": "Qwen/Qwen3-0.6B",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": true,
+      "max_num_seqs": 256,
+      "gpu_memory_utilization": 0.85,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "qwen3-1.7b-winner",
+    "model": "Qwen/Qwen3-1.7B",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": true,
+      "max_num_seqs": 128,
+      "gpu_memory_utilization": 0.85,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "qwen3-4b-winner",
+    "model": "Qwen/Qwen3-4B",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": true,
+      "max_num_seqs": 64,
+      "gpu_memory_utilization": 0.88,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "qwen3-8b-awq-winner",
+    "model": "Qwen/Qwen3-8B-AWQ",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": true,
+      "max_num_seqs": 64,
+      "gpu_memory_utilization": 0.90,
+      "max_model_len": 4096    }
+  },
+  {
+    "label": "qwen3-14b-awq-winner",
+    "model": "Qwen/Qwen3-14B-AWQ",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": true,
+      "max_num_seqs": 32,
+      "gpu_memory_utilization": 0.92,
+      "max_model_len": 4096    }
+  },
+  {
+    "label": "qwen3-4b-fp8-winner",
+    "model": "Qwen/Qwen3-4B-FP8",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": true,
+      "max_num_seqs": 128,
+      "gpu_memory_utilization": 0.88,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "qwen3-8b-fp8-winner",
+    "model": "Qwen/Qwen3-8B-FP8",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": true,
+      "max_num_seqs": 64,
+      "gpu_memory_utilization": 0.90,
+      "max_model_len": 4096
+    }
+  }
+]

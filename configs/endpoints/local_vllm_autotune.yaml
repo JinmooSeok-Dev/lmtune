@@ -1,0 +1,25 @@
+apiVersion: bench/v1alpha1
+slug: local-vllm-autotune
+name: "로컬 vLLM autotune (RTX 5060 Ti 16GB, Qwen2.5-1.5B-Instruct baseline)"
+url: http://localhost:8000/v1
+model: Qwen/Qwen2.5-1.5B-Instruct
+tokenizer: Qwen/Qwen2.5-1.5B-Instruct
+api_type: openai
+metrics_url: http://localhost:8000/metrics
+deployment:
+  engine: vllm
+  parallelism:
+    tp: 1
+    dp: 1
+  engine_args:
+    enable_prefix_caching: true
+    enable_chunked_prefill: true
+    max_num_seqs: 128
+    gpu_memory_utilization: 0.85
+    max_model_len: 4096
+notes: "Round 2 winner baseline (FINAL_REPORT.md §1). autoresearch 는 deployment.engine_args 블록만 수정."
+tags:
+  - autotune
+  - vllm
+  - local
+  - rtx5060ti

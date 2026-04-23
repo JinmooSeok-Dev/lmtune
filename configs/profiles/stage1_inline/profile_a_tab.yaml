@@ -1,0 +1,22 @@
+slug: profile-a-tab
+name: "Profile A — Tab Completion (Stateless, 고QPS)"
+stage: 1
+description: |
+  FIM 자동완성 패턴. 1턴 stateless. 짧은 입력(2K) → 짧은 출력(50).
+  TTFT p50/p99 + throughput(QPS) 기본선 측정. Prefix caching 미사용.
+references: [S-7, S-19]  # Cursor Tab Fusion 5.5→13K / 1M+ QPS
+
+runner: aiperf
+mode: concurrency
+
+workload:
+  synthetic_input_tokens_mean: 2000
+  output_tokens_mean: 50
+  concurrency: 4
+  request_count: 200
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 2000
+
+tags: [stage1, tab-completion, stateless]

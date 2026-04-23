@@ -1,0 +1,43 @@
+apiVersion: bench/v1alpha1
+slug: research-variance-10x
+name: "OpenHands 10× run-to-run 편차 검증"
+stage: 3
+description: |
+  "How Do Coding Agents Spend Your Money?" (arXiv, ICLR 2026 submission) —
+  같은 task 도 run 마다 토큰 소비가 최대 10× 차이. `bench repeat --count 10` 으로
+  반복 실행 후 `bench variance` 로 μ/σ/CV/max/min 비율 보고.
+references: []
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1200
+  output_tokens_mean: 300
+  conversation_num: 3
+  conversation_turn_mean: 12
+  conversation_turn_stddev: 0
+  num_users: 1
+  user_centric_rate: 2.0
+  random_seed: 0          # 외부에서 override 해서 seed 를 바꿔가며 repeat
+
+slo:
+  ttft_p99_ms: 5000
+  checks:
+    - metric: variance_cv
+      p: avg
+      op: "<="
+      value: 2.0
+      label: "CV ≤ 2.0 (10× 편차가 크지 않음을 기대하지만 관찰이 목적)"
+
+analysis:
+  metrics: [ttft, e2e]
+  plots:
+    - kind: cdf
+      metric: e2e_ms
+    - kind: histogram
+      metric: ttft_ms
+  sinks: [markdown, csv]
+
+tags: [research, variance, agent-loop]

@@ -1,0 +1,49 @@
+apiVersion: bench/v1alpha1
+slug: profile-c-agent
+name: "Profile C — Agent Loop (Unbounded Multi-turn)"
+stage: 3
+description: |
+  Claude Code / SWE-bench 패턴 재현. 12턴 × (1.2K input, 300 output),
+  누적 ~19.5K. Token Snowball 효과 하에서 TTFT vs Turn# 곡선 측정.
+references: [S-10, S-11, S-13, S-18]
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1200
+  output_tokens_mean: 300
+  conversation_num: 5
+  conversation_turn_mean: 12
+  conversation_turn_stddev: 2
+  num_users: 1
+  user_centric_rate: 2.0
+  random_seed: 42
+
+slo:
+  # legacy flat 필드 (기존 detector 와 호환)
+  ttft_p99_ms: 5000
+  e2e_p99_ms: 60000
+  # 신규: 임의 metric/percentile/operator 조합
+  checks:
+    - metric: itl
+      p: p95
+      op: "<="
+      value: 150
+      label: "ITL p95 안정성"
+    - metric: goodput
+      p: avg
+      op: ">="
+      value: 0.9
+      severity: critical
+      label: "Goodput ≥ 90%"
+
+# Runner 가 모르는 AIPerf 플래그 주입 예시. 필요 없으면 빈 dict 또는 생략.
+runner_overrides:
+  aiperf:
+    # --session-turn-delay-mean: 1500   # 인간 타이핑 딜레이 모사 (필요 시 주석 해제)
+
+expected_kv_usage_tok: 19500
+
+tags: [stage3, agent-loop, token-snowball]

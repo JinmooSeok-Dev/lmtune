@@ -1,0 +1,26 @@
+slug: profile-b-chat-prefix
+name: "Profile B — IDE Chat + Shared System Prompt (Prefix Caching)"
+stage: 2
+description: |
+  Profile B 와 동일한 대화 구조에 shared system prompt 3000 tok 를 덧붙여
+  prefix-caching 효과와 sticky-user-session 라우팅을 동시 테스트.
+references: [S-8, S-11, S-13]
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  synthetic_input_tokens_mean: 1500
+  output_tokens_mean: 300
+  shared_system_prompt_length: 3000
+  conversation_num: 10
+  conversation_turn_mean: 5
+  conversation_turn_stddev: 0
+  num_users: 2
+  user_centric_rate: 1.0
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 3000
+
+tags: [stage2, ide-chat, prefix-cache, multi-turn]

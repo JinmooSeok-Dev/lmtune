@@ -1,0 +1,28 @@
+slug: profile-goodput-ide
+name: "Goodput IDE Chat — SLO 3s TTFT / 30s E2E"
+stage: 2
+description: |
+  Profile B 패턴에 goodput SLO (TTFT 3s, E2E 30s) 를 씌워 유효 처리량 측정.
+  throughput 이 아닌 SLO-내 완료율 기반.
+references: [S-8, S-17]
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  synthetic_input_tokens_mean: 2000
+  output_tokens_mean: 500
+  conversation_num: 10
+  conversation_turn_mean: 5
+  conversation_turn_stddev: 1
+  num_users: 2
+  user_centric_rate: 0.5
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 3000
+  e2e_p99_ms: 30000
+
+goodput_spec: "time_to_first_token:3000 request_latency:30000"
+
+tags: [stage2, goodput, slo]

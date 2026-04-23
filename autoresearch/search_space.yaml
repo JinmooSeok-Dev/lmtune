@@ -1,0 +1,60 @@
+# Search space hints for autoresearch-claude-code.
+# Phase E7 — Tier 1 (4 axes, 48 combinations).
+# Actual experiment driver is described in autoresearch/goal.md.
+
+axes:
+  max_num_seqs:
+    values: [32, 64, 128, 256]
+    effect: "higher = more throughput under load, but risks higher TTFT / KV pressure"
+
+  enable_prefix_caching:
+    values: [true, false]
+    effect: "true helps shared-prefix / multi-turn; false removes the setup cost"
+
+  enable_chunked_prefill:
+    values: [true, false]
+    effect: "true allows larger concurrency by slicing prefill; interacts with max_num_seqs"
+
+  gpu_memory_utilization:
+    values: [0.80, 0.85, 0.90]
+    effect: "more KV cache at higher values, but less headroom for CUDA graph"
+
+pinned:
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  data_parallel_size: 1
+  expert_parallel_size: 1
+  enforce_eager: false
+  max_model_len: 4096
+  quantization: null
+
+workloads:
+  - autotune-short
+  - autotune-medium
+  - autotune-long
+
+objective:
+  kind: composite
+  formula: "throughput_tok.avg * max(0, 1 - ttft.p99 / 1000)"
+  aggregate_across_workloads: sum
+
+constraints:
+  - metric: ttft.p99
+    op: "<="
+    value: 500
+  - metric: e2e.p99
+    op: "<="
+    value: 30000
+
+reproducibility:
+  repeats: 3
+  cv_threshold: 0.10
+  extend_to: 5
+
+notes:
+  hardware: "RTX 5060 Ti 16GB (CUDA_VISIBLE_DEVICES=1 via PCI_BUS_ID order)"
+  model: "Qwen/Qwen2.5-1.5B-Instruct (bf16)"
+  vllm_version: "0.19.1"
+  known_incompatible:
+    - "tp/pp/dp > 1 — only 1 GPU allocated to the run"
+    - "kv_cache_dtype=fp8 — 5060 Ti Blackwell support not verified"

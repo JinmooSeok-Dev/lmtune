@@ -1,0 +1,25 @@
+apiVersion: bench/v1alpha1
+slug: autotune-medium
+name: "Autotune — medium (1024/256, 코딩 에이전트 턴)"
+stage: 1
+description: "코딩 에이전트 중간 길이 턴. autoresearch 루프의 중앙값 워크로드."
+references: []
+
+runner: guidellm
+mode: concurrency
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1024
+  output_tokens_mean: 256
+  concurrency: 8
+  request_count: 20
+  request_rate: 4.0
+  rate_type: constant
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 500
+  e2e_p99_ms: 30000
+
+tags: [autotune, medium]

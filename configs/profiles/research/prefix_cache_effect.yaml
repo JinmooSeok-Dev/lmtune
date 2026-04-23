@@ -1,0 +1,43 @@
+apiVersion: bench/v1alpha1
+slug: research-prefix-cache-effect
+name: "Prefix caching 효과 정량화 (Cost of Dynamic Reasoning 51.7% 절감)"
+stage: 2
+description: |
+  "The Cost of Dynamic Reasoning" (arXiv:2506.04301) — prefix caching 으로
+  KV cache 메모리 51.7% 감소, 최대 63.5%. 본 preset 은 shared_system_prompt
+  3000 tok 를 부과한 multi-turn 세션에서 prefix_hit_rate derived metric 으로
+  캐시 적중 비율을 계산.
+references: [S-11, S-13]
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1500
+  output_tokens_mean: 300
+  shared_system_prompt_length: 3000
+  conversation_num: 10
+  conversation_turn_mean: 5
+  num_users: 2
+  user_centric_rate: 1.0
+
+slo:
+  checks:
+    - metric: prefix_hit_rate
+      p: avg
+      op: ">="
+      value: 0.3
+      label: "Prefix cache hit rate ≥ 30%"
+
+analysis:
+  group_by: [turn_idx]
+  metrics: [ttft, cached_tokens, input_tokens]
+  plots:
+    - kind: ttft_vs_turn
+    - kind: token_snowball
+  sinks: [markdown, csv]
+  derived:
+    - name: prefix_hit_rate
+
+tags: [research, prefix-cache, multi-turn]

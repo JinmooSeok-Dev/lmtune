@@ -1,0 +1,44 @@
+apiVersion: bench/v1alpha1
+slug: research-burstgpt-replay
+name: "BurstGPT Zipf/bimodal 분포 재현 (raw_openai runner)"
+stage: 1
+description: |
+  "BurstGPT" (arXiv:2401.17644) — Azure OpenAI 10.31M 트레이스, 입력 Zipf·
+  출력 bimodal. 본 preset 은 synthetic 모드에서 동일 분포 파라미터를
+  부과하여 실 프로덕션 토큰 분포를 근사 재현한다.
+references: [S-15]
+
+runner: raw_openai
+mode: concurrency
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 2000   # baseline
+  output_tokens_mean: 300
+  concurrency: 16
+  request_count: 1000
+  arrival:
+    kind: poisson
+    rate: 20
+    duration_sec: 50
+  input_dist:
+    kind: zipf
+    zipf_s: 1.3
+    zipf_clip: 16384
+  output_dist:
+    kind: bimodal
+    modes: [[150, 30], [1500, 300]]
+    mode_weight: 0.6
+
+analysis:
+  metrics: [ttft, e2e]
+  plots:
+    - kind: histogram
+      metric: input_tokens
+    - kind: histogram
+      metric: output_tokens
+    - kind: cdf
+      metric: e2e_ms
+  sinks: [markdown, csv, parquet]
+
+tags: [research, trace-replay, zipf, bimodal]

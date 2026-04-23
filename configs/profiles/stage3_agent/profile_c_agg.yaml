@@ -1,0 +1,28 @@
+slug: profile-c-agg
+name: "Profile C-aggressive — 대형 context 한계 탐색"
+stage: 3
+description: |
+  15턴 × (1.5K input, 400 output), 누적 ~30.4K. max-model-len 한계
+  도달 지점과 에러 발생 턴 식별. Turn별 TTFT 급등 지점 관찰.
+references: [S-10, S-18]
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  synthetic_input_tokens_mean: 1500
+  output_tokens_mean: 400
+  conversation_num: 3
+  conversation_turn_mean: 15
+  conversation_turn_stddev: 0
+  num_users: 1
+  user_centric_rate: 3.0
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 10000
+  e2e_p99_ms: 120000
+
+expected_kv_usage_tok: 30400
+
+tags: [stage3, agent-loop, context-limit]

@@ -1,0 +1,48 @@
+apiVersion: bench/v1alpha1
+slug: research-tokenomics-sdlc
+name: "Tokenomics MSR 2026 — SDLC 단계별 토큰 프로파일 재현"
+stage: 3
+description: |
+  "Tokenomics" (arXiv:2601.14470) — ChatDev multi-agent 에서 SDLC 단계별
+  토큰 소비를 정량 분석. 본 preset 은 15턴 agent loop 을 돌리고 phase 별
+  input_tokens pie·bar 로 분해하여 editing / execution / verification 비중 관찰.
+references: [S-20]
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1500
+  output_tokens_mean: 400
+  conversation_num: 5
+  conversation_turn_mean: 15
+  conversation_turn_stddev: 2
+  num_users: 1
+  user_centric_rate: 2.0
+
+slo:
+  ttft_p99_ms: 5000
+  e2e_p99_ms: 120000
+  checks:
+    - metric: eutb
+      p: avg
+      op: ">="
+      value: 0.001
+      label: "EuTB ≥ 1e-3"
+
+analysis:
+  group_by: [phase]
+  metrics: [input_tokens, output_tokens, tool_call_count]
+  plots:
+    - kind: phase_breakdown
+      metric: input_tokens
+    - kind: phase_breakdown
+      metric: output_tokens
+    - kind: token_snowball
+  sinks: [markdown, csv, html]
+  derived:
+    - name: eutb
+    - name: tool_call_ratio
+
+tags: [research, tokenomics, sdlc, agent-loop]

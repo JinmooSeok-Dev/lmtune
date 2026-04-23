@@ -1,0 +1,72 @@
+[
+  {
+    "label": "baseline-default",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": false,
+      "max_num_seqs": 128,
+      "gpu_memory_utilization": 0.85,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "max-num-seqs-256",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": false,
+      "max_num_seqs": 256,
+      "gpu_memory_utilization": 0.85,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "max-num-seqs-64",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": false,
+      "max_num_seqs": 64,
+      "gpu_memory_utilization": 0.85,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "chunked-prefill-on",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": true,
+      "max_num_seqs": 128,
+      "gpu_memory_utilization": 0.85,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "gpu-mem-util-0.90",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": false,
+      "max_num_seqs": 128,
+      "gpu_memory_utilization": 0.90,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "gpu-mem-util-0.80",
+    "engine_args": {
+      "enable_prefix_caching": true,
+      "enable_chunked_prefill": false,
+      "max_num_seqs": 128,
+      "gpu_memory_utilization": 0.80,
+      "max_model_len": 4096
+    }
+  },
+  {
+    "label": "prefix-cache-off",
+    "engine_args": {
+      "enable_prefix_caching": false,
+      "enable_chunked_prefill": false,
+      "max_num_seqs": 128,
+      "gpu_memory_utilization": 0.85,
+      "max_model_len": 4096
+    }
+  }
+]

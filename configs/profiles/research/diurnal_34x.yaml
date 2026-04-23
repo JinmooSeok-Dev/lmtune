@@ -1,0 +1,36 @@
+apiVersion: bench/v1alpha1
+slug: research-diurnal-34x
+name: "DynamoLLM peak:valley 34.6× diurnal 파형 재현"
+stage: 1
+description: |
+  "DynamoLLM" (HPCA 2025) — MS coding fleet 에서 peak:valley 34.6× 의 뚜렷한
+  diurnal 패턴. 본 preset 은 sine wave arrival 로 60분 동안 peak 35 req/s,
+  valley 1 req/s 를 생성하여 queueing/KV pressure 시간 변화 관찰.
+references: []
+
+runner: raw_openai
+mode: concurrency
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 2000
+  output_tokens_mean: 50
+  concurrency: 64
+  request_count: 2000
+  arrival:
+    kind: diurnal
+    peak_rate: 35
+    valley_rate: 1
+    period_sec: 3600
+    duration_sec: 3600
+
+analysis:
+  metrics: [ttft, e2e, throughput_req]
+  plots:
+    - kind: cdf
+      metric: ttft_ms
+    - kind: histogram
+      metric: ttft_ms
+  sinks: [markdown, csv]
+
+tags: [research, diurnal, arrival-pattern]

@@ -1,0 +1,32 @@
+apiVersion: bench/v1alpha1
+slug: autotune-short
+name: "Autotune — short (256/128, chat-like)"
+stage: 1
+description: "짧은 입력/출력. TTFT-민감 워크로드. autoresearch 루프가 3 워크로드 중 1개로 순회."
+references: []
+
+runner: guidellm
+mode: concurrency
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 256
+  output_tokens_mean: 128
+  concurrency: 8
+  request_count: 30
+  request_rate: 8.0
+  rate_type: constant
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 500
+  e2e_p99_ms: 30000
+  checks:
+    - metric: throughput_req
+      p: avg
+      op: ">="
+      value: 0.0
+      severity: warning
+      label: "대조 지표"
+
+tags: [autotune, short]

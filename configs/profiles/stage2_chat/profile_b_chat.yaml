@@ -1,0 +1,25 @@
+slug: profile-b-chat
+name: "Profile B — IDE Chat (Short Multi-turn)"
+stage: 2
+description: |
+  IDE 채팅/코드 설명 패턴. 5턴 multi-turn. 턴당 2K input / 500 output,
+  누적 ~12.5K. Turn1 vs Turn5 TTFT 열화율과 ITL 안정성 측정.
+references: [S-8, S-19]  # Copilot Chat 64K, Cursor ~20K default
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  synthetic_input_tokens_mean: 2000
+  output_tokens_mean: 500
+  conversation_num: 10
+  conversation_turn_mean: 5
+  conversation_turn_stddev: 1
+  num_users: 2
+  user_centric_rate: 0.5
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 3000
+
+tags: [stage2, ide-chat, multi-turn]

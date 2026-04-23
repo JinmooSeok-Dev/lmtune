@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# 결과 데이터
+data/raw/
+data/processed/
+data/db/
+*.duckdb
+*.duckdb.wal
+*.parquet
+
+# AIPerf / vLLM 결과
+aiperf_results/
+artifacts/
+genai-perf-artifacts/
+
+# 로그
+*.log
+logs/
+
+# 편집기
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 비밀
+.env
+.env.local
+*.key
+*secret*
+
+# autoresearch session state (not code)
+autoresearch.jsonl
+autoresearch-dashboard.md
+autoresearch.ideas.md
+.autoresearch-off
+
+# prior manual autotune rounds (already published as reports)
+data/autotune/experiments*.jsonl
+data/autotune/*.duckdb*
+/tmp/vllm_autotune_*.log
