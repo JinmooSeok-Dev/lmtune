@@ -34,6 +34,17 @@ runners = [
     # 외부 벤치마크 도구. aiperf 는 pip 배포가 안정적이지 않으므로 git 설치 안내만 README 참조.
     "guidellm>=0.2.0",
 ]
+search = [
+    # Phase S1~S5 탐색 엔진. Optuna 래핑 + 수학 기법용 스택.
+    "optuna>=3.5",
+    "scipy>=1.11",
+    "scikit-learn>=1.3",
+]
+distributed = [
+    # Phase S3 K8s Job backend. kubernetes-client 필요; Ray 는 non-goal.
+    "kubernetes>=29.0",
+    "jinja2>=3.1",
+]
 
 [project.scripts]
 bench = "bench.cli:app"
