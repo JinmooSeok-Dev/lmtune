@@ -98,4 +98,7 @@ def make_sampler(
     if s in ("nsga3", "nsga-iii", "nsgaiii"):
         from bench.search.samplers.nsga2 import make_nsga3
         return make_nsga3(seed=seed), None
+    if s in ("botorch", "gp", "bo"):
+        from bench.search.samplers.botorch import make_botorch
+        return make_botorch(seed=seed), None
     raise ValueError(f"unknown strategy: {strategy}")

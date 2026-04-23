@@ -231,12 +231,20 @@ class DuckDBStore:
         )
 
     def record_trial_metrics(self, trial_id: str, metrics: dict[tuple[str, str | None], float]):
-        """metrics keyed by (metric_name, workload). None workload → 'aggregate'."""
-        rows = [
-            (trial_id, m, wl or "aggregate", float(v))
-            for (m, wl), v in metrics.items()
-            if v is not None
-        ]
+        """metrics keyed by (metric_name, workload). None workload → 'aggregate'.
+
+        Non-scalar values (e.g. the multi-obj '_values' tuple ParetoObjective
+        stashes for Study.tell) are skipped; only scalar entries persist to DB.
+        """
+        rows = []
+        for (m, wl), v in metrics.items():
+            if v is None: continue
+            if isinstance(v, (list, tuple, dict)): continue   # multi-obj sentinel
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                continue
+            rows.append((trial_id, m, wl or "aggregate", fv))
         if rows:
             self.conn.executemany(
                 """

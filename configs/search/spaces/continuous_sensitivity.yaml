@@ -1,0 +1,13 @@
+apiVersion: bench/search/v1alpha1
+kind: SearchSpace
+name: continuous-sensitivity
+
+# Phase S5 follow-up #1: continuous axes only → Sobol sensitivity actually fits.
+# Avoids kv_cache_dtype=fp8 (Blackwell probe unreliable) and max_model_len=8192
+# (KV pressure on 16GB). Mixes one float + two categoricals so the surrogate
+# has signal to partition.
+
+axes:
+  max_num_seqs: {type: categorical, values: [32, 64, 128, 256]}
+  enable_prefix_caching: {type: bool}
+  gpu_memory_utilization: {type: float, low: 0.80, high: 0.90}

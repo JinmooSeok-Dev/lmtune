@@ -65,8 +65,11 @@ class ParetoObjective:
 
     def __call__(self, params: dict[str, Any]) -> ObjectiveResult:
         result = self._base(params)
-        # Propagate the first objective onto .score (single-obj consumers).
         vals = self.values(result)
         if vals:
+            # Primary scalar stays set to obj1 for compatibility.
             result.score = vals[0]
+            # Stash the full tuple under a reserved metric key so Study.tell
+            # (multi-obj mode) can hand it to Optuna as `values=[...]`.
+            result.metrics[("_values", None)] = vals
         return result

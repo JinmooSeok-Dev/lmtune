@@ -14,8 +14,8 @@ deployment:
   engine_args:
     enable_prefix_caching: true
     enable_chunked_prefill: true
-    max_num_seqs: 32
-    gpu_memory_utilization: 0.85
+    max_num_seqs: 64
+    gpu_memory_utilization: 0.8120433660127293
     max_model_len: 4096
 notes: "Round 2 winner baseline (FINAL_REPORT.md \xA71). autoresearch \uB294 deployment.engine_args\
   \ \uBE14\uB85D\uB9CC \uC218\uC815."

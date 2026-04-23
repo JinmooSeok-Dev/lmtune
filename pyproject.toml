@@ -41,6 +41,12 @@ search = [
     "scikit-learn>=1.3",
     "SALib>=1.5",    # Phase S5 Sobol / Morris / FAST sensitivity
 ]
+search-gp = [
+    # Phase S5 follow-up #4: BoTorch GP backend for large-budget studies.
+    # Heavy (torch + gpytorch). Install only when the search truly benefits
+    # (see docs/search_tooling_2026-04.md §3.1).
+    "optuna-integration[botorch]>=3.4",
+]
 distributed = [
     # Phase S3 K8s Job backend. kubernetes-client 필요; Ray 는 non-goal.
     "kubernetes>=29.0",

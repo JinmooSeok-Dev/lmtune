@@ -38,10 +38,11 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 @dataclass(slots=True)
 class StudyConfig:
     name: str
-    strategy: str                      # grid | random | lhc | tpe | cma_es | ucb
+    strategy: str                      # grid | random | lhc | tpe | cma_es | ucb | nsga2 | botorch
     space: SearchSpace
     metric_name: str = "total_score"
-    direction: str = "maximize"        # maximize | minimize
+    direction: str = "maximize"        # maximize | minimize (single-objective)
+    directions: list[str] | None = None  # multi-objective; e.g. ["maximize","minimize"]
     endpoint_slug: str | None = None
     profile_slugs: list[str] = field(default_factory=list)
     seed: int | None = None
@@ -66,12 +67,22 @@ class Study:
         )
         from bench.search.pruners import make_pruner
         pruner = make_pruner(config.pruner) if config.pruner else None
-        self._optuna_study = optuna.create_study(
-            direction=config.direction,
-            sampler=sampler,
-            pruner=pruner,
-            study_name=self.study_id,
-        )
+        if config.directions:
+            self._optuna_study = optuna.create_study(
+                directions=list(config.directions),
+                sampler=sampler,
+                pruner=pruner,
+                study_name=self.study_id,
+            )
+            self._multi_obj = True
+        else:
+            self._optuna_study = optuna.create_study(
+                direction=config.direction,
+                sampler=sampler,
+                pruner=pruner,
+                study_name=self.study_id,
+            )
+            self._multi_obj = False
         self._prefetch = prefetch or []
         self._seq = 0
         self._active_axes = config.space.active_axes(config.context)
@@ -143,7 +154,7 @@ class Study:
             trial.status = TrialStatus.CRASH
             trial.error = result.error
             state = optuna.trial.TrialState.FAIL
-            value: float | None = None
+            value: float | list[float] | None = None
         elif not result.accepted:
             trial.status = TrialStatus.PRUNED
             state = optuna.trial.TrialState.FAIL
@@ -151,11 +162,20 @@ class Study:
         else:
             trial.status = TrialStatus.COMPLETED
             state = optuna.trial.TrialState.COMPLETE
-            value = result.score
+            if self._multi_obj:
+                # multi-obj result.score carries obj1; pull the rest from result.metrics
+                # via the same ordering the caller configured (directions/objectives).
+                # We rely on the caller to stash the list on result.metrics under ("_values", None).
+                raw = result.metrics.get(("_values", None))
+                if raw is None:
+                    value = [float(result.score or 0.0)]
+                else:
+                    value = [float(v) for v in raw]
+            else:
+                value = result.score
 
         # Optuna's GridSampler calls study.stop() from its after_trial callback
         # when the grid is exhausted; ask/tell loops surface this as a RuntimeError.
-        # We treat that as normal exhaustion (logged and swallowed).
         try:
             if state is optuna.trial.TrialState.COMPLETE:
                 self._optuna_study.tell(trial._optuna_trial, value)
