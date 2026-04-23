@@ -38,7 +38,7 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 @dataclass(slots=True)
 class StudyConfig:
     name: str
-    strategy: str                      # grid | random | lhc
+    strategy: str                      # grid | random | lhc | tpe | cma_es | ucb
     space: SearchSpace
     metric_name: str = "total_score"
     direction: str = "maximize"        # maximize | minimize
@@ -49,6 +49,7 @@ class StudyConfig:
     context: dict[str, Any] | None = None
     study_id: str | None = None
     notes: str | None = None
+    pruner: str | None = None          # none | sh | hyperband
 
 
 class Study:
@@ -63,9 +64,12 @@ class Study:
             context=config.context,
             n_samples=config.n_samples,
         )
+        from bench.search.pruners import make_pruner
+        pruner = make_pruner(config.pruner) if config.pruner else None
         self._optuna_study = optuna.create_study(
             direction=config.direction,
             sampler=sampler,
+            pruner=pruner,
             study_name=self.study_id,
         )
         self._prefetch = prefetch or []

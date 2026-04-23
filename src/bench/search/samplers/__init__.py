@@ -83,4 +83,13 @@ def make_sampler(
         samples = lhc_samples(space, n_samples=n_samples, seed=seed, context=context)
         # After pre-seeding, downstream uses RandomSampler for any overflow trials.
         return optuna.samplers.RandomSampler(seed=seed), samples
+    if s == "tpe":
+        from bench.search.samplers.tpe import make_tpe
+        return make_tpe(seed=seed), None
+    if s in ("cma_es", "cma-es", "cmaes"):
+        from bench.search.samplers.cma_es import make_cma_es
+        return make_cma_es(seed=seed), None
+    if s in ("ucb", "ucb1", "bandit"):
+        from bench.search.samplers.ucb_bandit import make_ucb1
+        return make_ucb1(space=space, seed=seed, context=context), None
     raise ValueError(f"unknown strategy: {strategy}")

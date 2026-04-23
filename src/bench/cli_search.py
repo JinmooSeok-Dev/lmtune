@@ -213,6 +213,105 @@ def cmd_resume(
     study.run(objective, max_trials=max_trials)
 
 
+@app.command("prune")
+def cmd_prune(
+    study_id: Annotated[str, typer.Argument()],
+    p_freeze: Annotated[float, typer.Option("--p-freeze")] = 0.01,
+    p_drop: Annotated[float, typer.Option("--p-drop")] = 0.05,
+    imp_drop: Annotated[float, typer.Option("--imp-drop", help="importance threshold for drop")] = 0.05,
+    top_frac: Annotated[float, typer.Option("--top-frac")] = 0.25,
+    apply: Annotated[bool, typer.Option("--apply", help="write a narrowed SearchSpace YAML next to the original")] = False,
+):
+    """Run ANOVA + RF importance + bound-tighten on a study's completed trials."""
+    import json as _json
+    from bench.search.analysis import anova_per_axis, axis_importance, tighten_bounds
+    from bench.search.space import parse_space
+
+    store = DuckDBStore(_default_db_path())
+    hdr = store.get_study(study_id)
+    if not hdr:
+        console.print(f"[red]study not found[/]: {study_id}")
+        raise typer.Exit(1)
+    space_yaml = hdr[3]
+    sp = parse_space(yaml.safe_load(space_yaml)) if space_yaml else None
+    if sp is None:
+        console.print("[red]study has no space_yaml; cannot prune[/]")
+        raise typer.Exit(1)
+
+    # Collect completed trials as {params, score, status}
+    raw_trials = store.list_trials(study_id)
+    trials: list[dict] = []
+    for trial_id, seq, params_json, status, score, _completed, _backend, _err in raw_trials:
+        try:
+            p = _json.loads(params_json or "{}")
+        except _json.JSONDecodeError:
+            p = {}
+        trials.append({"params": p, "score": score, "status": status, "seq": seq})
+
+    # Analyses
+    anova = anova_per_axis(trials, p_freeze=p_freeze, p_drop=p_drop)
+    importance = axis_importance(trials, drop_threshold=imp_drop)
+    axes_spec = [
+        {"name": a.name, "kind": a.kind, "low": a.low, "high": a.high}
+        for a in sp.axes
+    ]
+    shrink = tighten_bounds(trials, axes_spec, top_frac=top_frac)
+
+    # Emit JSON report
+    report = {
+        "study_id": study_id,
+        "n_trials": len(trials),
+        "n_completed": sum(1 for t in trials if t["status"] == "completed"),
+        "anova": [
+            {
+                "axis": a.axis,
+                "p_value": a.p_value,
+                "f_stat": a.f_stat,
+                "recommendation": a.recommendation,
+                "best_value": a.best_value,
+            } for a in anova
+        ],
+        "importance": importance,
+        "bound_tighten": shrink,
+    }
+    console.print_json(data=report)
+
+    # Merge recommendations → apply
+    if apply:
+        narrowed = _apply_recommendations(sp, anova, importance, shrink)
+        out = Path(f"{study_id}.narrowed.yaml")
+        out.write_text(narrowed.to_yaml(), encoding="utf-8")
+        console.print(f"[green]wrote[/]: {out}")
+
+
+def _apply_recommendations(space, anova_list, importance, shrink) -> object:
+    """Produce a narrowed SearchSpace copy applying freeze/drop/shrink."""
+    from copy import deepcopy
+    from bench.search.space import Axis, SearchSpace
+
+    keep: list[Axis] = []
+    imp_drop = {a for a, d in importance.items() if d.get("recommendation") == "drop"}
+    anova_by_axis = {a.axis: a for a in anova_list}
+    for axis in space.axes:
+        a = anova_by_axis.get(axis.name)
+        rec = a.recommendation if a else "keep"
+        # drop if either ANOVA or importance says drop
+        if rec == "drop" or axis.name in imp_drop:
+            continue
+        if rec == "freeze" and a is not None and a.best_value is not None:
+            keep.append(Axis(name=axis.name, kind="categorical", values=[a.best_value]))
+            continue
+        shrunk = shrink.get(axis.name)
+        if shrunk:
+            a2 = deepcopy(axis)
+            a2.low = float(shrunk["new_low"])
+            a2.high = float(shrunk["new_high"])
+            keep.append(a2)
+            continue
+        keep.append(deepcopy(axis))
+    return SearchSpace(name=f"{space.name}-narrowed", axes=keep)
+
+
 @app.command("ls")
 def cmd_ls(limit: Annotated[int, typer.Option("--limit")] = 20):
     store = DuckDBStore(_default_db_path())
