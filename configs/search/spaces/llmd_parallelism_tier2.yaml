@@ -1,0 +1,54 @@
+apiVersion: bench/search/v1alpha1
+kind: SearchSpace
+name: llmd-parallelism-tier2
+
+# Phase S4: tp/pp/dp/ep 축 해금. active_if 로 llm-d adapter 전용.
+# engine_args 공통 축도 포함해 공동 탐색.
+
+axes:
+  # --- 공통 engine_args ---
+  max_num_seqs:
+    type: categorical
+    values: [16, 32, 64, 128]
+
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+
+  kv_cache_dtype:
+    type: categorical
+    values: [auto, fp8]
+    # 첫 apply 실패 시 S2 ANOVA freeze → auto 고정
+
+  max_model_len:
+    type: categorical
+    values: [2048, 4096, 8192]
+
+  # --- llm-d K8s 전용 parallelism ---
+  tp:
+    type: int
+    low: 1
+    high: 8
+    step: 1
+    active_if: {adapter: llmd-k8s}
+
+  pp:
+    type: int
+    low: 1
+    high: 2
+    step: 1
+    active_if: {adapter: llmd-k8s}
+
+  dp:
+    type: int
+    low: 1
+    high: 4
+    step: 1
+    active_if: {adapter: llmd-k8s}

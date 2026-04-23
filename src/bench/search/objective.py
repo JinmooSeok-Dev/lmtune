@@ -82,7 +82,13 @@ class BenchScoreObjective:
         ttft_slo_ms: float = 500.0,
         bench_bin: str | None = None,
         python_bin: str | None = None,
+        adapter: Any = None,
     ):
+        # Optional DeploymentAdapter. When present, each __call__ merges params
+        # into the endpoint YAML and restarts/rolls out the server before
+        # launching bench_score.py. This is what turns a hyperparameter trial
+        # into an actually-deployed configuration (S4 wiring).
+        self.adapter = adapter
         self.endpoint_path = Path(endpoint_path)
         self.profile_paths = [Path(p) for p in profile_paths]
         self.repeats = int(repeats)
@@ -131,14 +137,24 @@ class BenchScoreObjective:
             return {"error": f"non-json output: {last[-400:]}"}
 
     def __call__(self, params: dict[str, Any]) -> ObjectiveResult:
-        # NOTE: params application (endpoint YAML edit + restart) is out of scope
-        # for this Objective. The caller orchestrates it via DeploymentAdapter.
-        # Phase S4 composes them together; S1 assumes the endpoint is already
-        # configured for these params upstream.
-        del params
-
         import logging
         _log = logging.getLogger(__name__)
+
+        # S4: apply params via adapter before measuring. Pre-S4, params are
+        # ignored (the endpoint YAML is assumed to already reflect them).
+        if self.adapter is not None:
+            try:
+                result = self.adapter.apply(self.endpoint_path, params)
+            except Exception as e:  # noqa: BLE001
+                return ObjectiveResult(
+                    score=0.0, accepted=False,
+                    error=f"adapter.apply failed: {e}",
+                )
+            if not result.ok:
+                return ObjectiveResult(
+                    score=0.0, accepted=False,
+                    error=f"adapter.apply not ok: {result.notes} {result.health.detail}",
+                )
 
         total = 0.0
         metrics: dict[tuple[str, str | None], float] = {}

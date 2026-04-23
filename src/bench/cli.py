@@ -34,6 +34,10 @@ console = Console()
 from bench.cli_search import app as _search_app  # noqa: E402
 app.add_typer(_search_app, name="search")
 
+# Phase S4: orchestrate (direct deployment) subcommand group
+from bench.cli_orchestrate import app as _orchestrate_app  # noqa: E402
+app.add_typer(_orchestrate_app, name="orchestrate")
+
 
 def _default_db_path() -> Path:
     return Path(os.environ.get("BENCH_DB", "data/db/bench.duckdb"))

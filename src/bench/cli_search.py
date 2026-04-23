@@ -63,6 +63,10 @@ def cmd_start(
         bool,
         typer.Option("--dry-run", help="CallableObjective(constant=0) 로 구조만 검증. vLLM 없어도 동작"),
     ] = False,
+    adapter: Annotated[
+        str,
+        typer.Option("--adapter", help="none | local-vllm | llmd-k8s. none 이면 params 를 endpoint 에 적용 안 함 (S1 호환)"),
+    ] = "none",
     backend: Annotated[
         str,
         typer.Option("--backend", help="inline | process-pool (S3 dev, workers=1 권장) | k8s-job (S4)"),
@@ -80,6 +84,19 @@ def cmd_start(
     sp = load_space(space)
     profile_slugs = [p.stem for p in profile]
 
+    # Build adapter early so SearchSpace active_if can be gated by adapter_label.
+    adapter_obj = None
+    if adapter == "local-vllm":
+        from bench.deploy import LocalVLLMAdapter
+        adapter_obj = LocalVLLMAdapter()
+    elif adapter == "llmd-k8s":
+        from bench.deploy import LLMDK8sAdapter
+        adapter_obj = LLMDK8sAdapter()
+    elif adapter != "none":
+        raise typer.BadParameter(f"unknown --adapter: {adapter}")
+
+    space_context = adapter_obj.context() if adapter_obj is not None else None
+
     cfg = StudyConfig(
         name=name or sp.name,
         strategy=strategy,
@@ -90,6 +107,7 @@ def cmd_start(
         profile_slugs=profile_slugs,
         seed=seed,
         n_samples=n_samples,
+        context=space_context,
     )
 
     # Endpoint slug 추출 (BenchScoreObjective 에 쓸 때만 필요)
@@ -127,7 +145,10 @@ def cmd_start(
         objective = BenchScoreObjective(
             endpoint_path=endpoint,
             profile_paths=[Path(p) for p in profile],
+            adapter=adapter_obj,
         )
+        if adapter_obj is not None:
+            console.print(f"[green]adapter[/]: {adapter_obj.adapter_label} (params will be applied to endpoint each trial)")
 
     if backend == "inline" or dry_run:
         trials = study.run(objective, max_trials=max_trials)

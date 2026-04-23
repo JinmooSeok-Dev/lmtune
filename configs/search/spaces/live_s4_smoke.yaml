@@ -1,0 +1,11 @@
+apiVersion: bench/search/v1alpha1
+kind: SearchSpace
+name: live-s4-smoke
+
+# Tiny space for the S4 live-smoke: verifies the adapter restarts vLLM with
+# different engine_args each trial. Avoids kv_cache_dtype/max_model_len to
+# keep trials quick.
+
+axes:
+  max_num_seqs: {type: categorical, values: [32, 128]}
+  enable_prefix_caching: {type: bool}
