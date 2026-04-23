@@ -25,6 +25,13 @@ RESTART_CMD="${RESTART_CMD:-scripts/vllm_restart.sh}"
 PY="${PY:-./.venv/bin/python}"
 
 if [ ! -x "$PY" ]; then PY="python3"; fi
+
+# bench CLI: prefer venv, fall back to PATH
+VENV_BENCH="$ROOT/.venv/bin/bench"
+if [ -x "$VENV_BENCH" ]; then
+    export BENCH_BIN="${BENCH_BIN:-$VENV_BENCH}"
+fi
+
 BENCH_SCORE="$PY scripts/bench_score.py"
 
 log() { echo "[autoresearch.sh] $*" >&2; }
