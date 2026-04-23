@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bench-trial-REPLACEME
+  labels:
+    app.kubernetes.io/name: bench-trial-runner
+    app.kubernetes.io/component: search-worker
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bench-trial-runner
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: runner
+          image: bench-trial-runner:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TRIAL_ID
+              value: ""
+            - name: STUDY_ID
+              value: ""
+            - name: PARAMS_JSON
+              value: ""
+            - name: ENDPOINT_PATH
+              value: ""
+            - name: PROFILE_PATHS
+              value: ""
+            - name: REPEATS
+              value: "3"
+            - name: TTFT_SLO_MS
+              value: "500.0"
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

@@ -63,6 +63,19 @@ def cmd_start(
         bool,
         typer.Option("--dry-run", help="CallableObjective(constant=0) 로 구조만 검증. vLLM 없어도 동작"),
     ] = False,
+    backend: Annotated[
+        str,
+        typer.Option("--backend", help="inline | process-pool (S3 dev, workers=1 권장) | k8s-job (S4)"),
+    ] = "inline",
+    workers: Annotated[
+        int,
+        typer.Option("--workers", help="동시 실행 수. process-pool + 단일 GPU/DuckDB 에서는 1 만 안전. "
+                                        "실제 병렬은 k8s-job backend(S4) 에서."),
+    ] = 1,
+    budget_hours: Annotated[
+        float | None,
+        typer.Option("--budget-hours", help="전체 실험 예산. 경과 시 실행 중 trial 만 마무리"),
+    ] = None,
 ):
     sp = load_space(space)
     profile_slugs = [p.stem for p in profile]
@@ -116,7 +129,29 @@ def cmd_start(
             profile_paths=[Path(p) for p in profile],
         )
 
-    trials = study.run(objective, max_trials=max_trials)
+    if backend == "inline" or dry_run:
+        trials = study.run(objective, max_trials=max_trials)
+    elif backend == "process-pool":
+        if dry_run:
+            raise typer.BadParameter("process-pool backend 은 --dry-run 과 호환 안 됨")
+        if not endpoint or not profile:
+            raise typer.BadParameter("process-pool 백엔드는 endpoint 와 profile 필수")
+        from bench.orchestrate.backend_process_pool import ProcessPoolBackend
+        from bench.orchestrate.driver import run_distributed
+        pool = ProcessPoolBackend(workers=workers)
+        trials = run_distributed(
+            study, pool,
+            endpoint_path=endpoint,
+            profile_paths=[Path(p) for p in profile],
+            max_trials=max_trials,
+            repeats=3,
+            budget_seconds=(budget_hours * 3600.0) if budget_hours else None,
+        )
+    elif backend == "k8s-job":
+        raise typer.BadParameter("k8s-job backend 은 Phase S4 에서 활성화됩니다")
+    else:
+        raise typer.BadParameter(f"unknown backend: {backend}")
+
     console.print(f"[bold]완료[/]: {len(trials)} trials  study_id={study.study_id}")
     _print_top(store, study.study_id, direction, k=5)
 
