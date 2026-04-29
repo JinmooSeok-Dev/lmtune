@@ -78,7 +78,35 @@ DuckDB 는 한 파일에 단일 프로세스 writer 만 허용. S3 의 `Study.st
 
 → _"앞으로 재점검 시 확인할 포인트?"_
 
-## 5. 재점검 트리거
+## 5. K8s E2E (Phase S5 follow-up #3) — llm-d P/D 분리 배치 검증
+
+| 항목 | 값 |
+|:---|:---|
+| 환경 | minikube + cri-dockerd, RTX 3060(8 GB) + RTX 5060 Ti(16 GB) |
+| 모델 | Qwen/Qwen2.5-1.5B (3 GB) |
+| 배포 helmfile | `phase2/pd-qwen25-1.5b/helmfile.yaml.gotmpl` (peer repo `llm-distributed-inference`) |
+| 릴리즈 | infra-pd-qwen25 / gaie-pd-qwen25 / ms-pd-qwen25 (decode + prefill) |
+| KV 전송 | NIXL TCP (RDMA 없음) |
+| 검증 run | `01KQC2BC272W6HN7XNJD550K1J` (`autotune-short`, guidellm runner, 30 req @ concurrency 8) |
+| TTFT p99 | 91.2 ms |
+| e2e p99 | 1.53 s |
+| throughput | 796 tok/s avg |
+| SLO | 3/3 pass |
+
+### 5.1 배치 시 부딪힌 함정
+
+- **agentgateway 가 `InferencePool` 미지원**: HTTPRoute backendRef 가 InferencePool 일 때 `InvalidKind` 로 거부됨. 우회는 (a) kgateway 사용 또는 (b) 본 검증처럼 decode pod 의 routing-proxy 컨테이너로 직접 port-forward.
+- **decode pod 의 routing-proxy 는 `/v1/chat/completions` 만 P/D 분리**. `/v1/completions` 는 그대로 vLLM 본체로 전달됨.
+- **이미지 풀링 ~30 분**: `ghcr.io/llm-d/llm-d-cuda:v0.5.1` 압축 7.3 GB / 풀어진 27 GB. minikube docker driver + cri-dockerd 경로로 풀이 진행되며 containerd `/var/lib/containerd/...content` 에는 진행 흔적이 남지 않는다 — 진행 추적은 `journalctl ... cri-dockerd ... Downloading`.
+- **메모리 압박**: helm 차트의 EPP(`gaie-pd-qwen25-epp`) 가 기본 8 GiB 요청. 16 GiB minikube 노드에서 prefill 4 GiB + decode 4 GiB + EPP 8 GiB 가 다른 시스템 pod 와 충돌. EPP 를 `0.5/1 GiB` 로 다운사이즈 후 정상 스케줄.
+
+### 5.2 endpoint config 정본
+
+`configs/endpoints/llmd_pd_qwen25.yaml` 에 deployment 메타로 박제. `bench` 자동화 로직은 이 필드를 읽지 않으나, runs 테이블에 `endpoint_meta` JSON 으로 저장되어 후속 비교 / archive 시 컨텍스트가 보존된다.
+
+→ _"앞으로 재점검 시 확인할 포인트?"_
+
+## 6. 재점검 트리거
 
 아래 조건 하나라도 충족 시 본 문서 업데이트:
 
@@ -88,7 +116,7 @@ DuckDB 는 한 파일에 단일 프로세스 writer 만 허용. S3 의 `Study.st
 - **SALib 의 Saltelli 샘플링 기본 변경** (현재 `sobol_from_history()` 가 `calc_second_order=False` 기본)
 - **Trial 규모가 5 000+ 로 증가** → BoTorch 이점 우세 구간 진입
 
-## 6. References
+## 7. References
 
 - Bergstra, J., Bardenet, R., Bengio, Y., & Kégl, B. (2011). ["Algorithms for Hyper-Parameter Optimization"](https://papers.nips.cc/paper/2011/hash/86e8f7ab32cfd12577bc2619bc635690-Abstract.html), NIPS 2011. — TPE.
 - Deb, K. et al. (2002). ["A fast and elitist multiobjective genetic algorithm: NSGA-II"](https://ieeexplore.ieee.org/document/996017), IEEE TEC. — NSGA-II.

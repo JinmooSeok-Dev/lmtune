@@ -1,0 +1,26 @@
+apiVersion: bench/v1alpha1
+slug: llmd-pd-qwen25
+name: "llm-d P/D Qwen2.5-1.5B (minikube)"
+url: http://127.0.0.1:8010/v1
+model: Qwen/Qwen2.5-1.5B
+tokenizer: Qwen/Qwen2.5-1.5B
+api_type: openai
+
+deployment:
+  engine: vllm
+  version: "0.5.1"
+  parallelism:
+    tp: 1
+    dp: 1
+    ep: false
+  engine_args:
+    enable_prefix_caching: false
+    max_num_seqs: 32
+    max_model_len: 4096
+    block_size: 16
+    enforce_eager: true
+    gpu_memory_utilization: 0.85
+    kv_transfer_config: '{"kv_connector":"NixlConnector","kv_role":"kv_both"}'
+
+notes: "phase2/pd-qwen25-1.5b helmfile 배포. Prefill RTX 5060 Ti(GPU1) + Decode RTX 3060(GPU0), NIXL TCP fallback. port-forward svc/infra-pd-qwen25-inference-gateway 8010:80."
+tags: [llmd, pd-disagg, minikube, qwen25-1.5b]
