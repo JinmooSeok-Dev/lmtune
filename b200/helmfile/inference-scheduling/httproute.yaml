@@ -1,0 +1,24 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: b200-infsch-smoke
+  namespace: b200-infsch
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: infra-infsch-inference-gateway
+  rules:
+    - backendRefs:
+        - group: inference.networking.x-k8s.io
+          kind: InferencePool
+          name: gaie-infsch
+          port: 8000
+          weight: 1
+      timeouts:
+        backendRequest: 0s
+        request: 0s
+      matches:
+        - path:
+            type: PathPrefix
+            value: /

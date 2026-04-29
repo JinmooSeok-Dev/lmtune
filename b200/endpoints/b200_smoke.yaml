@@ -1,0 +1,30 @@
+apiVersion: bench/v1alpha1
+slug: b200-smoke
+name: "B200 single-GPU smoke (Llama-3.1-8B)"
+url: http://127.0.0.1:8011/v1
+model: meta-llama/Llama-3.1-8B-Instruct
+tokenizer: meta-llama/Llama-3.1-8B-Instruct
+api_type: openai
+# api_key_env: HF_TOKEN_ENV   # gated 모델 사용 시 환경변수에서 로드
+
+deployment:
+  engine: vllm
+  version: "0.7.x"
+  parallelism:
+    tp: 1
+    dp: 1
+    ep: false
+  engine_args:
+    enable_prefix_caching: true
+    max_num_seqs: 64
+    max_model_len: 8192
+    block_size: 16
+    gpu_memory_utilization: 0.85
+    kv_cache_dtype: auto
+    dtype: bfloat16
+
+notes: |
+  B0 smoke endpoint. 단일 B200 GPU 위에서 가장 가벼운 모델로 bench 파이프라인 검증.
+  helmfile: b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl --selector role=smoke
+  port-forward: kubectl port-forward -n b200-smoke svc/<svc-name> 8011:80
+tags: [b200, smoke, llama, single-gpu]

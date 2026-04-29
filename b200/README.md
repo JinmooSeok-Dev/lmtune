@@ -1,0 +1,109 @@
+# Phase B — 2× B200 (16-GPU) llm-d Autotuning Platform
+
+> 본 디렉토리는 NVIDIA B200 16-GPU k3s 클러스터 위에서 llm-d 기반 autotuning 플랫폼을 운용하기 위한 모든 자산을 담는다. core 코드(`src/bench/**`) 는 거의 건드리지 않고 phase 별로 자산을 누적한다. 전체 plan 은 `/home/jinmoo/.claude/plans/async-cooking-cat.md` 의 "Phase B" 섹션 참조.
+
+## 환경 가정
+
+| 항목 | 기본값 | 비고 |
+|:---|:---|:---|
+| 노드 | 2 × B200 (8 GPU/node, 16 GPU 합) | 컨테이너로 노출, k3s 멤버 |
+| HBM | ~180 GB / GPU (~3 TB 합) | HBM3e |
+| Compute capability | sm_100 (Blackwell) | FP4 native |
+| 인터노드 fabric | RDMA (InfiniBand 또는 RoCE) | `B0` probe 가 검증 |
+| K8s | k3s | nvidia-device-plugin + Multus(또는 SR-IOV CNI) 필요 |
+| 컨테이너 런타임 | containerd 권장 | cri-dockerd 도 가능 |
+| peer repo | `/home/jinmoo/ml_ai/agentic/llm-distributed-inference` (default) | B0 에서 경로 확인·수정 가능 |
+
+> **사용자 환경 보정**: 위와 다른 부분은 `docs/b200_environment.md` 의 실측치로 갱신하면 모든 helmfile / search-space / endpoint 가 그 값을 참조한다.
+
+## 진입점
+
+```bash
+# 1. 환경 진단 (B0 — 최초 1회 + 정기 점검)
+bash b200/scripts/probe.sh
+
+# 2. smoke run (B0 마지막 단계)
+bench search start \
+  --strategy random \
+  --space b200/search-spaces/b0_smoke.yaml \
+  --backend k8s-job --workers 2 --max-trials 4 \
+  --study-prefix B0-smoke
+
+# 3. baseline 카탈로그 (B1)
+bench search start \
+  --strategy grid \
+  --space b200/search-spaces/b1_baselines.yaml \
+  --backend k8s-job --workers 4
+
+# (이후 phase 별 명령어는 각 phase doc 참조)
+```
+
+## 디렉토리 구조
+
+```
+b200/
+├── README.md                          ← 이 파일
+├── scripts/
+│   ├── probe.sh                       ← 클러스터·fabric·이미지 캐시 진단 (B0)
+│   ├── loop.sh                        ← continuous autotuning loop (B5)
+│   └── regression_check.py            ← baseline 회귀 알림 (B5)
+├── endpoints/                         ← well-lit path × 모델 별 endpoint YAML
+│   ├── b200_smoke.yaml                ← B0 smoke endpoint (Llama-3.1-8B 단일 GPU)
+│   └── …
+├── helmfile/                          ← peer repo phase{1..4} 를 16-GPU 에 맞게 fork
+│   ├── base/
+│   │   └── values-b200-common.yaml.gotmpl   ← runtimeClassName, securityContext, /dev/shm, topology
+│   ├── inference-scheduling/          ← well-lit path #1 (peer phase1/2 base)
+│   ├── wide-ep-lws/                   ← well-lit path #2 (peer phase3/4)
+│   ├── tiered-prefix-cache/           ← well-lit path #3
+│   ├── precise-prefix-cache/          ← well-lit path #4
+│   ├── pd-disaggregation/             ← well-lit path #5 (peer phase2/4 pd)
+│   ├── predicted-latency-scheduling/  ← well-lit path #6 (실험적)
+│   └── workload-autoscaling/          ← well-lit path #7 (peer phase4 Config D)
+├── search-spaces/                     ← phase 별 axis 카탈로그
+│   ├── b0_smoke.yaml                  ← 단일 GPU smoke (B0)
+│   ├── b1_baselines.yaml              ← 7 path × 모델 baseline (B1)
+│   ├── b2_vllm_engine.yaml            ← vLLM 최적화 axis (B2)
+│   ├── b3_parallelism.yaml            ← TP/PP/DP/EP + topology axis (B3)
+│   ├── b4_welllit_paths.yaml          ← well-lit path 자체를 axis 로 (B4)
+│   └── b5_combined_pareto.yaml        ← 통합 Pareto search (B5)
+├── profiles/                          ← B200 워크로드 preset
+│   ├── ultra_long.yaml                ← 32K context (대모델)
+│   └── coding_agent_burstgpt.yaml     ← BurstGPT 재현
+├── studies/                           ← phase 별 study export (DuckDB)
+│   └── <phase>_<study_id>/
+└── docs/
+    ├── b200_environment.md            ← 클러스터·드라이버·fabric 스냅샷
+    ├── well_lit_paths_catalog.md      ← 7 path × axis 매핑 (B1 산출)
+    ├── vllm_axis_catalog.md           ← vLLM axis 카탈로그 (B2 산출)
+    ├── parallelism_combinations.md    ← topology × parallelism (B3 산출)
+    ├── path_decision_tree.md          ← workload→path 의사결정 (B4 산출)
+    ├── continuous_loop.md             ← B5 운용 가이드
+    └── regression_alerts.md           ← B5 회귀 로그
+```
+
+## Phase 진행 상황
+
+| Phase | 상태 | 산출물 |
+|:---|:---|:---|
+| B0 — 클러스터 온보딩 | 🚧 in-progress | scripts/probe.sh, helmfile/base, endpoints/b200_smoke.yaml, search-spaces/b0_smoke.yaml |
+| B1 — well-lit path baseline | ⏳ pending | helmfile/{7 paths}/, search-spaces/b1_baselines.yaml, studies/B1_*, docs/well_lit_paths_catalog.md |
+| B2 — vLLM 최신 axis | ⏳ pending | search-spaces/b2_vllm_engine.yaml, docs/vllm_axis_catalog.md |
+| B3 — 병렬 분산 axis | ⏳ pending | search-spaces/b3_parallelism.yaml, src/bench/deploy/llmd_k8s.py 보강 |
+| B4 — well-lit path as axis | ⏳ pending | search-spaces/b4_welllit_paths.yaml, docs/path_decision_tree.md |
+| B5 — Continuous loop | ⏳ pending | scripts/loop.sh, scripts/regression_check.py, docs/continuous_loop.md |
+
+## 사용자 실행 흐름
+
+본 디렉토리는 사용자가 B200 클러스터에서 **직접 실행**하는 스크립트와 declarative manifest 위주다. 이 호스트(작성용 머신)는 클러스터에 직접 접근하지 않는다.
+
+1. 작성용 호스트(여기): 본 디렉토리에 자산을 쓰고 git commit
+2. B200 호스트: `git pull` 후 `bash b200/scripts/probe.sh` 같은 명령 실행
+3. 실행 결과(JSON / log) 를 다시 작성용 호스트로 전달 → 다음 cycle 의 axis / overlay 갱신
+
+## 참고 문서
+
+- 전체 plan: `/home/jinmoo/.claude/plans/async-cooking-cat.md` (Phase B 섹션)
+- 도구 스택 (Optuna 4.8 / SALib 1.5 / BoTorch 0.9.5): `docs/search_tooling_2026-04.md`
+- llm-d well-lit paths: <https://github.com/llm-d/llm-d/tree/main/guides>
+- peer helmfile templates: `/home/jinmoo/ml_ai/agentic/llm-distributed-inference`

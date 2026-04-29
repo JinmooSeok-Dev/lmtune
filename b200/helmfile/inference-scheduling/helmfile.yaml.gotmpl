@@ -1,0 +1,74 @@
+# b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl
+#
+# B200 16-GPU 클러스터 — well-lit path #1 (inference-scheduling)
+# 사용법:
+#   NS=b200-infsch helmfile -f b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl apply
+#
+# selector:
+#   --selector role=smoke   → values-llama-3.1-8b-smoke.yaml (B0)
+#   --selector role=base    → values-qwen3-235b-tp2-dp4.yaml (B1)
+#
+# Self-contained: peer repo 참조 없이 OCI chart 직접 사용.
+
+environments:
+  default:
+    values:
+      - provider:
+          name: none
+
+---
+
+{{- $ns := .Namespace | default (env "NS") | default "b200-infsch" -}}
+{{- $rn := (env "RELEASE_NAME_POSTFIX") | default "infsch" -}}
+
+repositories:
+  - name: llm-d-modelservice
+    url: https://llm-d-incubation.github.io/llm-d-modelservice/
+  - name: llm-d-infra
+    url: https://llm-d-incubation.github.io/llm-d-infra/
+
+releases:
+  - name: {{ printf "infra-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: llm-d-infra/llm-d-infra
+    version: v1.4.0
+    installed: true
+    labels:
+      type: infrastructure
+      kind: inference-stack
+      role: smoke
+    values:
+      - gateway:
+          gatewayClassName: agentgateway     # B0 권장; kgateway 가 있으면 변경
+
+  - name: {{ printf "gaie-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: oci://registry.k8s.io/gateway-api-inference-extension/charts/inferencepool
+    version: v1.4.0
+    installed: true
+    needs:
+      - {{ printf "infra-%s" $rn | quote }}
+    values:
+      - values-gaie.yaml
+    labels:
+      kind: inference-stack
+      role: smoke
+
+  - name: {{ printf "ms-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: llm-d-modelservice/llm-d-modelservice
+    version: v0.4.9
+    installed: true
+    needs:
+      - {{ printf "infra-%s" $rn | quote }}
+      - {{ printf "gaie-%s" $rn | quote }}
+    values:
+      - ../base/values-b200-common.yaml.gotmpl
+      - values-llama-3.1-8b-smoke.yaml
+    set:
+      # smoke: 모니터링 비활성 (B0 단계)
+      - name: "decode.monitoring.podmonitor.enabled"
+        value: false
+    labels:
+      kind: inference-stack
+      role: smoke

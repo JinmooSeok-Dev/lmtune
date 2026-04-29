@@ -1,0 +1,16 @@
+# gaie-pd values for inference-scheduling — minimal EPP
+inferencePool:
+  modelServers:
+    matchLabels:
+      llm-d.ai/inferenceServing: "true"
+
+epp:
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: "200m"
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi

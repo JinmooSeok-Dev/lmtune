@@ -1,0 +1,63 @@
+# Llama-3.1-8B Instruct — B200 smoke (single GPU)
+multinode: false
+
+modelArtifacts:
+  uri: "hf://meta-llama/Llama-3.1-8B-Instruct"
+  size: 32Gi
+  name: "meta-llama/Llama-3.1-8B-Instruct"
+  authSecretName: "huggingface-token"      # gated 모델: kubectl create secret generic huggingface-token --from-literal=HF_TOKEN=...
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "b200-smoke"
+    llm-d.ai/hardware-variant: "b200"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "Llama-3.1-8B"
+
+routing:
+  servicePort: 8000
+
+decode:
+  parallelism:
+    tensor: 1
+  create: true
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+  containers:
+    - name: "vllm"
+      image: ghcr.io/llm-d/llm-d-cuda:v0.5.1
+      modelCommand: vllmServe
+      args:
+        - "--max-num-seqs"
+        - "64"
+        - "--max-model-len"
+        - "8192"
+        - "--gpu-memory-utilization"
+        - "0.85"
+        - "--block-size"
+        - "16"
+        - "--enable-prefix-caching"
+        - "--dtype"
+        - "bfloat16"
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          cpu: "4"
+          memory: 32Gi
+        limits:
+          nvidia.com/gpu: "1"
+          cpu: "16"
+          memory: 64Gi
+      env:
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-token
+              key: HF_TOKEN
+              optional: true
+
+# topology: smoke 단계는 토폴로지 강제 없음 (어느 노드든 OK)

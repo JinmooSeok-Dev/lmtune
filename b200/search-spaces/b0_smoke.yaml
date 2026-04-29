@@ -1,0 +1,12 @@
+apiVersion: bench/search/v1alpha1
+kind: SearchSpace
+name: b0-smoke
+
+# B0 smoke search space — bench search 가 B200 클러스터에서 동작하는지만 확인.
+# 단일 GPU, Llama-3.1-8B, axis 4개 (작게). 4 trial 정도면 충분히 분기를 탄다.
+
+axes:
+  max_num_seqs: {type: categorical, values: [32, 64, 128, 256]}
+  enable_prefix_caching: {type: bool}
+  enable_chunked_prefill: {type: bool}
+  gpu_memory_utilization: {type: float, low: 0.80, high: 0.92}
