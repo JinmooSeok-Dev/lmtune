@@ -140,6 +140,7 @@ b200/
 
 ## 참고 문서
 
+- **실험 계획 (phase 별 모델·workload·axis·합격 기준 카탈로그)**: [`docs/experiment_plan.md`](docs/experiment_plan.md) ← B0 통과 후 다음 결정 시 참조
 - 전체 plan: `/home/jinmoo/.claude/plans/async-cooking-cat.md` (Phase B 섹션)
 - 도구 스택 (Optuna 4.8 / SALib 1.5 / BoTorch 0.9.5): `docs/search_tooling_2026-04.md`
 - llm-d well-lit paths: <https://github.com/llm-d/llm-d/tree/main/guides>
