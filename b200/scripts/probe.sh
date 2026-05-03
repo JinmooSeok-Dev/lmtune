@@ -13,28 +13,44 @@
 #   6. RDMA fabric (rdma 디바이스, ibstat / mlx5)
 #   7. 인터노드 nccl-tests + iperf3 (옵션, --skip-fabric 으로 생략 가능)
 #
+# 모드:
+#   --mode host    (기본) B200-1 컨테이너에서 실행. peer_repo / RDMA / 인터노드 fabric 모두 검사.
+#   --mode client  사용자 회사 개발 PC 에서 실행. peer_repo · RDMA · 인터노드 fabric 은 INFO 로 demote.
+#                  (peer_repo 와 helmfile apply 는 B200 컨테이너에서만 의미가 있고, 클라이언트 PC 에는
+#                   RDMA HW 가 없는 게 정상이라 FAIL/WARN 이 의미 없다.)
+#
 # 결과: stdout 에 사람이 읽는 표 + (옵션) JSON. 실패 시 비0 exit.
 
 set -u
 
 JSON_MODE=false
 SKIP_FABRIC=false
+MODE=host
 PEER_REPO_DEFAULT="/home/jinmoo/ml_ai/agentic/llm-distributed-inference"
 PEER_REPO="${PEER_REPO:-$PEER_REPO_DEFAULT}"
 
-for arg in "$@"; do
-  case "$arg" in
-    --json) JSON_MODE=true ;;
-    --skip-fabric) SKIP_FABRIC=true ;;
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --json) JSON_MODE=true; shift ;;
+    --skip-fabric) SKIP_FABRIC=true; shift ;;
+    --mode) MODE="${2:-host}"; shift 2 ;;
+    --mode=*) MODE="${1#--mode=}"; shift ;;
     --help|-h)
-      sed -n '2,18p' "$0" | sed 's/^# *//'
+      sed -n '2,22p' "$0" | sed 's/^# *//'
       exit 0 ;;
+    *) shift ;;
   esac
 done
+
+case "$MODE" in
+  host|client) ;;
+  *) printf 'unknown --mode %q (host|client)\n' "$MODE" >&2; exit 2 ;;
+esac
 
 PASS=0
 FAIL=0
 WARN=0
+INFO=0
 declare -A RESULTS
 
 record() {
@@ -44,13 +60,25 @@ record() {
     PASS) PASS=$((PASS+1)) ;;
     FAIL) FAIL=$((FAIL+1)) ;;
     WARN) WARN=$((WARN+1)) ;;
+    INFO) INFO=$((INFO+1)) ;;
   esac
   if ! $JSON_MODE; then
     case "$status" in
       PASS) printf '  [\033[32mPASS\033[0m] %-40s %s\n' "$key" "$msg" ;;
       WARN) printf '  [\033[33mWARN\033[0m] %-40s %s\n' "$key" "$msg" ;;
       FAIL) printf '  [\033[31mFAIL\033[0m] %-40s %s\n' "$key" "$msg" ;;
+      INFO) printf '  [\033[36mINFO\033[0m] %-40s %s\n' "$key" "$msg" ;;
     esac
+  fi
+}
+
+# client 모드에서 host-only 항목을 INFO 로 demote 하기 위한 helper.
+demote_for_client() {
+  # 인자 1 = 원래 status. client 모드면 INFO 로 바꿈.
+  if [ "$MODE" = "client" ]; then
+    echo "INFO"
+  else
+    echo "$1"
   fi
 }
 
@@ -120,12 +148,18 @@ fi
 # ----------------------------------------------------------------------
 section "3. Device plugin / CNI"
 
-DP_PODS=$(kubectl get pods -A -l 'app.kubernetes.io/name=nvidia-device-plugin' --no-headers 2>/dev/null \
-       || kubectl get pods -A 2>/dev/null | grep -E 'nvidia-device-plugin')
+DP_PODS=$(kubectl get pods -A -l 'app.kubernetes.io/name=nvidia-device-plugin' --no-headers 2>/dev/null)
+if [ -z "$DP_PODS" ]; then
+  # k3s 등 label 없는 배포 — 다른 패턴으로 탐색
+  DP_PODS=$(kubectl get pods -A 2>/dev/null | grep -E 'nvidia.*device.*plugin|gpu-(operator|feature-discovery)|nvidia-driver|nvk-' | grep -v Terminating)
+fi
 if [ -n "$DP_PODS" ]; then
   record "device_plugin" PASS "$(echo "$DP_PODS" | wc -l | tr -d ' ') pod(s) found"
+elif [ "$TOTAL_GPU" -gt 0 ] 2>/dev/null; then
+  # plugin pod 못 찾았지만 nvidia.com/gpu 자원이 노출됐다면 working — k3s 의 다양한 패턴
+  record "device_plugin" PASS "inferred from $TOTAL_GPU GPU allocatable (no labeled pod found)"
 else
-  record "device_plugin" FAIL "nvidia-device-plugin pod 미검출"
+  record "device_plugin" FAIL "nvidia-device-plugin pod 미검출 + GPU allocatable=0"
 fi
 
 MULTUS=$(kubectl get pods -A 2>/dev/null | grep -c multus || true)
@@ -144,9 +178,13 @@ if [ -d "$PEER_REPO/.git" ]; then
   PEER_SHA=$(git -C "$PEER_REPO" rev-parse --short HEAD 2>/dev/null)
   record "peer_repo" PASS "$PEER_REPO @ $PEER_SHA"
 elif [ -d "$PEER_REPO" ]; then
-  record "peer_repo" WARN "$PEER_REPO 존재하나 git 저장소 아님"
+  record "peer_repo" "$(demote_for_client WARN)" "$PEER_REPO 존재하나 git 저장소 아님"
 else
-  record "peer_repo" FAIL "$PEER_REPO 없음 (PEER_REPO env 로 경로 지정 가능)"
+  if [ "$MODE" = "client" ]; then
+    record "peer_repo" INFO "client 모드 — peer repo 는 B200 컨테이너 (host 모드) 에서만 의미 있음"
+  else
+    record "peer_repo" FAIL "$PEER_REPO 없음 (PEER_REPO env 로 경로 지정 가능)"
+  fi
 fi
 
 if command -v helmfile >/dev/null 2>&1; then
@@ -191,18 +229,22 @@ if command -v ibstat >/dev/null 2>&1; then
   if [ "$IB_PORTS" -gt 0 ]; then
     record "ib.active_ports" PASS "$IB_PORTS active InfiniBand port(s)"
   else
-    record "ib.active_ports" WARN "0 active IB port — RoCE 일 가능성"
+    record "ib.active_ports" "$(demote_for_client WARN)" "0 active IB port — RoCE 일 가능성"
   fi
 elif ls /sys/class/infiniband/ 2>/dev/null | grep -q .; then
   record "ib.devices" PASS "$(ls /sys/class/infiniband/ | head -3 | tr '\n' ' ')"
 else
-  record "rdma" WARN "ibstat / /sys/class/infiniband 미존재 — RDMA 미사용 가능성"
+  if [ "$MODE" = "client" ]; then
+    record "rdma" INFO "client 모드 — 회사 PC 에 RDMA HW 부재는 정상 (host 모드 = B200 컨테이너에서 검사)"
+  else
+    record "rdma" WARN "ibstat / /sys/class/infiniband 미존재 — RDMA 미사용 가능성"
+  fi
 fi
 
 if [ -e /dev/infiniband/uverbs0 ] || [ -e /dev/infiniband/rdma_cm ]; then
   record "rdma.uverbs" PASS "RDMA verb device present"
 else
-  record "rdma.uverbs" WARN "RDMA verb device 없음 — TCP fallback 만 가능"
+  record "rdma.uverbs" "$(demote_for_client WARN)" "RDMA verb device 없음 — TCP fallback 만 가능"
 fi
 
 # ----------------------------------------------------------------------
@@ -211,19 +253,20 @@ fi
 if ! $SKIP_FABRIC; then
   section "7. inter-node fabric (skip with --skip-fabric)"
   if [ "$NODE_COUNT" -ge 2 ]; then
-    record "fabric_test" WARN "권장: nccl-tests DaemonSet + iperf3 server/client 측정 (별도 manifest 추가 예정)"
+    record "fabric_test" "$(demote_for_client WARN)" "권장: nccl-tests DaemonSet + iperf3 server/client 측정 (별도 manifest 추가 예정)"
   else
-    record "fabric_test" WARN "노드 < 2 — 인터노드 테스트 스킵"
+    record "fabric_test" "$(demote_for_client WARN)" "노드 < 2 — 인터노드 테스트 스킵"
   fi
 fi
 
 # ----------------------------------------------------------------------
 # 결과 요약
 # ----------------------------------------------------------------------
-TOTAL=$((PASS + WARN + FAIL))
+TOTAL=$((PASS + WARN + FAIL + INFO))
 
 if $JSON_MODE; then
-  printf '{"pass":%d,"warn":%d,"fail":%d,"total":%d,"results":{' "$PASS" "$WARN" "$FAIL" "$TOTAL"
+  printf '{"mode":"%s","pass":%d,"warn":%d,"fail":%d,"info":%d,"total":%d,"results":{' \
+    "$MODE" "$PASS" "$WARN" "$FAIL" "$INFO" "$TOTAL"
   first=true
   for k in "${!RESULTS[@]}"; do
     $first || printf ','
@@ -235,8 +278,8 @@ if $JSON_MODE; then
   done
   printf '}}\n'
 else
-  printf '\n=== Summary ===\n'
-  printf '  PASS: %d   WARN: %d   FAIL: %d   (total %d)\n' "$PASS" "$WARN" "$FAIL" "$TOTAL"
+  printf '\n=== Summary (mode=%s) ===\n' "$MODE"
+  printf '  PASS: %d   WARN: %d   FAIL: %d   INFO: %d   (total %d)\n' "$PASS" "$WARN" "$FAIL" "$INFO" "$TOTAL"
 fi
 
 if [ "$FAIL" -gt 0 ]; then

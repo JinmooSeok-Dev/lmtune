@@ -22,7 +22,11 @@
 
 ```bash
 # 1. 환경 진단 (B0 — 최초 1회 + 정기 점검)
-bash b200/scripts/probe.sh
+#    실행 위치별 모드:
+#      B200-1 컨테이너 안 (k3s control plane + RDMA HW 가 직접 접근 가능):
+bash b200/scripts/probe.sh --mode host
+#      회사 개발 PC (kubeconfig 만 있고 RDMA HW · peer repo 는 부재):
+bash b200/scripts/probe.sh --mode client
 
 # 2. smoke run (B0 마지막 단계)
 lmtune search start \
