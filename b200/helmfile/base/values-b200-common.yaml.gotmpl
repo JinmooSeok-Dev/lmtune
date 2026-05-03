@@ -95,9 +95,12 @@ b200:
   nccl_min: "2.23"
 
 # ---------------- 이미지 default ---------------------------------------------
+# v0.6.0 (2026-04 build) 의 vLLM/Triton 은 B200 sm_100 에서 cuda_utils.c JIT
+# 컴파일 실패. v0.7.0-rc.2 (2026-05 publish) 이상이 Blackwell datacenter
+# native 지원 첫 안정 빌드. 본 phase 는 v0.7.0-rc.2 를 baseline 으로 고정.
 image:
   llmd:
-    cuda: ghcr.io/llm-d/llm-d-cuda:v0.6.0
+    cuda: ghcr.io/llm-d/llm-d-cuda:v0.7.0-rc.2
     routing_sidecar: ghcr.io/llm-d/llm-d-routing-sidecar:v0.7.1
     inference_scheduler: ghcr.io/llm-d/llm-d-inference-scheduler:v0.5.1
   pull_secret_name: ""                    # private registry 사용 시 secret 이름
