@@ -39,7 +39,14 @@ releases:
       role: smoke
     values:
       - gateway:
-          gatewayClassName: agentgateway     # B0 권장; kgateway 가 있으면 변경
+          # provider 가 default 'istio' 면 chart 가 Istio Telemetry/DestinationRule 을 렌더 →
+          # k3s 에 Istio CRD 가 없을 경우 helm diff 단계에서 실패. agentgateway provider 로
+          # 두어 Istio 의존을 끊는다. README 에 'agentgateway' 가 standalone 옵션으로 명시.
+          provider: agentgateway
+          gatewayClassName: agentgateway
+          gatewayParameters:
+            istio:
+              accessLogging: false
 
   - name: {{ printf "gaie-%s" $rn | quote }}
     namespace: {{ $ns }}

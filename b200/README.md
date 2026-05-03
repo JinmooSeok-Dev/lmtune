@@ -32,6 +32,11 @@ bash b200/scripts/probe.sh --mode client
 #     probe --mode host 의 helmfile / peer_repo FAIL 두 개를 sudo 없이 한 번에 해결
 PEER_REPO_URL=<peer repo git URL> bash b200/scripts/setup_host.sh
 
+# 1b. (클라이언트 PC 또는 컨테이너 어디서든 한 번, 클러스터 전역 1회)
+#     gateway-provider prereq — Gateway API + GAIE CRDs + agentgateway controller 설치
+#     llm-d 정본 가이드의 prereq/gateway-provider 단계를 wrap한 스크립트.
+bash b200/scripts/setup_gateway_provider.sh agentgateway
+
 # 2. smoke run (B0 마지막 단계)
 lmtune search start \
   --strategy random \

@@ -41,7 +41,13 @@ releases:
       role: base
     values:
       - gateway:
+          # See inference-scheduling/helmfile.yaml.gotmpl for rationale —
+          # default provider 'istio' renders Istio Telemetry CRDs that k3s lacks.
+          provider: agentgateway
           gatewayClassName: agentgateway
+          gatewayParameters:
+            istio:
+              accessLogging: false
 
   - name: {{ printf "gaie-%s" $rn | quote }}
     namespace: {{ $ns }}
