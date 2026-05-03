@@ -1,0 +1,29 @@
+apiVersion: lmtune/v1alpha1
+slug: b200-smoke-localhost
+name: "B200 smoke (host port-forward 시나리오)"
+# host 에서 lmtune 직접 실행 + svc 기반 port-forward 한 번 띄운 시나리오용.
+# pod 이름 무관 (svc selector 가 label 매칭). port-forward 는 1회만:
+#   SVC=$(kubectl -n b200-infsch get svc -l llm-d.ai/role=decode -o jsonpath='{.items[0].metadata.name}')
+#   kubectl -n b200-infsch port-forward svc/$SVC 8011:8000 &
+url: http://127.0.0.1:8011/v1
+model: meta-llama/Llama-3.1-8B-Instruct
+tokenizer: meta-llama/Llama-3.1-8B-Instruct
+api_type: openai
+
+deployment:
+  engine: vllm
+  version: "0.17.x"
+  parallelism:
+    tp: 1
+    dp: 1
+    ep: false
+  engine_args:
+    max_num_seqs: 64
+    max_model_len: 4096
+    gpu_memory_utilization: 0.85
+    dtype: bfloat16
+
+notes: |
+  B0 smoke endpoint (host port-forward variant).
+  K8sJobBackend / cluster-internal 변형은 b200/endpoints/b200_smoke.yaml.
+tags: [b200, smoke, llama, single-gpu, localhost]
