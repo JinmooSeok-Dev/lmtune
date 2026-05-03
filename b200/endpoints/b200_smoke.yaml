@@ -1,7 +1,14 @@
 apiVersion: lmtune/v1alpha1
 slug: b200-smoke
 name: "B200 single-GPU smoke (Llama-3.1-8B)"
-url: http://127.0.0.1:8011/v1
+# url 의 두 모드:
+#   (A) K8sJobBackend (정공법, autotune 자동 cycle) — trial_runner pod 가 cluster 안에서
+#       실행되므로 cluster-internal Service URL 사용. port-forward 0번.
+#       url 예: http://infra-infsch-inference-gateway.b200-infsch.svc.cluster.local/v1
+#   (B) host 에서 lmtune 직접 실행 (smoke acceptance 4 검증용 1회) — svc 기반
+#       port-forward (pod 가 아님!) 후 localhost. url: http://127.0.0.1:8011/v1
+# default = (A). (B) 는 첫 검증 시 url 만 잠깐 swap.
+url: http://infra-infsch-inference-gateway.b200-infsch.svc.cluster.local/v1
 model: meta-llama/Llama-3.1-8B-Instruct
 tokenizer: meta-llama/Llama-3.1-8B-Instruct
 api_type: openai
@@ -26,5 +33,15 @@ deployment:
 notes: |
   B0 smoke endpoint. 단일 B200 GPU 위에서 가장 가벼운 모델로 bench 파이프라인 검증.
   helmfile: b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl --selector role=smoke
-  port-forward: kubectl port-forward -n b200-smoke svc/<svc-name> 8011:80
+
+  port-forward 는 반드시 SERVICE 단위로 — pod 이름이 helmfile apply 마다 변경되므로
+  pod/<name> 기반 forward 는 끊김. autotune 이 chart 의 deployment 를 매 trial 갈아치우는
+  동안에도 svc abstraction 은 stable.
+
+    SVC=$(kubectl -n b200-infsch get svc -l llm-d.ai/role=decode \
+            -o jsonpath='{.items[0].metadata.name}')
+    kubectl -n b200-infsch port-forward svc/$SVC 8011:8000 &
+
+  url 은 한 번 띄운 svc port-forward 의 stable address. trial 마다 갱신 불필요.
+  또는 cluster 안에서 lmtune 실행 (K8sJobBackend) 시 url 을 clusterIP service URL 로 변경.
 tags: [b200, smoke, llama, single-gpu]
