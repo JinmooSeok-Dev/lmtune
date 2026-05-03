@@ -1,0 +1,6 @@
+{
+  "enable_chunked_prefill": false,
+  "enable_prefix_caching": true,
+  "gpu_memory_utilization": 0.8139042871430157,
+  "max_num_seqs": 64
+}

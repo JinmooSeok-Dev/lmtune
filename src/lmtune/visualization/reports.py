@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
 
-from bench.analysis.aggregate import aggregate, requests_to_dataframe
-from bench.analysis.metrics import summarize_requests
-from bench.profiles import AnalysisSpec
-from bench.runners.base import RequestRow
-from bench.visualization.plots import get_plot
-from bench.visualization.sinks import write as sink_write
+from lmtune.analysis.aggregate import aggregate, requests_to_dataframe
+from lmtune.analysis.metrics import summarize_requests
+from lmtune.profiles import AnalysisSpec
+from lmtune.runners.base import RequestRow
+from lmtune.visualization.plots import get_plot
+from lmtune.visualization.sinks import write as sink_write
 
 
 def render_run_report(

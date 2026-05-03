@@ -1,0 +1,150 @@
+# Llama-3.1-70B Instruct — B200 P/D (Prefill TP=4, Decode TP=4)
+# 단일 노드 8 GPU 에서 prefill 4 + decode 4 GPU 로 분할.
+# NIXL v2 connector + UCX RDMA transport (B200 fabric).
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://meta-llama/Llama-3.1-70B-Instruct"
+  size: 140Gi
+  name: "meta-llama/Llama-3.1-70B-Instruct"
+  authSecretName: "huggingface-token"
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "b200-pd"
+    llm-d.ai/hardware-variant: "b200"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "Llama-3.1-70B"
+
+routing:
+  servicePort: 8000
+  proxy:
+    image: ghcr.io/llm-d/llm-d-routing-sidecar:v0.7.1
+    connector: nixlv2
+    secure: false
+
+decode:
+  parallelism:
+    tensor: 4
+  create: true
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+  containers:
+    - name: "vllm"
+      image: ghcr.io/llm-d/llm-d-cuda:v0.6.0
+      modelCommand: vllmServe
+      args:
+        - "--block-size"
+        - "32"
+        - "--kv-transfer-config"
+        - '{"kv_connector":"NixlConnector", "kv_role":"kv_both"}'
+        - "--max-model-len"
+        - "8192"
+        - "--max-num-seqs"
+        - "128"
+        - "--gpu-memory-utilization"
+        - "0.85"
+        - "--enable-prefix-caching"
+        - "--enable-chunked-prefill"
+        - "--dtype"
+        - "bfloat16"
+      env:
+        - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: UCX_TLS
+          value: "rc,cuda_copy,cuda_ipc"          # B200: RDMA RC + CUDA IPC
+        - name: UCX_NET_DEVICES
+          value: "all"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-token
+              key: HF_TOKEN
+              optional: true
+      ports:
+        - containerPort: 8200
+          name: vllm
+          protocol: TCP
+        - containerPort: 5600
+          name: nixl
+          protocol: TCP
+      resources:
+        requests:
+          nvidia.com/gpu: "4"
+          cpu: "8"
+          memory: 64Gi
+        limits:
+          nvidia.com/gpu: "4"
+          cpu: "32"
+          memory: 192Gi
+
+prefill:
+  parallelism:
+    tensor: 4
+  create: true
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+  containers:
+    - name: "vllm"
+      image: ghcr.io/llm-d/llm-d-cuda:v0.6.0
+      modelCommand: vllmServe
+      args:
+        - "--block-size"
+        - "32"
+        - "--kv-transfer-config"
+        - '{"kv_connector":"NixlConnector", "kv_role":"kv_both"}'
+        - "--max-model-len"
+        - "8192"
+        - "--max-num-seqs"
+        - "64"
+        - "--gpu-memory-utilization"
+        - "0.85"
+        - "--enable-prefix-caching"
+        - "--enable-chunked-prefill"
+        - "--dtype"
+        - "bfloat16"
+      env:
+        - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: UCX_TLS
+          value: "rc,cuda_copy,cuda_ipc"
+        - name: UCX_NET_DEVICES
+          value: "all"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-token
+              key: HF_TOKEN
+              optional: true
+      ports:
+        - containerPort: 8000
+          name: vllm
+          protocol: TCP
+        - containerPort: 5600
+          name: nixl
+          protocol: TCP
+      resources:
+        requests:
+          nvidia.com/gpu: "4"
+          cpu: "8"
+          memory: 64Gi
+        limits:
+          nvidia.com/gpu: "4"
+          cpu: "32"
+          memory: 192Gi
+
+# topology: prefill 과 decode 가 다른 노드에 가도 좋음 (인터노드 NIXL via RDMA)
+# 단일 노드 강제 시: same-node soft affinity (peer repo 패턴)

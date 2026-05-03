@@ -1,0 +1,77 @@
+# Winner Recipe — {{ study_name }}
+
+> Auto-generated from `bench search export {{ study_id }} --winner top-1`
+> Study created: {{ created_at }} · finished: {{ finished_at }}
+
+## Identifiers
+
+| Field | Value |
+|:---|:---|
+| Study ID | `{{ study_id }}` |
+| Study Name | {{ study_name }} |
+| Strategy | `{{ strategy }}` |
+| Metric | `{{ metric_name }}` (direction: {{ direction }}) |
+| Trial ID | `{{ trial_id }}` |
+| Trial seq | {{ seq }} |
+| Score | **{{ score }}** |
+| Adapter | `{{ adapter }}` |
+| Endpoint | `{{ endpoint_path }}` |
+
+## Winning Parameters
+
+```json
+{{ params_json_pretty }}
+```
+
+## How to Apply
+
+### Dry run (no changes)
+```bash
+bash apply.sh --dry-run
+```
+Renders the values overlay and shows what would happen without touching the cluster.
+
+### Live apply
+```bash
+bash apply.sh --apply
+```
+- For `local-vllm`: writes engine_args to the endpoint YAML, runs `scripts/vllm_restart.sh`.
+- For `llmd-k8s`: runs `helmfile -f <peer> --state-values-file values-overlay.yaml apply`,
+  waits for deployment rollout, probes `/v1/models`.
+
+## Reproducibility
+
+Re-run this exact configuration on a different cluster:
+
+```bash
+git clone <this-repo>
+cd <repo>
+pip install -e ".[search,distributed]"
+ENDPOINT={{ endpoint_path }} bash {{ winner_dir }}/apply.sh --apply
+```
+
+## Related artifacts
+
+- `apply.sh` — the apply script (this directory)
+- `values-overlay.yaml` — Helm values overlay (consumed by helmfile)
+- `params.json` — raw params dict (machine readable)
+{% if metrics_summary %}
+
+## Workload-level Metrics (top-1 measured)
+
+| metric | workload | value |
+|:---|:---|---:|
+{% for m in metrics_summary %}
+| {{ m.metric }} | {{ m.workload }} | {{ m.value }} |
+{% endfor %}
+{% endif %}
+
+## Provenance
+
+This recipe was selected from {{ total_trials }} trials in study `{{ study_id }}`,
+which was started with search space `{{ space_name }}`. To inspect the full study:
+
+```bash
+bench search status {{ study_id }}
+bench dashboard build --out b200/dashboards
+```

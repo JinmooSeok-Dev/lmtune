@@ -1,0 +1,167 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b5-combined-pareto
+
+# Phase B5 [Track B-III] — Combined Pareto search-space (Macro × Env-Profile × Micro).
+#
+# B1 (path×model) + B2 (vLLM engine) + B3 (parallelism) + B6 (system) 의 macro 만 합쳐
+# autoresearch agent 가 추론하는 7-dim macro space + profile-binder 가 자동 채우는 env_locked
+# + 3-5 micro fine-tune 이 트리 구조 (plan § Autoresearch Architecture).
+#
+# B6 의 70+ axis 는 여기에 직접 안 합침. profile-binder 가 (macro tuple) → matching profile
+# 매핑 후 env_locked 채우고, env_tunable 만 micro 로 노출.
+#
+# 사용 예 (continuous loop, 4 시간 budget):
+#   lmtune search start \
+#     --strategy nsga2 \
+#     --space b200/search-spaces/b5_combined_pareto.yaml \
+#     --warmstart-db data/db/lmtune.duckdb \
+#     -p configs/profiles/autotune/short.yaml \
+#     -p configs/profiles/autotune/medium.yaml \
+#     -p configs/profiles/autotune/long.yaml \
+#     --backend k8s-job --workers 8 \
+#     --budget-hours 4 \
+#     --objectives "throughput_tok.avg:medium:maximize,ttft.p99:short:minimize,cost_per_token:medium:minimize,energy_per_token:medium:minimize" \
+#     --slo "ttft.p99:short<=500,e2e.p99:long<=30000" \
+#     --name B5-combined
+
+axes:
+  # ═══════════════════════════════════════════════════════════════════════
+  # MACRO axis — 7 차원 (autoresearch 가 추론하는 핵심)
+  # ═══════════════════════════════════════════════════════════════════════
+  # Profile-binder 가 (macro tuple) 로 env_profile 매칭 → env_locked 자동 채움.
+  # 사용자/agent 는 이 7 차원만 의식하면 됨.
+
+  model_id:
+    type: categorical
+    values:
+      - meta-llama/Llama-3.1-8B-Instruct
+      - meta-llama/Llama-3.1-70B-Instruct
+      - meta-llama/Llama-3.3-70B-Instruct
+      - Qwen/Qwen2.5-72B-Instruct
+      - Qwen/Qwen3-235B-A22B
+      - Qwen/Qwen3-Coder-480B-A35B-Instruct
+      - mistralai/Mixtral-8x22B-Instruct-v0.1
+      - mistralai/Mistral-Large-Instruct-2411
+      - deepseek-ai/DeepSeek-V3
+      - deepseek-ai/DeepSeek-R1-0528
+      - zai-org/GLM-4.7-355B-MTP
+    cost_tier: 2
+    # model 변경 = weights pull = ~5~30 min. archive cache 활용 시 단축
+
+  well_lit_path:
+    type: categorical
+    values:
+      - inference-scheduling
+      - pd-disaggregation
+      - wide-ep-lws
+      - tiered-prefix-cache
+    cost_tier: 3
+
+  node_split_strategy:
+    type: categorical
+    values:
+      - single-node-tp8
+      - single-node-dp2-tp4
+      - single-node-wide-ep-dp8
+      - dual-node-dp2-tp8
+      - dual-node-pp2-tp8
+      - dual-node-tp16
+      - dual-node-wide-ep-dp16
+      - dual-node-tp8-pp2-pcp2
+    cost_tier: 3
+
+  ep_strategy:
+    type: categorical
+    values: [standard, wide]
+    active_if: {model_family: moe}
+    cost_tier: 3
+
+  engine_dtype:
+    type: categorical
+    values: [bfloat16, fp8_e4m3, nvfp4]
+    cost_tier: 3
+
+  kv_cache_dtype:
+    type: categorical
+    values: [auto, fp8_e4m3, fp8_e5m2, nvfp4]
+    cost_tier: 4
+
+  attention_backend:
+    type: categorical
+    values: [auto, flash_attn, flashinfer, triton]
+    cost_tier: 4
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # MICRO axis — 3-5 dim (profile 별 env_tunable, profile-binder 가 자동 합류)
+  # ═══════════════════════════════════════════════════════════════════════
+  # 본 블록은 profile 의 env_tunable 이 자동으로 더해짐.
+  # 사용자가 명시하지 않아도 single_node_tp_nvl 매칭 시 NCCL_BUFFSIZE 등 합류.
+  # 아래는 macro 위에 항상 노출되는 universal micro 만.
+
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256, 512]
+    cost_tier: 4
+
+  enable_chunked_prefill:
+    type: bool
+    cost_tier: 4
+
+  enable_prefix_caching:
+    type: bool
+    cost_tier: 4
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+    cost_tier: 4
+
+  speculative_method:
+    type: categorical
+    values: [none, eagle3, mtp, ngram]
+    cost_tier: 4
+
+  speculative_num_speculative_tokens:
+    type: categorical
+    values: [1, 2, 4]
+    active_if: {speculative_method: ["eagle3", "mtp", "ngram"]}
+    cost_tier: 4
+
+
+# ─────────── Profile binding ───────────
+# Profile-binder 가 macro tuple → applies_when 매칭 → env_locked + env_tunable
+# 자동 합류. 본 study 는 다음 profile 카탈로그를 사용.
+profile_catalog:
+  - configs/autoresearch/env_profiles/single_node_tp_nvl.yaml
+  - configs/autoresearch/env_profiles/two_node_tp_ib.yaml
+  - configs/autoresearch/env_profiles/wide_ep_lws_dp8.yaml
+  - configs/autoresearch/env_profiles/pd_disagg_nixl.yaml
+  - configs/autoresearch/env_profiles/tiered_prefix_lmcache.yaml
+  - configs/autoresearch/env_profiles/precise_prefix_zmq.yaml
+  - configs/autoresearch/env_profiles/pls_predictive.yaml
+  - configs/autoresearch/env_profiles/host_b6_default.yaml
+  - configs/autoresearch/env_profiles/single_node_local_vllm.yaml      # 기존
+  - configs/autoresearch/env_profiles/minikube_pd_qwen25.yaml          # 기존
+
+
+# ─────────── Feasibility (B3 의 10 룰 재사용) ───────────
+feasibility_constraints_ref: b200/search-spaces/b3_parallelism.yaml#feasibility_constraints
+
+
+# ─────────── Pruner 권고 ───────────
+default_pruner:
+  type: anova_then_rf_importance
+  freeze_threshold_p_value: 0.01
+  drop_threshold_importance: 0.05
+  rerun_interval_trials: 30
+  # 30 trial 마다 axis importance 재평가 → 효과 없는 micro 는 profile env_locked 로 승격
+
+
+# ─────────── Multi-objective (NSGA-II) ───────────
+default_objectives:
+  - {metric: "throughput_tok.avg", workload: "medium", direction: maximize}
+  - {metric: "ttft.p99", workload: "short", direction: minimize}
+  - {metric: "cost_per_token", workload: "medium", direction: minimize}
+  - {metric: "energy_per_token", workload: "medium", direction: minimize}

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from bench.runners.base import RequestRow
-from bench.visualization import plot_ttft_vs_input_len, plot_ttft_vs_turn, render_run_report
+from lmtune.runners.base import RequestRow
+from lmtune.visualization import plot_ttft_vs_input_len, plot_ttft_vs_turn, render_run_report
 
 
 def _make_turn_rows(n_conv=3, n_turn=5):

@@ -1,4 +1,4 @@
-apiVersion: bench/v1alpha1
+apiVersion: lmtune/v1alpha1
 slug: research-prefix-cache-effect
 name: "Prefix caching 효과 정량화 (Cost of Dynamic Reasoning 51.7% 절감)"
 stage: 2

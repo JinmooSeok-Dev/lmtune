@@ -21,7 +21,6 @@ Caveats:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -51,9 +50,7 @@ def _pick_continuous(trials: list[dict], axes_spec: list[dict]) -> list[dict]:
     operates on hyperbox domains."""
     out = []
     for a in axes_spec:
-        if a.get("kind") in ("float", "log_uniform"):
-            out.append(a)
-        elif a.get("kind") == "int" and a.get("low") is not None and a.get("high") is not None:
+        if a.get("kind") in ("float", "log_uniform") or a.get("kind") == "int" and a.get("low") is not None and a.get("high") is not None:
             out.append(a)
     return out
 

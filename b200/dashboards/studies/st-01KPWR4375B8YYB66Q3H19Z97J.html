@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>s5f1-continuous-v2 — bench autotuner</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5">
+    <div class="flex items-center gap-3 text-sm text-slate-500 mb-2">
+      <a href="../index.html" class="text-blue-600 hover:underline">← all studies</a>
+      <span class="text-slate-300">/</span>
+      <a href="../compare.html" class="text-blue-600 hover:underline">compare</a>
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight">s5f1-continuous-v2</h1>
+    <div class="text-slate-500 text-sm mt-1 font-mono">st-01KPWR4375B8YYB66Q3H19Z97J</div>
+    <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+      <div><span class="text-slate-400">strategy</span> <span class="font-mono">tpe</span></div>
+      <div><span class="text-slate-400">model</span> ?</div>
+      <div><span class="text-slate-400">HW</span> RTX-local</div>
+      <div><span class="text-slate-400">status</span> <span class="font-mono">completed</span></div>
+      <div><span class="text-slate-400">objective</span> <span class="font-mono">maximize total_score</span></div>
+      <div><span class="text-slate-400">trials</span> 8/8 (0 pruned)</div>
+      <div><span class="text-slate-400">top score</span> <span class="font-bold">750.7791</span></div>
+      <div><span class="text-slate-400">created</span> <span class="font-mono text-xs">2026-04-23 17:43:21.192862</span></div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Top-1 winning params</h2>
+    
+    <pre class="text-xs bg-slate-50 p-3 rounded overflow-auto">{
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.810284749316075,
+  "max_num_seqs": 64
+}</pre>
+    <p class="mt-3 text-xs text-slate-500">
+      Export this as a self-contained recipe: <code>bench search export st-01KPWR4375B8YYB66Q3H19Z97J --winner top-1 --out b200/results/st-01KPWR4375B8YYB66Q3H19Z97J/winner</code>
+    </p>
+    
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Trial scatter — choose any X / Y</h2>
+    <div class="flex flex-wrap gap-3 items-center mb-3 text-xs">
+      <label>X axis
+        <select id="x-axis" class="ml-1 border border-slate-300 rounded px-2 py-1 font-mono"></select>
+      </label>
+      <label>Y axis
+        <select id="y-axis" class="ml-1 border border-slate-300 rounded px-2 py-1 font-mono"></select>
+      </label>
+      <span class="text-slate-400">
+        Color = trial sequence (lighter → newer).
+        Hover for trial_id.
+      </span>
+    </div>
+    <div id="tput-empty" class="hidden text-sm text-slate-500 bg-amber-50 border border-amber-200 rounded p-3">
+      <strong>차트 데이터 없음.</strong> 이 study 는 (1) completed trial 이 없거나 (2) trial_metrics 에
+      X·Y 측정값이 기록되지 않았습니다. <code>bench search status st-01KPWR4375B8YYB66Q3H19Z97J</code> 로 trial
+      상태를 확인해 보세요.
+    </div>
+    <canvas id="throughput-vs-ttft" width="800" height="380"></canvas>
+  </section>
+
+  
+  
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Top-1 metrics — per workload</h2>
+    <p class="text-xs text-slate-500 mb-3">winner (seq=6) 의 모든 trial_metric (workload 별).</p>
+    <div class="overflow-auto">
+      <table class="text-xs">
+        <thead class="bg-slate-100 text-slate-700">
+          <tr>
+            <th class="text-left p-2">metric.workload</th>
+            <th class="text-right p-2">value</th>
+          </tr>
+        </thead>
+        <tbody>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">cv_throughput.short</td>
+            <td class="p-2 text-right font-mono">0.01089</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">e2e_p99.short</td>
+            <td class="p-2 text-right font-mono">1.325</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">score.aggregate</td>
+            <td class="p-2 text-right font-mono">750.8</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">score.short</td>
+            <td class="p-2 text-right font-mono">750.8</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">throughput_tok_avg.short</td>
+            <td class="p-2 text-right font-mono">808.8</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">ttft_p99.short</td>
+            <td class="p-2 text-right font-mono">71.78</td>
+          </tr>
+        
+        </tbody>
+      </table>
+    </div>
+  </section>
+  
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Score over trials</h2>
+    <div id="score-empty" class="hidden text-sm text-slate-500 bg-amber-50 border border-amber-200 rounded p-3">
+      <strong>점수 데이터 없음.</strong> completed trial 이 없거나 score 가 기록되지 않은 study 입니다.
+    </div>
+    <canvas id="score-trace" width="800" height="280"></canvas>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Trial table</h2>
+    <div class="overflow-auto">
+      <table class="text-xs w-full">
+        <thead class="bg-slate-100 text-slate-700">
+          <tr>
+            <th class="text-left p-2">seq</th>
+            <th class="text-left p-2">trial_id</th>
+            <th class="text-left p-2">status</th>
+            <th class="text-right p-2">score</th>
+            <th class="text-right p-2">throughput tok/s</th>
+            <th class="text-right p-2">ttft p99 (ms)</th>
+            <th class="text-right p-2">e2e p99 (s)</th>
+            <th class="text-right p-2">CV</th>
+            <th class="text-left p-2">params</th>
+          </tr>
+        </thead>
+        <tbody>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">1</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWR4…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">745.311</td>
+            <td class="p-2 text-right font-mono">807.9</td>
+            <td class="p-2 text-right font-mono">78</td>
+            <td class="p-2 text-right font-mono">1.33</td>
+            <td class="p-2 text-right font-mono">0.008</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_prefix_caching": true, "gpu_memory_utilization": 0.8306966219672238, "max_num_seqs": 64}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">2</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWR8…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">749.312</td>
+            <td class="p-2 text-right font-mono">809.3</td>
+            <td class="p-2 text-right font-mono">74</td>
+            <td class="p-2 text-right font-mono">1.33</td>
+            <td class="p-2 text-right font-mono">0.011</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_prefix_caching": false, "gpu_memory_utilization": 0.8785601761864359, "max_num_seqs": 32}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">3</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWRC…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">743.865</td>
+            <td class="p-2 text-right font-mono">810.4</td>
+            <td class="p-2 text-right font-mono">82</td>
+            <td class="p-2 text-right font-mono">1.33</td>
+            <td class="p-2 text-right font-mono">0.014</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_prefix_caching": false, "gpu_memory_utilization": 0.8685306328780179, "max_num_seqs": 32}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">4</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWRH…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">748.564</td>
+            <td class="p-2 text-right font-mono">809.0</td>
+            <td class="p-2 text-right font-mono">75</td>
+            <td class="p-2 text-right font-mono">1.33</td>
+            <td class="p-2 text-right font-mono">0.011</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_prefix_caching": false, "gpu_memory_utilization": 0.8578789535475417, "max_num_seqs": 32}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">5</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWRN…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">736.853</td>
+            <td class="p-2 text-right font-mono">808.7</td>
+            <td class="p-2 text-right font-mono">89</td>
+            <td class="p-2 text-right font-mono">1.33</td>
+            <td class="p-2 text-right font-mono">0.010</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_prefix_caching": false, "gpu_memory_utilization": 0.8952876714710873, "max_num_seqs": 128}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">6</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWRS…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">750.779</td>
+            <td class="p-2 text-right font-mono">808.8</td>
+            <td class="p-2 text-right font-mono">72</td>
+            <td class="p-2 text-right font-mono">1.33</td>
+            <td class="p-2 text-right font-mono">0.011</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_prefix_caching": false, "gpu_memory_utilization": 0.810284749316075, "max_num_seqs": 64}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">7</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWRY…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">739.536</td>
+            <td class="p-2 text-right font-mono">808.0</td>
+            <td class="p-2 text-right font-mono">85</td>
+            <td class="p-2 text-right font-mono">1.33</td>
+            <td class="p-2 text-right font-mono">0.007</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_prefix_caching": false, "gpu_memory_utilization": 0.8701371136609086, "max_num_seqs": 64}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">8</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWS2…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">742.386</td>
+            <td class="p-2 text-right font-mono">810.6</td>
+            <td class="p-2 text-right font-mono">84</td>
+            <td class="p-2 text-right font-mono">1.32</td>
+            <td class="p-2 text-right font-mono">0.013</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_prefix_caching": true, "gpu_memory_utilization": 0.8120433660127293, "max_num_seqs": 64}</td>
+          </tr>
+        
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="bg-white border border-slate-200 rounded-lg p-5">
+    <summary class="cursor-pointer text-sm font-semibold text-slate-700">Raw study JSON</summary>
+    <pre class="mt-3 text-xs bg-slate-50 p-3 rounded overflow-auto">{
+  &#34;study_id&#34;: &#34;st-01KPWR4375B8YYB66Q3H19Z97J&#34;,
+  &#34;name&#34;: &#34;s5f1-continuous-v2&#34;,
+  &#34;strategy&#34;: &#34;tpe&#34;,
+  &#34;direction&#34;: &#34;maximize&#34;,
+  &#34;status&#34;: &#34;completed&#34;,
+  &#34;n_trials&#34;: 8,
+  &#34;n_completed&#34;: 8,
+  &#34;top_score&#34;: 750.779068721573,
+  &#34;endpoint_slug&#34;: &#34;local-vllm-autotune&#34;,
+  &#34;profile_slugs&#34;: [
+    &#34;short&#34;
+  ],
+  &#34;created_at&#34;: &#34;2026-04-23 17:43:21.192862&#34;,
+  &#34;finished_at&#34;: &#34;2026-04-23 18:02:24.292155&#34;,
+  &#34;top_params&#34;: {
+    &#34;enable_prefix_caching&#34;: false,
+    &#34;gpu_memory_utilization&#34;: 0.810284749316075,
+    &#34;max_num_seqs&#34;: 64
+  },
+  &#34;n_pruned&#34;: 0,
+  &#34;metric_name&#34;: &#34;total_score&#34;,
+  &#34;model&#34;: null,
+  &#34;hw&#34;: &#34;RTX-local&#34;,
+  &#34;framework&#34;: &#34;vllm&#34;,
+  &#34;workload&#34;: &#34;short&#34;,
+  &#34;points&#34;: [
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWR437FMJFVNHQ6BZQRKC3D&#34;,
+      &#34;seq&#34;: 1,
+      &#34;score&#34;: 745.3109541009555,
+      &#34;params&#34;: {
+        &#34;enable_prefix_caching&#34;: true,
+        &#34;gpu_memory_utilization&#34;: 0.8306966219672238,
+        &#34;max_num_seqs&#34;: 64
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 745.3109541009555,
+        &#34;score.aggregate&#34;: 745.3109541009555,
+        &#34;ttft_p99.short&#34;: 77.52585411071777,
+        &#34;throughput_tok_avg.short&#34;: 807.9477971520404,
+        &#34;e2e_p99.short&#34;: 1.3317112922668457,
+        &#34;cv_throughput.short&#34;: 0.00820288394761711
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 807.9477971520404,
+      &#34;ttft_p99&#34;: 77.52585411071777,
+      &#34;e2e_p99&#34;: 1.3317112922668457,
+      &#34;cv&#34;: 0.00820288394761711
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWR8MVYYD95YYANYF2AJHCY&#34;,
+      &#34;seq&#34;: 2,
+      &#34;score&#34;: 749.3122657647534,
+      &#34;params&#34;: {
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.8785601761864359,
+        &#34;max_num_seqs&#34;: 32
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 749.3122657647534,
+        &#34;score.aggregate&#34;: 749.3122657647534,
+        &#34;ttft_p99.short&#34;: 74.08332824707031,
+        &#34;throughput_tok_avg.short&#34;: 809.2653352338588,
+        &#34;e2e_p99.short&#34;: 1.3278205394744873,
+        &#34;cv_throughput.short&#34;: 0.011199566646758261
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 809.2653352338588,
+      &#34;ttft_p99&#34;: 74.08332824707031,
+      &#34;e2e_p99&#34;: 1.3278205394744873,
+      &#34;cv&#34;: 0.011199566646758261
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWRCZH7B8Y4Q5M73NT1J3WK&#34;,
+      &#34;seq&#34;: 3,
+      &#34;score&#34;: 743.8648422551489,
+      &#34;params&#34;: {
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.8685306328780179,
+        &#34;max_num_seqs&#34;: 32
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 743.8648422551489,
+        &#34;score.aggregate&#34;: 743.8648422551489,
+        &#34;ttft_p99.short&#34;: 82.09109306335449,
+        &#34;throughput_tok_avg.short&#34;: 810.3907006825578,
+        &#34;e2e_p99.short&#34;: 1.3253277937571208,
+        &#34;cv_throughput.short&#34;: 0.013688075551920715
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 810.3907006825578,
+      &#34;ttft_p99&#34;: 82.09109306335449,
+      &#34;e2e_p99&#34;: 1.3253277937571208,
+      &#34;cv&#34;: 0.013688075551920715
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWRHAMX3BYYBPYTH6Z0DX2Q&#34;,
+      &#34;seq&#34;: 4,
+      &#34;score&#34;: 748.5640388195255,
+      &#34;params&#34;: {
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.8578789535475417,
+        &#34;max_num_seqs&#34;: 32
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 748.5640388195255,
+        &#34;score.aggregate&#34;: 748.5640388195255,
+        &#34;ttft_p99.short&#34;: 74.72705841064453,
+        &#34;throughput_tok_avg.short&#34;: 809.0197012934428,
+        &#34;e2e_p99.short&#34;: 1.3282114664713542,
+        &#34;cv_throughput.short&#34;: 0.01057382451284315
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 809.0197012934428,
+      &#34;ttft_p99&#34;: 74.72705841064453,
+      &#34;e2e_p99&#34;: 1.3282114664713542,
+      &#34;cv&#34;: 0.01057382451284315
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWRNKSDB4X83SDZQWT6MCW1&#34;,
+      &#34;seq&#34;: 5,
+      &#34;score&#34;: 736.8530928310563,
+      &#34;params&#34;: {
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.8952876714710873,
+        &#34;max_num_seqs&#34;: 128
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 736.8530928310563,
+        &#34;score.aggregate&#34;: 736.8530928310563,
+        &#34;ttft_p99.short&#34;: 88.78636360168457,
+        &#34;throughput_tok_avg.short&#34;: 808.6502038573076,
+        &#34;e2e_p99.short&#34;: 1.3314568201700847,
+        &#34;cv_throughput.short&#34;: 0.009646792486702803
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 808.6502038573076,
+      &#34;ttft_p99&#34;: 88.78636360168457,
+      &#34;e2e_p99&#34;: 1.3314568201700847,
+      &#34;cv&#34;: 0.009646792486702803
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWRSY2DWK5AKZ8RNH8HYJ2T&#34;,
+      &#34;seq&#34;: 6,
+      &#34;score&#34;: 750.779068721573,
+      &#34;params&#34;: {
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.810284749316075,
+        &#34;max_num_seqs&#34;: 64
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 750.779068721573,
+        &#34;score.aggregate&#34;: 750.779068721573,
+        &#34;ttft_p99.short&#34;: 71.7763106028239,
+        &#34;throughput_tok_avg.short&#34;: 808.834203756594,
+        &#34;e2e_p99.short&#34;: 1.32534925142924,
+        &#34;cv_throughput.short&#34;: 0.010889720567131146
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 808.834203756594,
+      &#34;ttft_p99&#34;: 71.7763106028239,
+      &#34;e2e_p99&#34;: 1.32534925142924,
+      &#34;cv&#34;: 0.010889720567131146
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWRY9KFZNPMYNN9HEWFCQHE&#34;,
+      &#34;seq&#34;: 7,
+      &#34;score&#34;: 739.535557829542,
+      &#34;params&#34;: {
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.8701371136609086,
+        &#34;max_num_seqs&#34;: 64
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 739.535557829542,
+        &#34;score.aggregate&#34;: 739.535557829542,
+        &#34;ttft_p99.short&#34;: 84.76662635803223,
+        &#34;throughput_tok_avg.short&#34;: 808.029491851597,
+        &#34;e2e_p99.short&#34;: 1.3266793092091878,
+        &#34;cv_throughput.short&#34;: 0.006813391689503014
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 808.029491851597,
+      &#34;ttft_p99&#34;: 84.76662635803223,
+      &#34;e2e_p99&#34;: 1.3266793092091878,
+      &#34;cv&#34;: 0.006813391689503014
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWS2MKM2G2387JTGVG69GHZ&#34;,
+      &#34;seq&#34;: 8,
+      &#34;score&#34;: 742.3857790761072,
+      &#34;params&#34;: {
+        &#34;enable_prefix_caching&#34;: true,
+        &#34;gpu_memory_utilization&#34;: 0.8120433660127293,
+        &#34;max_num_seqs&#34;: 64
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 742.3857790761072,
+        &#34;score.aggregate&#34;: 742.3857790761072,
+        &#34;ttft_p99.short&#34;: 84.10867055257161,
+        &#34;throughput_tok_avg.short&#34;: 810.5609860112992,
+        &#34;e2e_p99.short&#34;: 1.3177657922108967,
+        &#34;cv_throughput.short&#34;: 0.013330354047765131
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 810.5609860112992,
+      &#34;ttft_p99&#34;: 84.10867055257161,
+      &#34;e2e_p99&#34;: 1.3177657922108967,
+      &#34;cv&#34;: 0.013330354047765131
+    }
+  ]
+}</pre>
+  </details>
+
+</main>
+
+<footer class="max-w-7xl mx-auto px-6 py-6 text-xs text-slate-400">
+  Generated by <code>bench dashboard build</code>. JSON: <a href="../data/studies_index.json" class="hover:underline">studies_index</a> · <a href="../data/throughput_vs_latency.json" class="hover:underline">tvl</a> · <a href="../data/perf_history.json" class="hover:underline">perf_history</a>
+</footer>
+
+<script>
+const STUDY = {
+  "study_id": "st-01KPWR4375B8YYB66Q3H19Z97J",
+  "name": "s5f1-continuous-v2",
+  "strategy": "tpe",
+  "direction": "maximize",
+  "status": "completed",
+  "n_trials": 8,
+  "n_completed": 8,
+  "top_score": 750.779068721573,
+  "endpoint_slug": "local-vllm-autotune",
+  "profile_slugs": [
+    "short"
+  ],
+  "created_at": "2026-04-23 17:43:21.192862",
+  "finished_at": "2026-04-23 18:02:24.292155",
+  "top_params": {
+    "enable_prefix_caching": false,
+    "gpu_memory_utilization": 0.810284749316075,
+    "max_num_seqs": 64
+  },
+  "n_pruned": 0,
+  "metric_name": "total_score",
+  "model": null,
+  "hw": "RTX-local",
+  "framework": "vllm",
+  "workload": "short",
+  "points": [
+    {
+      "trial_id": "tr-01KPWR437FMJFVNHQ6BZQRKC3D",
+      "seq": 1,
+      "score": 745.3109541009555,
+      "params": {
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.8306966219672238,
+        "max_num_seqs": 64
+      },
+      "metrics": {
+        "score.short": 745.3109541009555,
+        "score.aggregate": 745.3109541009555,
+        "ttft_p99.short": 77.52585411071777,
+        "throughput_tok_avg.short": 807.9477971520404,
+        "e2e_p99.short": 1.3317112922668457,
+        "cv_throughput.short": 0.00820288394761711
+      },
+      "status": "completed",
+      "throughput_avg": 807.9477971520404,
+      "ttft_p99": 77.52585411071777,
+      "e2e_p99": 1.3317112922668457,
+      "cv": 0.00820288394761711
+    },
+    {
+      "trial_id": "tr-01KPWR8MVYYD95YYANYF2AJHCY",
+      "seq": 2,
+      "score": 749.3122657647534,
+      "params": {
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.8785601761864359,
+        "max_num_seqs": 32
+      },
+      "metrics": {
+        "score.short": 749.3122657647534,
+        "score.aggregate": 749.3122657647534,
+        "ttft_p99.short": 74.08332824707031,
+        "throughput_tok_avg.short": 809.2653352338588,
+        "e2e_p99.short": 1.3278205394744873,
+        "cv_throughput.short": 0.011199566646758261
+      },
+      "status": "completed",
+      "throughput_avg": 809.2653352338588,
+      "ttft_p99": 74.08332824707031,
+      "e2e_p99": 1.3278205394744873,
+      "cv": 0.011199566646758261
+    },
+    {
+      "trial_id": "tr-01KPWRCZH7B8Y4Q5M73NT1J3WK",
+      "seq": 3,
+      "score": 743.8648422551489,
+      "params": {
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.8685306328780179,
+        "max_num_seqs": 32
+      },
+      "metrics": {
+        "score.short": 743.8648422551489,
+        "score.aggregate": 743.8648422551489,
+        "ttft_p99.short": 82.09109306335449,
+        "throughput_tok_avg.short": 810.3907006825578,
+        "e2e_p99.short": 1.3253277937571208,
+        "cv_throughput.short": 0.013688075551920715
+      },
+      "status": "completed",
+      "throughput_avg": 810.3907006825578,
+      "ttft_p99": 82.09109306335449,
+      "e2e_p99": 1.3253277937571208,
+      "cv": 0.013688075551920715
+    },
+    {
+      "trial_id": "tr-01KPWRHAMX3BYYBPYTH6Z0DX2Q",
+      "seq": 4,
+      "score": 748.5640388195255,
+      "params": {
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.8578789535475417,
+        "max_num_seqs": 32
+      },
+      "metrics": {
+        "score.short": 748.5640388195255,
+        "score.aggregate": 748.5640388195255,
+        "ttft_p99.short": 74.72705841064453,
+        "throughput_tok_avg.short": 809.0197012934428,
+        "e2e_p99.short": 1.3282114664713542,
+        "cv_throughput.short": 0.01057382451284315
+      },
+      "status": "completed",
+      "throughput_avg": 809.0197012934428,
+      "ttft_p99": 74.72705841064453,
+      "e2e_p99": 1.3282114664713542,
+      "cv": 0.01057382451284315
+    },
+    {
+      "trial_id": "tr-01KPWRNKSDB4X83SDZQWT6MCW1",
+      "seq": 5,
+      "score": 736.8530928310563,
+      "params": {
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.8952876714710873,
+        "max_num_seqs": 128
+      },
+      "metrics": {
+        "score.short": 736.8530928310563,
+        "score.aggregate": 736.8530928310563,
+        "ttft_p99.short": 88.78636360168457,
+        "throughput_tok_avg.short": 808.6502038573076,
+        "e2e_p99.short": 1.3314568201700847,
+        "cv_throughput.short": 0.009646792486702803
+      },
+      "status": "completed",
+      "throughput_avg": 808.6502038573076,
+      "ttft_p99": 88.78636360168457,
+      "e2e_p99": 1.3314568201700847,
+      "cv": 0.009646792486702803
+    },
+    {
+      "trial_id": "tr-01KPWRSY2DWK5AKZ8RNH8HYJ2T",
+      "seq": 6,
+      "score": 750.779068721573,
+      "params": {
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.810284749316075,
+        "max_num_seqs": 64
+      },
+      "metrics": {
+        "score.short": 750.779068721573,
+        "score.aggregate": 750.779068721573,
+        "ttft_p99.short": 71.7763106028239,
+        "throughput_tok_avg.short": 808.834203756594,
+        "e2e_p99.short": 1.32534925142924,
+        "cv_throughput.short": 0.010889720567131146
+      },
+      "status": "completed",
+      "throughput_avg": 808.834203756594,
+      "ttft_p99": 71.7763106028239,
+      "e2e_p99": 1.32534925142924,
+      "cv": 0.010889720567131146
+    },
+    {
+      "trial_id": "tr-01KPWRY9KFZNPMYNN9HEWFCQHE",
+      "seq": 7,
+      "score": 739.535557829542,
+      "params": {
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.8701371136609086,
+        "max_num_seqs": 64
+      },
+      "metrics": {
+        "score.short": 739.535557829542,
+        "score.aggregate": 739.535557829542,
+        "ttft_p99.short": 84.76662635803223,
+        "throughput_tok_avg.short": 808.029491851597,
+        "e2e_p99.short": 1.3266793092091878,
+        "cv_throughput.short": 0.006813391689503014
+      },
+      "status": "completed",
+      "throughput_avg": 808.029491851597,
+      "ttft_p99": 84.76662635803223,
+      "e2e_p99": 1.3266793092091878,
+      "cv": 0.006813391689503014
+    },
+    {
+      "trial_id": "tr-01KPWS2MKM2G2387JTGVG69GHZ",
+      "seq": 8,
+      "score": 742.3857790761072,
+      "params": {
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.8120433660127293,
+        "max_num_seqs": 64
+      },
+      "metrics": {
+        "score.short": 742.3857790761072,
+        "score.aggregate": 742.3857790761072,
+        "ttft_p99.short": 84.10867055257161,
+        "throughput_tok_avg.short": 810.5609860112992,
+        "e2e_p99.short": 1.3177657922108967,
+        "cv_throughput.short": 0.013330354047765131
+      },
+      "status": "completed",
+      "throughput_avg": 810.5609860112992,
+      "ttft_p99": 84.10867055257161,
+      "e2e_p99": 1.3177657922108967,
+      "cv": 0.013330354047765131
+    }
+  ]
+};
+
+// Configurable scatter: X / Y axes pulled from any metric.workload key
+// in TrialPoint.metrics.
+
+function collectMetricKeys() {
+  const keys = new Set();
+  STUDY.points.forEach(p => {
+    Object.keys(p.metrics || {}).forEach(k => keys.add(k));
+  });
+  return [...keys].sort();
+}
+
+function fillSelect(id, options, defaultKey) {
+  const sel = document.getElementById(id);
+  options.forEach(k => {
+    const o = document.createElement('option');
+    o.value = k;
+    o.textContent = k;
+    if (k === defaultKey) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function pickDefault(keys, candidates) {
+  for (const c of candidates) {
+    const hit = keys.find(k => k.startsWith(c + '.'));
+    if (hit) return hit;
+  }
+  return keys[0];
+}
+
+function getValue(p, key) {
+  return p.metrics ? p.metrics[key] : undefined;
+}
+
+let chart;
+function render() {
+  const xKey = document.getElementById('x-axis').value;
+  const yKey = document.getElementById('y-axis').value;
+
+  const points = STUDY.points
+    .filter(p => getValue(p, xKey) != null && getValue(p, yKey) != null)
+    .map(p => ({x: getValue(p, xKey), y: getValue(p, yKey), seq: p.seq, trial_id: p.trial_id}));
+
+  if (points.length === 0) {
+    document.getElementById('tput-empty').classList.remove('hidden');
+    document.getElementById('throughput-vs-ttft').classList.add('hidden');
+    if (chart) { chart.destroy(); chart = null; }
+    return;
+  }
+  document.getElementById('tput-empty').classList.add('hidden');
+  document.getElementById('throughput-vs-ttft').classList.remove('hidden');
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('throughput-vs-ttft'), {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'trials',
+        data: points,
+        backgroundColor: points.map((p, i) => `hsla(220, 80%, ${30 + Math.round(50 * i / Math.max(1, points.length - 1))}%, 0.75)`),
+        pointRadius: 6,
+      }],
+    },
+    options: {
+      scales: {
+        x: {title: {display: true, text: xKey}},
+        y: {title: {display: true, text: yKey}},
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = ctx.raw;
+              return `seq=${p.seq} trial=${p.trial_id.slice(0, 10)}… ${xKey}=${p.x.toFixed(3)} ${yKey}=${p.y.toFixed(3)}`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+const allKeys = collectMetricKeys();
+if (allKeys.length === 0) {
+  document.getElementById('tput-empty').classList.remove('hidden');
+  document.getElementById('throughput-vs-ttft').classList.add('hidden');
+} else {
+  // Defaults: prefer ttft_p99 for X (lower=better), throughput for Y (higher=better)
+  const xDefault = pickDefault(allKeys, ['ttft_p99', 'e2e_p99', 'tpot_p99']);
+  const yDefault = pickDefault(allKeys, ['throughput_tok_avg', 'throughput_avg', 'throughput_tok', 'score']);
+  fillSelect('x-axis', allKeys, xDefault);
+  fillSelect('y-axis', allKeys, yDefault);
+  document.getElementById('x-axis').addEventListener('change', render);
+  document.getElementById('y-axis').addEventListener('change', render);
+  render();
+}
+
+// line: score over trials
+const trace = STUDY.points
+  .filter(p => p.score != null)
+  .sort((a, b) => a.seq - b.seq)
+  .map(p => ({x: p.seq, y: p.score}));
+
+if (trace.length === 0) {
+  document.getElementById('score-empty').classList.remove('hidden');
+  document.getElementById('score-trace').classList.add('hidden');
+} else {
+  // running best
+  const direction = STUDY.direction;
+  const better = (a, b) => direction === 'maximize' ? a > b : a < b;
+  let best = trace[0].y;
+  const running = trace.map(p => {
+    if (better(p.y, best)) best = p.y;
+    return {x: p.x, y: best};
+  });
+  new Chart(document.getElementById('score-trace'), {
+    type: 'line',
+    data: {
+      datasets: [
+        {label: 'score', data: trace, showLine: false, pointRadius: 4, pointBackgroundColor: 'rgba(100,116,139,0.6)'},
+        {label: 'running best', data: running, borderColor: 'rgb(37,99,235)', backgroundColor: 'transparent', stepped: true, pointRadius: 0},
+      ],
+    },
+    options: {
+      scales: {
+        x: {title: {display: true, text: 'trial seq'}, type: 'linear'},
+        y: {title: {display: true, text: STUDY.metric_name}},
+      },
+    }
+  });
+}
+</script>
+</body>
+</html>

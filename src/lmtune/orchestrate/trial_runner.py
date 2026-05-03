@@ -7,7 +7,7 @@ Two invocation modes:
    ENDPOINT_PATH, PROFILE_PATHS, REPEATS from env and prints the resulting
    TrialResult as JSON on stdout for the backend to harvest. (Phase S4)
 
-Both paths build a `BenchScoreObjective` and call it once. If the trial
+Both paths build a `ScoreObjective` and call it once. If the trial
 includes parallelism axes (tp/pp/dp/ep), the caller must have materialized
 an endpoint YAML before submission — this runner does not mutate YAMLs.
 """
@@ -18,18 +18,17 @@ import json
 import os
 import sys
 import traceback
-from pathlib import Path
 
-from bench.orchestrate.backend import TrialPayload, TrialResult
-from bench.search.objective import BenchScoreObjective
+from lmtune.orchestrate.backend import TrialPayload, TrialResult
+from lmtune.search.objective import ScoreObjective
 
 
 def run_trial_locally(payload: TrialPayload) -> TrialResult:
     """ProcessPool entrypoint. Pure function: no DuckDB writes, no side effects
-    besides running bench runs via BenchScoreObjective (which spawns subprocesses).
+    besides running bench runs via ScoreObjective (which spawns subprocesses).
     """
     try:
-        obj = BenchScoreObjective(
+        obj = ScoreObjective(
             endpoint_path=payload.endpoint_path,
             profile_paths=payload.profile_paths,
             repeats=payload.repeats,

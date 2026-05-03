@@ -2,7 +2,7 @@
 
 For each distinct `deployment.engine_args` ever recorded against a given
 (endpoint_slug, profile_slug), we compute a composite score analogous to
-`bench_score.py`:
+`lmtune_score.py`:
 
     penalty = max(0, 1 - ttft_p99 / (2 * ttft_slo_ms))
     score   = throughput_tok_avg * penalty
@@ -22,8 +22,7 @@ from typing import Any
 
 import duckdb
 
-from bench.search.space import Axis, SearchSpace
-
+from lmtune.search.space import Axis, SearchSpace
 
 log = logging.getLogger(__name__)
 
@@ -144,7 +143,7 @@ def warmstart_from_archive(
 
     # Aggregate per engine_args: sum per-workload composite scores.
     bucket: dict[str, dict] = {}
-    for ea_text, prof, thr, ttft, e2e, n in rows:
+    for ea_text, _prof, thr, ttft, e2e, n in rows:
         if not ea_text:
             continue
         ea = json.loads(ea_text) if isinstance(ea_text, str) else ea_text

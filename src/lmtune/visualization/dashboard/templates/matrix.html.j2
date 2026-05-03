@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Model × HW matrix — bench autotuner</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5">
+    <div class="text-sm text-slate-500 mb-2">
+      <a href="index.html" class="text-blue-600 hover:underline">← all studies</a>
+      <span class="text-slate-300 mx-2">/</span>
+      <a href="compare.html" class="text-blue-600 hover:underline">compare</a>
+      <span class="text-slate-300 mx-2">/</span>
+      <a href="spaces.html" class="text-blue-600 hover:underline">spaces</a>
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight">Model × HW matrix</h1>
+    <p class="text-slate-500 text-sm mt-1">
+      InferenceX 스타일 — 모델(row) × 하드웨어(column). 각 셀 = 해당 (모델, HW) 의 <strong>best-score study</strong>.
+      셀 클릭 시 해당 study 페이지로 이동. 색상 = 메트릭 정규화 (top metric = 진한 색).
+    </p>
+    <div class="mt-3 flex flex-wrap gap-2 items-center text-sm">
+      <span class="text-slate-500">Cell metric:</span>
+      <button data-metric="score" class="metric-toggle bg-blue-600 text-white px-3 py-1 rounded text-xs">score</button>
+      <button data-metric="throughput" class="metric-toggle bg-slate-200 text-slate-700 px-3 py-1 rounded text-xs">throughput</button>
+      <button data-metric="ttft_p99" class="metric-toggle bg-slate-200 text-slate-700 px-3 py-1 rounded text-xs">TTFT p99 (lower better)</button>
+      <span class="text-slate-300 ml-2">|</span>
+      <span class="text-slate-500 ml-1">{{ matrix.n_filled }} / {{ matrix.n_total }} cells filled · {{ n_studies }} total studies</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+{% if matrix.n_filled == 0 %}
+<section class="bg-white border border-slate-200 rounded-lg p-8 text-center">
+  <p class="text-slate-500">아직 모델 × HW 매트릭스를 채울 study 가 없습니다.
+    <code>lmtune search start</code> 로 study 를 추가하세요.</p>
+</section>
+{% else %}
+
+<section class="bg-white border border-slate-200 rounded-lg p-5">
+  <div class="overflow-auto">
+    <table id="matrix-table" class="text-xs border-collapse">
+      <thead>
+        <tr>
+          <th class="sticky left-0 bg-slate-100 text-slate-700 p-2 text-left border border-slate-200">model \ HW</th>
+          {% for hw in matrix.hardware %}
+          <th class="bg-slate-100 text-slate-700 p-2 text-center border border-slate-200" style="min-width:160px">{{ hw }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+      {% for model in matrix.models %}
+        <tr>
+          <td class="sticky left-0 bg-white p-2 border border-slate-200 font-semibold text-slate-700">{{ model }}</td>
+          {% for hw in matrix.hardware %}
+            {% set cell = matrix.cells[model][hw] if matrix.cells.get(model, {}).get(hw) else None %}
+            <td class="p-0 border border-slate-200 align-top matrix-cell"
+                data-score="{% if cell and cell.score is not none %}{{ cell.score }}{% endif %}"
+                data-tput="{% if cell and cell.throughput is not none %}{{ cell.throughput }}{% endif %}"
+                data-ttft="{% if cell and cell.ttft_p99 is not none %}{{ cell.ttft_p99 }}{% endif %}">
+              {% if cell %}
+              <a href="studies/{{ cell.study_id }}.html" class="block p-2 hover:bg-slate-50">
+                <div class="font-mono font-semibold text-slate-900 cell-headline">{% if cell.score is not none %}{{ "%.2f"|format(cell.score) }}{% else %}—{% endif %}</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">
+                  {% if cell.throughput is not none %}<span class="font-mono">tput={{ "%.0f"|format(cell.throughput) }}</span>{% endif %}
+                  {% if cell.ttft_p99 is not none %}<span class="font-mono ml-1">ttft={{ "%.0f"|format(cell.ttft_p99) }}ms</span>{% endif %}
+                </div>
+                <div class="text-[10px] text-slate-400 mt-0.5">
+                  <span class="font-mono">{{ cell.framework }}</span>
+                  <span class="font-mono ml-1">{{ cell.strategy }}</span>
+                  <span class="ml-1">{{ cell.n_completed }} trials</span>
+                </div>
+              </a>
+              {% else %}
+              <div class="p-3 text-center text-slate-300 font-mono">—</div>
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="bg-white border border-slate-200 rounded-lg p-5">
+  <h2 class="text-sm font-semibold text-slate-700 mb-2">셀 색상 = 매트릭스 내 정규화</h2>
+  <p class="text-xs text-slate-500">
+    선택된 메트릭 기준 <strong>최고값 → 짙은 청록</strong> · <strong>최저값 → 옅음</strong>.
+    TTFT 같은 "낮을수록 좋은" 메트릭은 자동으로 반전됨.
+  </p>
+</section>
+
+{% endif %}
+
+</main>
+
+<footer class="max-w-7xl mx-auto px-6 py-6 text-xs text-slate-400">
+  Generated by <code>lmtune dashboard build</code> — InferenceX-app schema 호환 데이터.
+  Compatible JSON: <a href="data/throughput_vs_latency.json" class="hover:underline">tvl</a>.
+</footer>
+
+<script>
+const cells = document.querySelectorAll('.matrix-cell');
+let activeMetric = 'score';
+
+function paintCells(metric) {
+  // Collect non-null values
+  const vals = [];
+  cells.forEach(c => {
+    const v = parseFloat(c.dataset[metric === 'ttft_p99' ? 'ttft' :
+                                    metric === 'throughput' ? 'tput' : 'score']);
+    if (!isNaN(v)) vals.push(v);
+  });
+  if (vals.length === 0) return;
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const rng = (hi - lo) || 1;
+  const reverse = metric === 'ttft_p99';   // ttft: lower is better
+
+  cells.forEach(c => {
+    const raw = c.dataset[metric === 'ttft_p99' ? 'ttft' :
+                          metric === 'throughput' ? 'tput' : 'score'];
+    const v = parseFloat(raw);
+    if (isNaN(v)) {
+      c.style.background = '';
+      return;
+    }
+    let t = (v - lo) / rng;
+    if (reverse) t = 1 - t;
+    // Teal scale: 0 = pale, 1 = strong. Hue 175°.
+    const lightness = 95 - t * 45;   // 95% → 50%
+    c.style.background = `hsl(175, 60%, ${lightness}%)`;
+    // Update headline display number based on metric
+    const hl = c.querySelector('.cell-headline');
+    if (hl) {
+      if (metric === 'score') hl.textContent = isNaN(parseFloat(c.dataset.score)) ? '—' : parseFloat(c.dataset.score).toFixed(2);
+      else if (metric === 'throughput') hl.textContent = isNaN(parseFloat(c.dataset.tput)) ? '—' : parseFloat(c.dataset.tput).toFixed(0);
+      else hl.textContent = isNaN(parseFloat(c.dataset.ttft)) ? '—' : parseFloat(c.dataset.ttft).toFixed(0) + 'ms';
+    }
+  });
+}
+
+document.querySelectorAll('.metric-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeMetric = btn.dataset.metric;
+    document.querySelectorAll('.metric-toggle').forEach(b => {
+      b.classList.toggle('bg-blue-600', b === btn);
+      b.classList.toggle('text-white', b === btn);
+      b.classList.toggle('bg-slate-200', b !== btn);
+      b.classList.toggle('text-slate-700', b !== btn);
+    });
+    paintCells(activeMetric);
+  });
+});
+
+paintCells(activeMetric);
+</script>
+</body>
+</html>

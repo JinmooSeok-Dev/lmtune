@@ -7,10 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from bench.search import CallableObjective, SearchSpace, Study, StudyConfig
-from bench.search.space import Axis
-from bench.storage.duckdb_store import DuckDBStore
-
+from lmtune.search import CallableObjective, SearchSpace, Study, StudyConfig
+from lmtune.search.space import Axis
+from lmtune.storage.duckdb_store import DuckDBStore
 
 botorch = pytest.importorskip("optuna_integration")
 
@@ -23,7 +22,7 @@ def test_botorch_sampler_runs_on_continuous_space():
             Axis("y", "float", low=-2.0, high=2.0),
         ],
     )
-    store = DuckDBStore(Path(tempfile.mkdtemp()) / "bench.duckdb")
+    store = DuckDBStore(Path(tempfile.mkdtemp()) / "lmtune.duckdb")
     cfg = StudyConfig(name="gp-smoke", strategy="botorch", space=sp, seed=0)
     study = Study(cfg, store)
     ts = study.run(
@@ -38,7 +37,7 @@ def test_botorch_sampler_runs_on_continuous_space():
 
 def test_botorch_sampler_accepts_bo_alias():
     """'bo' and 'gp' should route to the same BoTorch sampler."""
-    from bench.search.samplers import make_sampler
+    from lmtune.search.samplers import make_sampler
 
     sp = SearchSpace(name="s", axes=[Axis("x", "float", low=0.0, high=1.0)])
     for alias in ("botorch", "gp", "bo"):

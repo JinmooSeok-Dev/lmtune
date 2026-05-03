@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>live-s2-tpe-12 — bench autotuner</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5">
+    <div class="flex items-center gap-3 text-sm text-slate-500 mb-2">
+      <a href="../index.html" class="text-blue-600 hover:underline">← all studies</a>
+      <span class="text-slate-300">/</span>
+      <a href="../compare.html" class="text-blue-600 hover:underline">compare</a>
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight">live-s2-tpe-12</h1>
+    <div class="text-slate-500 text-sm mt-1 font-mono">st-01KPWDDCTB9MPJRYA9Z4CFVYZX</div>
+    <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+      <div><span class="text-slate-400">strategy</span> <span class="font-mono">tpe</span></div>
+      <div><span class="text-slate-400">model</span> ?</div>
+      <div><span class="text-slate-400">HW</span> RTX-local</div>
+      <div><span class="text-slate-400">status</span> <span class="font-mono">completed</span></div>
+      <div><span class="text-slate-400">objective</span> <span class="font-mono">maximize total_score</span></div>
+      <div><span class="text-slate-400">trials</span> 12/12 (0 pruned)</div>
+      <div><span class="text-slate-400">top score</span> <span class="font-bold">775.9921</span></div>
+      <div><span class="text-slate-400">created</span> <span class="font-mono text-xs">2026-04-23 14:36:11.598997</span></div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Top-1 winning params</h2>
+    
+    <pre class="text-xs bg-slate-50 p-3 rounded overflow-auto">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.8,
+  "kv_cache_dtype": "auto",
+  "max_model_len": 8192,
+  "max_num_seqs": 128
+}</pre>
+    <p class="mt-3 text-xs text-slate-500">
+      Export this as a self-contained recipe: <code>bench search export st-01KPWDDCTB9MPJRYA9Z4CFVYZX --winner top-1 --out b200/results/st-01KPWDDCTB9MPJRYA9Z4CFVYZX/winner</code>
+    </p>
+    
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Trial scatter — choose any X / Y</h2>
+    <div class="flex flex-wrap gap-3 items-center mb-3 text-xs">
+      <label>X axis
+        <select id="x-axis" class="ml-1 border border-slate-300 rounded px-2 py-1 font-mono"></select>
+      </label>
+      <label>Y axis
+        <select id="y-axis" class="ml-1 border border-slate-300 rounded px-2 py-1 font-mono"></select>
+      </label>
+      <span class="text-slate-400">
+        Color = trial sequence (lighter → newer).
+        Hover for trial_id.
+      </span>
+    </div>
+    <div id="tput-empty" class="hidden text-sm text-slate-500 bg-amber-50 border border-amber-200 rounded p-3">
+      <strong>차트 데이터 없음.</strong> 이 study 는 (1) completed trial 이 없거나 (2) trial_metrics 에
+      X·Y 측정값이 기록되지 않았습니다. <code>bench search status st-01KPWDDCTB9MPJRYA9Z4CFVYZX</code> 로 trial
+      상태를 확인해 보세요.
+    </div>
+    <canvas id="throughput-vs-ttft" width="800" height="380"></canvas>
+  </section>
+
+  
+  
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Top-1 metrics — per workload</h2>
+    <p class="text-xs text-slate-500 mb-3">winner (seq=12) 의 모든 trial_metric (workload 별).</p>
+    <div class="overflow-auto">
+      <table class="text-xs">
+        <thead class="bg-slate-100 text-slate-700">
+          <tr>
+            <th class="text-left p-2">metric.workload</th>
+            <th class="text-right p-2">value</th>
+          </tr>
+        </thead>
+        <tbody>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">cv_throughput.short</td>
+            <td class="p-2 text-right font-mono">0.0003644</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">e2e_p99.short</td>
+            <td class="p-2 text-right font-mono">1.214</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">score.aggregate</td>
+            <td class="p-2 text-right font-mono">776</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">score.short</td>
+            <td class="p-2 text-right font-mono">776</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">throughput_tok_avg.short</td>
+            <td class="p-2 text-right font-mono">804.1</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100">
+            <td class="p-2 font-mono">ttft_p99.short</td>
+            <td class="p-2 text-right font-mono">34.94</td>
+          </tr>
+        
+        </tbody>
+      </table>
+    </div>
+  </section>
+  
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Score over trials</h2>
+    <div id="score-empty" class="hidden text-sm text-slate-500 bg-amber-50 border border-amber-200 rounded p-3">
+      <strong>점수 데이터 없음.</strong> completed trial 이 없거나 score 가 기록되지 않은 study 입니다.
+    </div>
+    <canvas id="score-trace" width="800" height="280"></canvas>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Trial table</h2>
+    <div class="overflow-auto">
+      <table class="text-xs w-full">
+        <thead class="bg-slate-100 text-slate-700">
+          <tr>
+            <th class="text-left p-2">seq</th>
+            <th class="text-left p-2">trial_id</th>
+            <th class="text-left p-2">status</th>
+            <th class="text-right p-2">score</th>
+            <th class="text-right p-2">throughput tok/s</th>
+            <th class="text-right p-2">ttft p99 (ms)</th>
+            <th class="text-right p-2">e2e p99 (s)</th>
+            <th class="text-right p-2">CV</th>
+            <th class="text-left p-2">params</th>
+          </tr>
+        </thead>
+        <tbody>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">1</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWDD…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">773.083</td>
+            <td class="p-2 text-right font-mono">804.6</td>
+            <td class="p-2 text-right font-mono">39</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.001</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": false, "enable_prefix_caching": false, "gpu_memory_utilization": 0.9, "kv_cache_dtype": "fp8", "max_model_len": 8192, "max_num_seqs": 64}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">2</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWDG…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">775.372</td>
+            <td class="p-2 text-right font-mono">803.7</td>
+            <td class="p-2 text-right font-mono">35</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.001</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": true, "enable_prefix_caching": true, "gpu_memory_utilization": 0.8, "kv_cache_dtype": "fp8", "max_model_len": 4096, "max_num_seqs": 64}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">3</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWDM…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">774.883</td>
+            <td class="p-2 text-right font-mono">804.3</td>
+            <td class="p-2 text-right font-mono">37</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.000</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": true, "enable_prefix_caching": false, "gpu_memory_utilization": 0.9, "kv_cache_dtype": "auto", "max_model_len": 8192, "max_num_seqs": 32}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">4</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWDQ…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">774.351</td>
+            <td class="p-2 text-right font-mono">803.6</td>
+            <td class="p-2 text-right font-mono">36</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.001</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": false, "enable_prefix_caching": true, "gpu_memory_utilization": 0.85, "kv_cache_dtype": "auto", "max_model_len": 8192, "max_num_seqs": 64}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">5</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWDV…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">775.116</td>
+            <td class="p-2 text-right font-mono">803.1</td>
+            <td class="p-2 text-right font-mono">35</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.001</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": false, "enable_prefix_caching": true, "gpu_memory_utilization": 0.85, "kv_cache_dtype": "auto", "max_model_len": 4096, "max_num_seqs": 32}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">6</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWDY…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">774.093</td>
+            <td class="p-2 text-right font-mono">804.7</td>
+            <td class="p-2 text-right font-mono">38</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.001</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": false, "enable_prefix_caching": true, "gpu_memory_utilization": 0.85, "kv_cache_dtype": "auto", "max_model_len": 4096, "max_num_seqs": 128}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">7</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWE1…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">774.428</td>
+            <td class="p-2 text-right font-mono">804.0</td>
+            <td class="p-2 text-right font-mono">37</td>
+            <td class="p-2 text-right font-mono">1.22</td>
+            <td class="p-2 text-right font-mono">0.000</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": true, "enable_prefix_caching": false, "gpu_memory_utilization": 0.8, "kv_cache_dtype": "fp8", "max_model_len": 8192, "max_num_seqs": 32}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">8</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWE5…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">772.171</td>
+            <td class="p-2 text-right font-mono">805.1</td>
+            <td class="p-2 text-right font-mono">41</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.001</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": true, "enable_prefix_caching": false, "gpu_memory_utilization": 0.9, "kv_cache_dtype": "fp8", "max_model_len": 8192, "max_num_seqs": 128}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">9</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWE8…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">775.315</td>
+            <td class="p-2 text-right font-mono">804.1</td>
+            <td class="p-2 text-right font-mono">36</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.001</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": true, "enable_prefix_caching": false, "gpu_memory_utilization": 0.8, "kv_cache_dtype": "auto", "max_model_len": 8192, "max_num_seqs": 128}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">10</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWEC…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">775.228</td>
+            <td class="p-2 text-right font-mono">804.2</td>
+            <td class="p-2 text-right font-mono">36</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.002</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": true, "enable_prefix_caching": true, "gpu_memory_utilization": 0.85, "kv_cache_dtype": "fp8", "max_model_len": 8192, "max_num_seqs": 128}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">11</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWEF…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">774.076</td>
+            <td class="p-2 text-right font-mono">804.5</td>
+            <td class="p-2 text-right font-mono">38</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.001</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": true, "enable_prefix_caching": true, "gpu_memory_utilization": 0.8, "kv_cache_dtype": "fp8", "max_model_len": 4096, "max_num_seqs": 64}</td>
+          </tr>
+        
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2 font-mono">12</td>
+            <td class="p-2 font-mono text-slate-500">tr-01KPWEJ…</td>
+            <td class="p-2">
+              <span class="text-xs px-1.5 py-0.5 rounded
+                bg-green-100 text-green-800
+                ">completed</span>
+            </td>
+            <td class="p-2 text-right font-mono">775.992</td>
+            <td class="p-2 text-right font-mono">804.1</td>
+            <td class="p-2 text-right font-mono">35</td>
+            <td class="p-2 text-right font-mono">1.21</td>
+            <td class="p-2 text-right font-mono">0.000</td>
+            <td class="p-2 text-xs font-mono text-slate-600">{"enable_chunked_prefill": true, "enable_prefix_caching": false, "gpu_memory_utilization": 0.8, "kv_cache_dtype": "auto", "max_model_len": 8192, "max_num_seqs": 128}</td>
+          </tr>
+        
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="bg-white border border-slate-200 rounded-lg p-5">
+    <summary class="cursor-pointer text-sm font-semibold text-slate-700">Raw study JSON</summary>
+    <pre class="mt-3 text-xs bg-slate-50 p-3 rounded overflow-auto">{
+  &#34;study_id&#34;: &#34;st-01KPWDDCTB9MPJRYA9Z4CFVYZX&#34;,
+  &#34;name&#34;: &#34;live-s2-tpe-12&#34;,
+  &#34;strategy&#34;: &#34;tpe&#34;,
+  &#34;direction&#34;: &#34;maximize&#34;,
+  &#34;status&#34;: &#34;completed&#34;,
+  &#34;n_trials&#34;: 12,
+  &#34;n_completed&#34;: 12,
+  &#34;top_score&#34;: 775.9920820186236,
+  &#34;endpoint_slug&#34;: &#34;local-vllm-autotune&#34;,
+  &#34;profile_slugs&#34;: [
+    &#34;short&#34;
+  ],
+  &#34;created_at&#34;: &#34;2026-04-23 14:36:11.598997&#34;,
+  &#34;finished_at&#34;: &#34;2026-04-23 14:58:26.850626&#34;,
+  &#34;top_params&#34;: {
+    &#34;enable_chunked_prefill&#34;: true,
+    &#34;enable_prefix_caching&#34;: false,
+    &#34;gpu_memory_utilization&#34;: 0.8,
+    &#34;kv_cache_dtype&#34;: &#34;auto&#34;,
+    &#34;max_model_len&#34;: 8192,
+    &#34;max_num_seqs&#34;: 128
+  },
+  &#34;n_pruned&#34;: 0,
+  &#34;metric_name&#34;: &#34;total_score&#34;,
+  &#34;model&#34;: null,
+  &#34;hw&#34;: &#34;RTX-local&#34;,
+  &#34;framework&#34;: &#34;vllm&#34;,
+  &#34;workload&#34;: &#34;short&#34;,
+  &#34;points&#34;: [
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWDDCTPMN09DB31P7ECAMGA&#34;,
+      &#34;seq&#34;: 1,
+      &#34;score&#34;: 773.0832955367372,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: false,
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.9,
+        &#34;kv_cache_dtype&#34;: &#34;fp8&#34;,
+        &#34;max_model_len&#34;: 8192,
+        &#34;max_num_seqs&#34;: 64
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 773.0832955367372,
+        &#34;score.aggregate&#34;: 773.0832955367372,
+        &#34;ttft_p99.short&#34;: 39.18687502543131,
+        &#34;throughput_tok_avg.short&#34;: 804.6135876393232,
+        &#34;e2e_p99.short&#34;: 1.2139370441436768,
+        &#34;cv_throughput.short&#34;: 0.0005096941522785387
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 804.6135876393232,
+      &#34;ttft_p99&#34;: 39.18687502543131,
+      &#34;e2e_p99&#34;: 1.2139370441436768,
+      &#34;cv&#34;: 0.0005096941522785387
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWDGSM9M1PBBMKAXT6RC6GN&#34;,
+      &#34;seq&#34;: 2,
+      &#34;score&#34;: 775.3720159405051,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: true,
+        &#34;enable_prefix_caching&#34;: true,
+        &#34;gpu_memory_utilization&#34;: 0.8,
+        &#34;kv_cache_dtype&#34;: &#34;fp8&#34;,
+        &#34;max_model_len&#34;: 4096,
+        &#34;max_num_seqs&#34;: 64
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 775.3720159405051,
+        &#34;score.aggregate&#34;: 775.3720159405051,
+        &#34;ttft_p99.short&#34;: 35.23826599121094,
+        &#34;throughput_tok_avg.short&#34;: 803.6927550170034,
+        &#34;e2e_p99.short&#34;: 1.2136956055959065,
+        &#34;cv_throughput.short&#34;: 0.0007751055585670558
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 803.6927550170034,
+      &#34;ttft_p99&#34;: 35.23826599121094,
+      &#34;e2e_p99&#34;: 1.2136956055959065,
+      &#34;cv&#34;: 0.0007751055585670558
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWDM6QZX61QWKQM3XWG6NVC&#34;,
+      &#34;seq&#34;: 3,
+      &#34;score&#34;: 774.8828616490043,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: true,
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.9,
+        &#34;kv_cache_dtype&#34;: &#34;auto&#34;,
+        &#34;max_model_len&#34;: 8192,
+        &#34;max_num_seqs&#34;: 32
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 774.8828616490043,
+        &#34;score.aggregate&#34;: 774.8828616490043,
+        &#34;ttft_p99.short&#34;: 36.533753077189125,
+        &#34;throughput_tok_avg.short&#34;: 804.2657063741277,
+        &#34;e2e_p99.short&#34;: 1.2138197422027588,
+        &#34;cv_throughput.short&#34;: 0.0004829079046311981
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 804.2657063741277,
+      &#34;ttft_p99&#34;: 36.533753077189125,
+      &#34;e2e_p99&#34;: 1.2138197422027588,
+      &#34;cv&#34;: 0.0004829079046311981
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWDQMSWHEDDSDVCC3XMCRN5&#34;,
+      &#34;seq&#34;: 4,
+      &#34;score&#34;: 774.350761188501,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: false,
+        &#34;enable_prefix_caching&#34;: true,
+        &#34;gpu_memory_utilization&#34;: 0.85,
+        &#34;kv_cache_dtype&#34;: &#34;auto&#34;,
+        &#34;max_model_len&#34;: 8192,
+        &#34;max_num_seqs&#34;: 64
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 774.350761188501,
+        &#34;score.aggregate&#34;: 774.350761188501,
+        &#34;ttft_p99.short&#34;: 36.34325663248698,
+        &#34;throughput_tok_avg.short&#34;: 803.5545504330936,
+        &#34;e2e_p99.short&#34;: 1.2134378751118977,
+        &#34;cv_throughput.short&#34;: 0.0007217602725491837
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 803.5545504330936,
+      &#34;ttft_p99&#34;: 36.34325663248698,
+      &#34;e2e_p99&#34;: 1.2134378751118977,
+      &#34;cv&#34;: 0.0007217602725491837
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWDV2MPFQTB2JJ14REWHN2Q&#34;,
+      &#34;seq&#34;: 5,
+      &#34;score&#34;: 775.1161646634242,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: false,
+        &#34;enable_prefix_caching&#34;: true,
+        &#34;gpu_memory_utilization&#34;: 0.85,
+        &#34;kv_cache_dtype&#34;: &#34;auto&#34;,
+        &#34;max_model_len&#34;: 4096,
+        &#34;max_num_seqs&#34;: 32
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 775.1161646634242,
+        &#34;score.aggregate&#34;: 775.1161646634242,
+        &#34;ttft_p99.short&#34;: 34.814675649007164,
+        &#34;throughput_tok_avg.short&#34;: 803.0749588786233,
+        &#34;e2e_p99.short&#34;: 1.2139033476511638,
+        &#34;cv_throughput.short&#34;: 0.0006720639119115293
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 803.0749588786233,
+      &#34;ttft_p99&#34;: 34.814675649007164,
+      &#34;e2e_p99&#34;: 1.2139033476511638,
+      &#34;cv&#34;: 0.0006720639119115293
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWDYGR71H7XCY39V485YP5M&#34;,
+      &#34;seq&#34;: 6,
+      &#34;score&#34;: 774.0927978477993,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: false,
+        &#34;enable_prefix_caching&#34;: true,
+        &#34;gpu_memory_utilization&#34;: 0.85,
+        &#34;kv_cache_dtype&#34;: &#34;auto&#34;,
+        &#34;max_model_len&#34;: 4096,
+        &#34;max_num_seqs&#34;: 128
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 774.0927978477993,
+        &#34;score.aggregate&#34;: 774.0927978477993,
+        &#34;ttft_p99.short&#34;: 38.0864143371582,
+        &#34;throughput_tok_avg.short&#34;: 804.7425562810637,
+        &#34;e2e_p99.short&#34;: 1.213990608851115,
+        &#34;cv_throughput.short&#34;: 0.0007469164331915033
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 804.7425562810637,
+      &#34;ttft_p99&#34;: 38.0864143371582,
+      &#34;e2e_p99&#34;: 1.213990608851115,
+      &#34;cv&#34;: 0.0007469164331915033
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWE1Z10EKDT2P0MR0YDGXHW&#34;,
+      &#34;seq&#34;: 7,
+      &#34;score&#34;: 774.4278503566011,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: true,
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.8,
+        &#34;kv_cache_dtype&#34;: &#34;fp8&#34;,
+        &#34;max_model_len&#34;: 8192,
+        &#34;max_num_seqs&#34;: 32
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 774.4278503566011,
+        &#34;score.aggregate&#34;: 774.4278503566011,
+        &#34;ttft_p99.short&#34;: 36.79847717285156,
+        &#34;throughput_tok_avg.short&#34;: 804.0143542168965,
+        &#34;e2e_p99.short&#34;: 1.2153737545013428,
+        &#34;cv_throughput.short&#34;: 0.0004940979692892041
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 804.0143542168965,
+      &#34;ttft_p99&#34;: 36.79847717285156,
+      &#34;e2e_p99&#34;: 1.2153737545013428,
+      &#34;cv&#34;: 0.0004940979692892041
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWE5A4NZF6HFE7N2DVJSR4X&#34;,
+      &#34;seq&#34;: 8,
+      &#34;score&#34;: 772.1706765127406,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: true,
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.9,
+        &#34;kv_cache_dtype&#34;: &#34;fp8&#34;,
+        &#34;max_model_len&#34;: 8192,
+        &#34;max_num_seqs&#34;: 128
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 772.1706765127406,
+        &#34;score.aggregate&#34;: 772.1706765127406,
+        &#34;ttft_p99.short&#34;: 40.94052314758301,
+        &#34;throughput_tok_avg.short&#34;: 805.1332530980918,
+        &#34;e2e_p99.short&#34;: 1.2133403619130452,
+        &#34;cv_throughput.short&#34;: 0.001174587084118489
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 805.1332530980918,
+      &#34;ttft_p99&#34;: 40.94052314758301,
+      &#34;e2e_p99&#34;: 1.2133403619130452,
+      &#34;cv&#34;: 0.001174587084118489
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWE8NQET2YN7C8R2KPSZWPN&#34;,
+      &#34;seq&#34;: 9,
+      &#34;score&#34;: 775.3154985412507,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: true,
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.8,
+        &#34;kv_cache_dtype&#34;: &#34;auto&#34;,
+        &#34;max_model_len&#34;: 8192,
+        &#34;max_num_seqs&#34;: 128
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 775.3154985412507,
+        &#34;score.aggregate&#34;: 775.3154985412507,
+        &#34;ttft_p99.short&#34;: 35.76469421386719,
+        &#34;throughput_tok_avg.short&#34;: 804.0729206748373,
+        &#34;e2e_p99.short&#34;: 1.2138219674428303,
+        &#34;cv_throughput.short&#34;: 0.0006128230660397248
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 804.0729206748373,
+      &#34;ttft_p99&#34;: 35.76469421386719,
+      &#34;e2e_p99&#34;: 1.2138219674428303,
+      &#34;cv&#34;: 0.0006128230660397248
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWEC1E2TX85JP7ZNZ3V2KHH&#34;,
+      &#34;seq&#34;: 10,
+      &#34;score&#34;: 775.2282227145474,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: true,
+        &#34;enable_prefix_caching&#34;: true,
+        &#34;gpu_memory_utilization&#34;: 0.85,
+        &#34;kv_cache_dtype&#34;: &#34;fp8&#34;,
+        &#34;max_model_len&#34;: 8192,
+        &#34;max_num_seqs&#34;: 128
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 775.2282227145474,
+        &#34;score.aggregate&#34;: 775.2282227145474,
+        &#34;ttft_p99.short&#34;: 36.03863716125488,
+        &#34;throughput_tok_avg.short&#34;: 804.2108870749734,
+        &#34;e2e_p99.short&#34;: 1.2133228778839111,
+        &#34;cv_throughput.short&#34;: 0.0016655600815258487
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 804.2108870749734,
+      &#34;ttft_p99&#34;: 36.03863716125488,
+      &#34;e2e_p99&#34;: 1.2133228778839111,
+      &#34;cv&#34;: 0.0016655600815258487
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWEFD5Z7GH0JZMBKJDMJ1PC&#34;,
+      &#34;seq&#34;: 11,
+      &#34;score&#34;: 774.0758136221826,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: true,
+        &#34;enable_prefix_caching&#34;: true,
+        &#34;gpu_memory_utilization&#34;: 0.8,
+        &#34;kv_cache_dtype&#34;: &#34;fp8&#34;,
+        &#34;max_model_len&#34;: 4096,
+        &#34;max_num_seqs&#34;: 64
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 774.0758136221826,
+        &#34;score.aggregate&#34;: 774.0758136221826,
+        &#34;ttft_p99.short&#34;: 37.83869743347168,
+        &#34;throughput_tok_avg.short&#34;: 804.5177160600464,
+        &#34;e2e_p99.short&#34;: 1.213525613149007,
+        &#34;cv_throughput.short&#34;: 0.0008977054250929434
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 804.5177160600464,
+      &#34;ttft_p99&#34;: 37.83869743347168,
+      &#34;e2e_p99&#34;: 1.213525613149007,
+      &#34;cv&#34;: 0.0008977054250929434
+    },
+    {
+      &#34;trial_id&#34;: &#34;tr-01KPWEJS4FXCSGZXSTT1DXA8CD&#34;,
+      &#34;seq&#34;: 12,
+      &#34;score&#34;: 775.9920820186236,
+      &#34;params&#34;: {
+        &#34;enable_chunked_prefill&#34;: true,
+        &#34;enable_prefix_caching&#34;: false,
+        &#34;gpu_memory_utilization&#34;: 0.8,
+        &#34;kv_cache_dtype&#34;: &#34;auto&#34;,
+        &#34;max_model_len&#34;: 8192,
+        &#34;max_num_seqs&#34;: 128
+      },
+      &#34;metrics&#34;: {
+        &#34;score.short&#34;: 775.9920820186236,
+        &#34;score.aggregate&#34;: 775.9920820186236,
+        &#34;ttft_p99.short&#34;: 34.94159380594889,
+        &#34;throughput_tok_avg.short&#34;: 804.0882054786116,
+        &#34;e2e_p99.short&#34;: 1.2137990792592366,
+        &#34;cv_throughput.short&#34;: 0.0003644357600098668
+      },
+      &#34;status&#34;: &#34;completed&#34;,
+      &#34;throughput_avg&#34;: 804.0882054786116,
+      &#34;ttft_p99&#34;: 34.94159380594889,
+      &#34;e2e_p99&#34;: 1.2137990792592366,
+      &#34;cv&#34;: 0.0003644357600098668
+    }
+  ]
+}</pre>
+  </details>
+
+</main>
+
+<footer class="max-w-7xl mx-auto px-6 py-6 text-xs text-slate-400">
+  Generated by <code>bench dashboard build</code>. JSON: <a href="../data/studies_index.json" class="hover:underline">studies_index</a> · <a href="../data/throughput_vs_latency.json" class="hover:underline">tvl</a> · <a href="../data/perf_history.json" class="hover:underline">perf_history</a>
+</footer>
+
+<script>
+const STUDY = {
+  "study_id": "st-01KPWDDCTB9MPJRYA9Z4CFVYZX",
+  "name": "live-s2-tpe-12",
+  "strategy": "tpe",
+  "direction": "maximize",
+  "status": "completed",
+  "n_trials": 12,
+  "n_completed": 12,
+  "top_score": 775.9920820186236,
+  "endpoint_slug": "local-vllm-autotune",
+  "profile_slugs": [
+    "short"
+  ],
+  "created_at": "2026-04-23 14:36:11.598997",
+  "finished_at": "2026-04-23 14:58:26.850626",
+  "top_params": {
+    "enable_chunked_prefill": true,
+    "enable_prefix_caching": false,
+    "gpu_memory_utilization": 0.8,
+    "kv_cache_dtype": "auto",
+    "max_model_len": 8192,
+    "max_num_seqs": 128
+  },
+  "n_pruned": 0,
+  "metric_name": "total_score",
+  "model": null,
+  "hw": "RTX-local",
+  "framework": "vllm",
+  "workload": "short",
+  "points": [
+    {
+      "trial_id": "tr-01KPWDDCTPMN09DB31P7ECAMGA",
+      "seq": 1,
+      "score": 773.0832955367372,
+      "params": {
+        "enable_chunked_prefill": false,
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.9,
+        "kv_cache_dtype": "fp8",
+        "max_model_len": 8192,
+        "max_num_seqs": 64
+      },
+      "metrics": {
+        "score.short": 773.0832955367372,
+        "score.aggregate": 773.0832955367372,
+        "ttft_p99.short": 39.18687502543131,
+        "throughput_tok_avg.short": 804.6135876393232,
+        "e2e_p99.short": 1.2139370441436768,
+        "cv_throughput.short": 0.0005096941522785387
+      },
+      "status": "completed",
+      "throughput_avg": 804.6135876393232,
+      "ttft_p99": 39.18687502543131,
+      "e2e_p99": 1.2139370441436768,
+      "cv": 0.0005096941522785387
+    },
+    {
+      "trial_id": "tr-01KPWDGSM9M1PBBMKAXT6RC6GN",
+      "seq": 2,
+      "score": 775.3720159405051,
+      "params": {
+        "enable_chunked_prefill": true,
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.8,
+        "kv_cache_dtype": "fp8",
+        "max_model_len": 4096,
+        "max_num_seqs": 64
+      },
+      "metrics": {
+        "score.short": 775.3720159405051,
+        "score.aggregate": 775.3720159405051,
+        "ttft_p99.short": 35.23826599121094,
+        "throughput_tok_avg.short": 803.6927550170034,
+        "e2e_p99.short": 1.2136956055959065,
+        "cv_throughput.short": 0.0007751055585670558
+      },
+      "status": "completed",
+      "throughput_avg": 803.6927550170034,
+      "ttft_p99": 35.23826599121094,
+      "e2e_p99": 1.2136956055959065,
+      "cv": 0.0007751055585670558
+    },
+    {
+      "trial_id": "tr-01KPWDM6QZX61QWKQM3XWG6NVC",
+      "seq": 3,
+      "score": 774.8828616490043,
+      "params": {
+        "enable_chunked_prefill": true,
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.9,
+        "kv_cache_dtype": "auto",
+        "max_model_len": 8192,
+        "max_num_seqs": 32
+      },
+      "metrics": {
+        "score.short": 774.8828616490043,
+        "score.aggregate": 774.8828616490043,
+        "ttft_p99.short": 36.533753077189125,
+        "throughput_tok_avg.short": 804.2657063741277,
+        "e2e_p99.short": 1.2138197422027588,
+        "cv_throughput.short": 0.0004829079046311981
+      },
+      "status": "completed",
+      "throughput_avg": 804.2657063741277,
+      "ttft_p99": 36.533753077189125,
+      "e2e_p99": 1.2138197422027588,
+      "cv": 0.0004829079046311981
+    },
+    {
+      "trial_id": "tr-01KPWDQMSWHEDDSDVCC3XMCRN5",
+      "seq": 4,
+      "score": 774.350761188501,
+      "params": {
+        "enable_chunked_prefill": false,
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.85,
+        "kv_cache_dtype": "auto",
+        "max_model_len": 8192,
+        "max_num_seqs": 64
+      },
+      "metrics": {
+        "score.short": 774.350761188501,
+        "score.aggregate": 774.350761188501,
+        "ttft_p99.short": 36.34325663248698,
+        "throughput_tok_avg.short": 803.5545504330936,
+        "e2e_p99.short": 1.2134378751118977,
+        "cv_throughput.short": 0.0007217602725491837
+      },
+      "status": "completed",
+      "throughput_avg": 803.5545504330936,
+      "ttft_p99": 36.34325663248698,
+      "e2e_p99": 1.2134378751118977,
+      "cv": 0.0007217602725491837
+    },
+    {
+      "trial_id": "tr-01KPWDV2MPFQTB2JJ14REWHN2Q",
+      "seq": 5,
+      "score": 775.1161646634242,
+      "params": {
+        "enable_chunked_prefill": false,
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.85,
+        "kv_cache_dtype": "auto",
+        "max_model_len": 4096,
+        "max_num_seqs": 32
+      },
+      "metrics": {
+        "score.short": 775.1161646634242,
+        "score.aggregate": 775.1161646634242,
+        "ttft_p99.short": 34.814675649007164,
+        "throughput_tok_avg.short": 803.0749588786233,
+        "e2e_p99.short": 1.2139033476511638,
+        "cv_throughput.short": 0.0006720639119115293
+      },
+      "status": "completed",
+      "throughput_avg": 803.0749588786233,
+      "ttft_p99": 34.814675649007164,
+      "e2e_p99": 1.2139033476511638,
+      "cv": 0.0006720639119115293
+    },
+    {
+      "trial_id": "tr-01KPWDYGR71H7XCY39V485YP5M",
+      "seq": 6,
+      "score": 774.0927978477993,
+      "params": {
+        "enable_chunked_prefill": false,
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.85,
+        "kv_cache_dtype": "auto",
+        "max_model_len": 4096,
+        "max_num_seqs": 128
+      },
+      "metrics": {
+        "score.short": 774.0927978477993,
+        "score.aggregate": 774.0927978477993,
+        "ttft_p99.short": 38.0864143371582,
+        "throughput_tok_avg.short": 804.7425562810637,
+        "e2e_p99.short": 1.213990608851115,
+        "cv_throughput.short": 0.0007469164331915033
+      },
+      "status": "completed",
+      "throughput_avg": 804.7425562810637,
+      "ttft_p99": 38.0864143371582,
+      "e2e_p99": 1.213990608851115,
+      "cv": 0.0007469164331915033
+    },
+    {
+      "trial_id": "tr-01KPWE1Z10EKDT2P0MR0YDGXHW",
+      "seq": 7,
+      "score": 774.4278503566011,
+      "params": {
+        "enable_chunked_prefill": true,
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.8,
+        "kv_cache_dtype": "fp8",
+        "max_model_len": 8192,
+        "max_num_seqs": 32
+      },
+      "metrics": {
+        "score.short": 774.4278503566011,
+        "score.aggregate": 774.4278503566011,
+        "ttft_p99.short": 36.79847717285156,
+        "throughput_tok_avg.short": 804.0143542168965,
+        "e2e_p99.short": 1.2153737545013428,
+        "cv_throughput.short": 0.0004940979692892041
+      },
+      "status": "completed",
+      "throughput_avg": 804.0143542168965,
+      "ttft_p99": 36.79847717285156,
+      "e2e_p99": 1.2153737545013428,
+      "cv": 0.0004940979692892041
+    },
+    {
+      "trial_id": "tr-01KPWE5A4NZF6HFE7N2DVJSR4X",
+      "seq": 8,
+      "score": 772.1706765127406,
+      "params": {
+        "enable_chunked_prefill": true,
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.9,
+        "kv_cache_dtype": "fp8",
+        "max_model_len": 8192,
+        "max_num_seqs": 128
+      },
+      "metrics": {
+        "score.short": 772.1706765127406,
+        "score.aggregate": 772.1706765127406,
+        "ttft_p99.short": 40.94052314758301,
+        "throughput_tok_avg.short": 805.1332530980918,
+        "e2e_p99.short": 1.2133403619130452,
+        "cv_throughput.short": 0.001174587084118489
+      },
+      "status": "completed",
+      "throughput_avg": 805.1332530980918,
+      "ttft_p99": 40.94052314758301,
+      "e2e_p99": 1.2133403619130452,
+      "cv": 0.001174587084118489
+    },
+    {
+      "trial_id": "tr-01KPWE8NQET2YN7C8R2KPSZWPN",
+      "seq": 9,
+      "score": 775.3154985412507,
+      "params": {
+        "enable_chunked_prefill": true,
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.8,
+        "kv_cache_dtype": "auto",
+        "max_model_len": 8192,
+        "max_num_seqs": 128
+      },
+      "metrics": {
+        "score.short": 775.3154985412507,
+        "score.aggregate": 775.3154985412507,
+        "ttft_p99.short": 35.76469421386719,
+        "throughput_tok_avg.short": 804.0729206748373,
+        "e2e_p99.short": 1.2138219674428303,
+        "cv_throughput.short": 0.0006128230660397248
+      },
+      "status": "completed",
+      "throughput_avg": 804.0729206748373,
+      "ttft_p99": 35.76469421386719,
+      "e2e_p99": 1.2138219674428303,
+      "cv": 0.0006128230660397248
+    },
+    {
+      "trial_id": "tr-01KPWEC1E2TX85JP7ZNZ3V2KHH",
+      "seq": 10,
+      "score": 775.2282227145474,
+      "params": {
+        "enable_chunked_prefill": true,
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.85,
+        "kv_cache_dtype": "fp8",
+        "max_model_len": 8192,
+        "max_num_seqs": 128
+      },
+      "metrics": {
+        "score.short": 775.2282227145474,
+        "score.aggregate": 775.2282227145474,
+        "ttft_p99.short": 36.03863716125488,
+        "throughput_tok_avg.short": 804.2108870749734,
+        "e2e_p99.short": 1.2133228778839111,
+        "cv_throughput.short": 0.0016655600815258487
+      },
+      "status": "completed",
+      "throughput_avg": 804.2108870749734,
+      "ttft_p99": 36.03863716125488,
+      "e2e_p99": 1.2133228778839111,
+      "cv": 0.0016655600815258487
+    },
+    {
+      "trial_id": "tr-01KPWEFD5Z7GH0JZMBKJDMJ1PC",
+      "seq": 11,
+      "score": 774.0758136221826,
+      "params": {
+        "enable_chunked_prefill": true,
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.8,
+        "kv_cache_dtype": "fp8",
+        "max_model_len": 4096,
+        "max_num_seqs": 64
+      },
+      "metrics": {
+        "score.short": 774.0758136221826,
+        "score.aggregate": 774.0758136221826,
+        "ttft_p99.short": 37.83869743347168,
+        "throughput_tok_avg.short": 804.5177160600464,
+        "e2e_p99.short": 1.213525613149007,
+        "cv_throughput.short": 0.0008977054250929434
+      },
+      "status": "completed",
+      "throughput_avg": 804.5177160600464,
+      "ttft_p99": 37.83869743347168,
+      "e2e_p99": 1.213525613149007,
+      "cv": 0.0008977054250929434
+    },
+    {
+      "trial_id": "tr-01KPWEJS4FXCSGZXSTT1DXA8CD",
+      "seq": 12,
+      "score": 775.9920820186236,
+      "params": {
+        "enable_chunked_prefill": true,
+        "enable_prefix_caching": false,
+        "gpu_memory_utilization": 0.8,
+        "kv_cache_dtype": "auto",
+        "max_model_len": 8192,
+        "max_num_seqs": 128
+      },
+      "metrics": {
+        "score.short": 775.9920820186236,
+        "score.aggregate": 775.9920820186236,
+        "ttft_p99.short": 34.94159380594889,
+        "throughput_tok_avg.short": 804.0882054786116,
+        "e2e_p99.short": 1.2137990792592366,
+        "cv_throughput.short": 0.0003644357600098668
+      },
+      "status": "completed",
+      "throughput_avg": 804.0882054786116,
+      "ttft_p99": 34.94159380594889,
+      "e2e_p99": 1.2137990792592366,
+      "cv": 0.0003644357600098668
+    }
+  ]
+};
+
+// Configurable scatter: X / Y axes pulled from any metric.workload key
+// in TrialPoint.metrics.
+
+function collectMetricKeys() {
+  const keys = new Set();
+  STUDY.points.forEach(p => {
+    Object.keys(p.metrics || {}).forEach(k => keys.add(k));
+  });
+  return [...keys].sort();
+}
+
+function fillSelect(id, options, defaultKey) {
+  const sel = document.getElementById(id);
+  options.forEach(k => {
+    const o = document.createElement('option');
+    o.value = k;
+    o.textContent = k;
+    if (k === defaultKey) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function pickDefault(keys, candidates) {
+  for (const c of candidates) {
+    const hit = keys.find(k => k.startsWith(c + '.'));
+    if (hit) return hit;
+  }
+  return keys[0];
+}
+
+function getValue(p, key) {
+  return p.metrics ? p.metrics[key] : undefined;
+}
+
+let chart;
+function render() {
+  const xKey = document.getElementById('x-axis').value;
+  const yKey = document.getElementById('y-axis').value;
+
+  const points = STUDY.points
+    .filter(p => getValue(p, xKey) != null && getValue(p, yKey) != null)
+    .map(p => ({x: getValue(p, xKey), y: getValue(p, yKey), seq: p.seq, trial_id: p.trial_id}));
+
+  if (points.length === 0) {
+    document.getElementById('tput-empty').classList.remove('hidden');
+    document.getElementById('throughput-vs-ttft').classList.add('hidden');
+    if (chart) { chart.destroy(); chart = null; }
+    return;
+  }
+  document.getElementById('tput-empty').classList.add('hidden');
+  document.getElementById('throughput-vs-ttft').classList.remove('hidden');
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('throughput-vs-ttft'), {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'trials',
+        data: points,
+        backgroundColor: points.map((p, i) => `hsla(220, 80%, ${30 + Math.round(50 * i / Math.max(1, points.length - 1))}%, 0.75)`),
+        pointRadius: 6,
+      }],
+    },
+    options: {
+      scales: {
+        x: {title: {display: true, text: xKey}},
+        y: {title: {display: true, text: yKey}},
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = ctx.raw;
+              return `seq=${p.seq} trial=${p.trial_id.slice(0, 10)}… ${xKey}=${p.x.toFixed(3)} ${yKey}=${p.y.toFixed(3)}`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+const allKeys = collectMetricKeys();
+if (allKeys.length === 0) {
+  document.getElementById('tput-empty').classList.remove('hidden');
+  document.getElementById('throughput-vs-ttft').classList.add('hidden');
+} else {
+  // Defaults: prefer ttft_p99 for X (lower=better), throughput for Y (higher=better)
+  const xDefault = pickDefault(allKeys, ['ttft_p99', 'e2e_p99', 'tpot_p99']);
+  const yDefault = pickDefault(allKeys, ['throughput_tok_avg', 'throughput_avg', 'throughput_tok', 'score']);
+  fillSelect('x-axis', allKeys, xDefault);
+  fillSelect('y-axis', allKeys, yDefault);
+  document.getElementById('x-axis').addEventListener('change', render);
+  document.getElementById('y-axis').addEventListener('change', render);
+  render();
+}
+
+// line: score over trials
+const trace = STUDY.points
+  .filter(p => p.score != null)
+  .sort((a, b) => a.seq - b.seq)
+  .map(p => ({x: p.seq, y: p.score}));
+
+if (trace.length === 0) {
+  document.getElementById('score-empty').classList.remove('hidden');
+  document.getElementById('score-trace').classList.add('hidden');
+} else {
+  // running best
+  const direction = STUDY.direction;
+  const better = (a, b) => direction === 'maximize' ? a > b : a < b;
+  let best = trace[0].y;
+  const running = trace.map(p => {
+    if (better(p.y, best)) best = p.y;
+    return {x: p.x, y: best};
+  });
+  new Chart(document.getElementById('score-trace'), {
+    type: 'line',
+    data: {
+      datasets: [
+        {label: 'score', data: trace, showLine: false, pointRadius: 4, pointBackgroundColor: 'rgba(100,116,139,0.6)'},
+        {label: 'running best', data: running, borderColor: 'rgb(37,99,235)', backgroundColor: 'transparent', stepped: true, pointRadius: 0},
+      ],
+    },
+    options: {
+      scales: {
+        x: {title: {display: true, text: 'trial seq'}, type: 'linear'},
+        y: {title: {display: true, text: STUDY.metric_name}},
+      },
+    }
+  });
+}
+</script>
+</body>
+</html>

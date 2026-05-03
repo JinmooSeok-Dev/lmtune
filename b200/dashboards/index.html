@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>bench autotuner dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5">
+    <h1 class="text-2xl font-bold tracking-tight">bench autotuner</h1>
+    <p class="text-slate-500 text-sm mt-1">
+      Output G — InferenceX-style static dashboard. 25 study/studies indexed.
+    </p>
+    <div class="mt-3 flex gap-3 text-sm">
+      <a href="compare.html" class="text-blue-600 hover:underline">Cross-study compare</a>
+      <span class="text-slate-300">|</span>
+      <span class="text-slate-500">Schema: <code>bench/dashboard/v1alpha1-inferencex-compat</code></span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6">
+  <h2 class="text-lg font-semibold mb-3">Studies</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">w-local-mvp</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>10 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 10 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">736.24</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": false,
+  "enable_prefix_caching": true,
+  "gpu_memory_utilization": 0.8139042871430157,
+  "max_num_seqs": 64
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQMYS90H4228W644KMRHRPY3">st-01KQMYS90H4…</span>
+        <a href="studies/st-01KQMYS90H4228W644KMRHRPY3.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">w-local-mvp</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-blue-100 text-blue-800
+          ">running</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 1 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQMYRVQ3PRMTHZZDA94565FS">st-01KQMYRVQ3P…</span>
+        <a href="studies/st-01KQMYRVQ3PRMTHZZDA94565FS.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-s6-validation</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>4 <span class="text-slate-400">completed</span> / 1 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">1390.94</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": true,
+  "gpu_memory_utilization": 0.8611787397928485,
+  "kv_cache_dtype": "fp8",
+  "max_model_len": 8192,
+  "max_num_seqs": 16
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQCX8F8A9M620HDX8GGDCMWS">st-01KQCX8F8A9…</span>
+        <a href="studies/st-01KQCX8F8A9M620HDX8GGDCMWS.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">B0-validate</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>2 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.8629707717958686,
+  "max_num_seqs": 128
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQCM1FRZNMYJ9EAJQYEB2DEY">st-01KQCM1FRZN…</span>
+        <a href="studies/st-01KQCM1FRZNMYJ9EAJQYEB2DEY.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">s5f2-nsga2-live</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">nsga2</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>8 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 8 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">811.07</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.8964092140761427,
+  "max_num_seqs": 128
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWS8M6WJ8YEGNENM4VJTJ9K">st-01KPWS8M6WJ…</span>
+        <a href="studies/st-01KPWS8M6WJ8YEGNENM4VJTJ9K.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">s5f1-continuous-v2</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>8 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 8 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">750.78</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.810284749316075,
+  "max_num_seqs": 64
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWR4375B8YYB66Q3H19Z97J">st-01KPWR4375B…</span>
+        <a href="studies/st-01KPWR4375B8YYB66Q3H19Z97J.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">s5f-continuous-tpe</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 8 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWPT9912RV4P51T7D3WDRB7">st-01KPWPT9912…</span>
+        <a href="studies/st-01KPWPT9912RV4P51T7D3WDRB7.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s4-adapter</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">751.36</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_prefix_caching": false,
+  "max_num_seqs": 32
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWH6YFWNGBZHNXNG9346T9C">st-01KPWH6YFWN…</span>
+        <a href="studies/st-01KPWH6YFWNGBZHNXNG9346T9C.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s3-pool-2</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-blue-100 text-blue-800
+          ">running</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWFD8017FYNX1EJPSKYENYG">st-01KPWFD8017…</span>
+        <a href="studies/st-01KPWFD8017FYNX1EJPSKYENYG.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s3-pool-1</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">775.89</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.8,
+  "kv_cache_dtype": "auto",
+  "max_model_len": 2048,
+  "max_num_seqs": 256
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWF2DNTEZ78FPM63Y35K3SC">st-01KPWF2DNTE…</span>
+        <a href="studies/st-01KPWF2DNTEZ78FPM63Y35K3SC.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s3-pool</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 4 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWEXD64NFV10GF5G791MVC6">st-01KPWEXD64N…</span>
+        <a href="studies/st-01KPWEXD64NFV10GF5G791MVC6.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s2-tpe-12</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>12 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 12 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">775.99</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.8,
+  "kv_cache_dtype": "auto",
+  "max_model_len": 8192,
+  "max_num_seqs": 128
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWDDCTB9MPJRYA9Z4CFVYZX">st-01KPWDDCTB9…</span>
+        <a href="studies/st-01KPWDDCTB9MPJRYA9Z4CFVYZX.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s2-tpe</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">773.82</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_prefix_caching": true,
+  "max_num_seqs": 128
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWCYBYKYNSBR8F91N6K9Q84">st-01KPWCYBYKY…</span>
+        <a href="studies/st-01KPWCYBYKYNSBR8F91N6K9Q84.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s1-smoke6</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>2 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">775.15</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_prefix_caching": true,
+  "max_num_seqs": 128
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWCAZ7PWJB6Y8WNBJYBQHAC">st-01KPWCAZ7PW…</span>
+        <a href="studies/st-01KPWCAZ7PWJB6Y8WNBJYBQHAC.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s1-smoke5</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWC7SN5G9CCHN2AGVHTQN9J">st-01KPWC7SN5G…</span>
+        <a href="studies/st-01KPWC7SN5G9CCHN2AGVHTQN9J.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-smoke-v2</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWC0E6TYPJ9Y9C204YQ65QS">st-01KPWC0E6TY…</span>
+        <a href="studies/st-01KPWC0E6TYPJ9Y9C204YQ65QS.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s1-smoke4</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWBRTC9ADW7PD7RPYTVYWRR">st-01KPWBRTC9A…</span>
+        <a href="studies/st-01KPWBRTC9ADW7PD7RPYTVYWRR.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s1-smoke3</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWBKMPJPAYMYT6BAK47NG4X">st-01KPWBKMPJP…</span>
+        <a href="studies/st-01KPWBKMPJPAYMYT6BAK47NG4X.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s1-smoke2</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWBH27QTV7KBGEJM507XQCF">st-01KPWBH27QT…</span>
+        <a href="studies/st-01KPWBH27QTV7KBGEJM507XQCF.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">live-s1-smoke</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWBF2KQTGCNT8V09D80DXKP">st-01KPWBF2KQT…</span>
+        <a href="studies/st-01KPWBF2KQTGCNT8V09D80DXKP.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">vllm-engine-args-tier1</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.8599859000990673,
+  "kv_cache_dtype": "fp8",
+  "max_model_len": 4096,
+  "max_num_seqs": 256
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWB6AYEWK4PDSNG0Y9H2CYB">st-01KPWB6AYEW…</span>
+        <a href="studies/st-01KPWB6AYEWK4PDSNG0Y9H2CYB.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">vllm-engine-args-tier1</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.8599859000990673,
+  "kv_cache_dtype": "fp8",
+  "max_model_len": 4096,
+  "max_num_seqs": 256
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWB57F12FFJ873SAW0M29M7">st-01KPWB57F12…</span>
+        <a href="studies/st-01KPWB57F12FFJ873SAW0M29M7.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">vllm-engine-args-tier1</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">lhc</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>5 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": true,
+  "gpu_memory_utilization": 0.8185950274402258,
+  "kv_cache_dtype": "fp8",
+  "max_model_len": 4096,
+  "max_num_seqs": 256
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWB56ED7XZJSGQY0WRM2AW9">st-01KPWB56ED7…</span>
+        <a href="studies/st-01KPWB56ED7XZJSGQY0WRM2AW9.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">vllm-engine-args-grid-tier1</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">grid</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>6 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 6 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": true,
+  "gpu_memory_utilization": 0.85,
+  "kv_cache_dtype": "auto",
+  "max_model_len": 2048,
+  "max_num_seqs": 32
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWB55QXH2ZDCHVRXEMCYM0P">st-01KPWB55QXH…</span>
+        <a href="studies/st-01KPWB55QXH2ZDCHVRXEMCYM0P.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">vllm-engine-args-tier1</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>5 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.8599859000990673,
+  "kv_cache_dtype": "fp8",
+  "max_model_len": 4096,
+  "max_num_seqs": 256
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KPWB4S3ZRVG2DPF7KEKC9Q77">st-01KPWB4S3ZR…</span>
+        <a href="studies/st-01KPWB4S3ZRVG2DPF7KEKC9Q77.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+  </div>
+
+  
+  <h2 class="text-lg font-semibold mt-8 mb-3">Perf changelog</h2>
+  <ul class="space-y-2">
+    
+    <li class="bg-white border border-slate-200 rounded p-3 text-sm">
+      <div class="flex justify-between">
+        <code class="text-slate-500">w-local-*, w-minikube-*</code>
+        
+      </div>
+      <ul class="list-disc list-inside text-xs text-slate-600 mt-1">
+        <li>Phase W (Walkthrough MVP) 진입: w_local_minimal (4-axis) + w_minikube_minimal (3-axis) baseline 시드</li><li>dashboard schema = bench/dashboard/v1alpha1-inferencex-compat (InferenceX-app 호환)</li><li>winner export 산출물 = winner/{params.json, values-overlay.yaml, apply.sh, README.md} 4 파일</li>
+      </ul>
+    </li>
+    
+  </ul>
+  
+</main>
+
+<footer class="max-w-7xl mx-auto px-6 py-6 text-xs text-slate-400">
+  Generated by <code>bench dashboard build</code>. JSON: <a href="data/studies_index.json" class="hover:underline">studies_index</a> · <a href="data/throughput_vs_latency.json" class="hover:underline">tvl</a> · <a href="data/perf_history.json" class="hover:underline">perf_history</a>
+</footer>
+</body>
+</html>

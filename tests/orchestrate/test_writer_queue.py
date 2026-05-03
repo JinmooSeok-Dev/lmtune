@@ -3,8 +3,8 @@ from __future__ import annotations
 import threading
 from pathlib import Path
 
-from bench.storage.duckdb_store import DuckDBStore
-from bench.storage.writer_queue import DuckDBWriterQueue
+from lmtune.storage.duckdb_store import DuckDBStore
+from lmtune.storage.writer_queue import DuckDBWriterQueue
 
 
 def test_writer_queue_serializes_concurrent_writes(tmp_path: Path):
@@ -32,8 +32,10 @@ def test_writer_queue_serializes_concurrent_writes(tmp_path: Path):
             wq.enqueue("record_trial_metrics", tid, {("metric", None): float(i)})
 
     threads = [threading.Thread(target=produce, args=(p,)) for p in range(N_producers)]
-    for t in threads: t.start()
-    for t in threads: t.join()
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
 
     wq.flush()
     wq.stop()

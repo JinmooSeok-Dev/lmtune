@@ -1,0 +1,76 @@
+# Phase W-Local Tier-2 SearchSpace (9 axes — 4 minimal + 5 vLLM engine_args).
+#
+# 트랙: adapter=local-vllm. vllm_restart.sh 가 매 trial 마다 vLLM 서버 재기동.
+# tier2 라는 이름은 cost (axes 수) 가 minimal 보다 ~2.25× 라는 의미. 측정 시간은
+# trial 당 거의 동일하지만 (vllm cold start ~90s 가 dominate) 탐색 공간이 더 크므로
+# 권장 max-trials = 20+.
+#
+# 모든 axis 가 cost_tier=4 (vllm restart, ~30s + measure ~30~60s = ~2~4 min/trial).
+#
+# 사용:
+#   lmtune search start \
+#     --endpoint configs/endpoints/local_vllm_autotune.yaml \
+#     --space b200/search-spaces/w_local_tier2.yaml \
+#     --profile configs/profiles/autotune/short.yaml \
+#     --strategy tpe --max-trials 20 --name w-local-tier2 \
+#     --adapter local-vllm
+#
+# vLLM 0.19.1 검증된 flag (5060 Ti / Qwen2.5-1.5B-Instruct 환경):
+#   - kv_cache_dtype: GPU sm_120 미지원 dtype 은 첫 trial 에서 fail-fast
+#   - async_scheduling: vLLM 0.6+ 의 비동기 scheduler (steady-state throughput ↑ 가능)
+#   - block_size: page table block 크기 (16=default, 32=긴 시퀀스에 유리할 수 있음)
+
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: w-local-tier2
+
+axes:
+  # Minimal 그대로
+  enable_chunked_prefill:
+    type: bool
+    cost_tier: 4
+
+  enable_prefix_caching:
+    type: bool
+    cost_tier: 4
+
+  max_num_seqs:
+    type: categorical
+    values: [16, 32, 64, 128, 256]
+    cost_tier: 4
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+    cost_tier: 4
+
+  # 신규 5 — Phase W tier2 추가
+  kv_cache_dtype:
+    type: categorical
+    values: [auto, fp8]
+    cost_tier: 4
+    # 5060 Ti sm_120 에서 fp8 미지원 시 첫 sample 에서 fail → cv_throughput 가
+    # NaN 으로 처리되지 않게 SLO 통과 0 = score 0 으로 자연스럽게 빠짐.
+
+  block_size:
+    type: categorical
+    values: [16, 32]
+    cost_tier: 4
+
+  max_model_len:
+    type: categorical
+    values: [2048, 4096, 8192]
+    cost_tier: 4
+    # 8192 는 GPU 메모리 압박. gpu_memory_utilization 과 conditional 관계.
+
+  async_scheduling:
+    type: bool
+    cost_tier: 4
+    # vLLM 0.6+. 일부 워크로드에서 throughput +5~10%, TTFT trade-off.
+
+  enforce_eager:
+    type: bool
+    cost_tier: 4
+    # true → CUDA graph 비활성 (cold start 빠름, steady throughput 저하).
+    # false (default) → CUDA graph 활성 (warmup 길고 steady 빠름).

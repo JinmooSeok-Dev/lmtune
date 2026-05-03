@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-
 Direction = Literal["lower_better", "higher_better", "neutral"]
 Category = Literal["latency", "throughput", "cost", "energy", "quality", "resource", "agent", "other"]
 Source = Literal["request", "session", "prom", "derived"]

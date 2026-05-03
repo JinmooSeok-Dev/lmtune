@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
-
 
 RunnerKind = Literal["aiperf", "vllm_bench", "guidellm", "raw_openai"]
 RunnerMode = Literal["concurrency", "user_centric", "rate_sweep"]
@@ -107,7 +106,7 @@ class TraceWorkload(_WorkloadBase):
 
 
 Workload = Annotated[
-    Union[SyntheticWorkload, DatasetWorkload, TraceWorkload],
+    SyntheticWorkload | DatasetWorkload | TraceWorkload,
     Field(discriminator="source"),
 ]
 
@@ -180,7 +179,7 @@ class AnalysisSpec(BaseModel):
 
 
 class ProfileSpec(BaseModel):
-    apiVersion: str = "bench/v1alpha1"
+    apiVersion: str = "lmtune/v1alpha1"
     slug: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9\-_]*$")
     name: str
     stage: int = Field(ge=1, le=3)
@@ -217,7 +216,7 @@ class ProfileSpec(BaseModel):
         return data
 
     @model_validator(mode="after")
-    def _validate_mode_consistency(self) -> "ProfileSpec":
+    def _validate_mode_consistency(self) -> ProfileSpec:
         w = self.workload
         if self.mode == "concurrency":
             missing = [k for k in ("concurrency", "request_count") if getattr(w, k) is None]

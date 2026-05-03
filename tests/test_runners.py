@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
 
-from bench.endpoints import load_endpoint
-from bench.profiles import ProfileSpec, load_profile
-from bench.runners import AIPerfRunner, GuideLLMRunner, VllmBenchRunner, get_runner
-
+from lmtune.endpoints import load_endpoint
+from lmtune.profiles import ProfileSpec, load_profile
+from lmtune.runners import AIPerfRunner, GuideLLMRunner, VllmBenchRunner, get_runner
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -81,7 +79,7 @@ def test_aiperf_user_centric_command(endpoint, multiturn_profile, tmp_path):
 
 def test_vllm_bench_requires_repo(endpoint, smoke_profile, tmp_path, monkeypatch):
     monkeypatch.delenv("VLLM_REPO", raising=False)
-    with pytest.raises(Exception):
+    with pytest.raises((RuntimeError, FileNotFoundError, EnvironmentError)):
         VllmBenchRunner().build_command(smoke_profile, endpoint, "r", tmp_path)
 
 

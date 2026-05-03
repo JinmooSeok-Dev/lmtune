@@ -1,4 +1,4 @@
-apiVersion: bench/v1alpha1
+apiVersion: lmtune/v1alpha1
 slug: research-burstgpt-replay
 name: "BurstGPT Zipf/bimodal 분포 재현 (raw_openai runner)"
 stage: 1

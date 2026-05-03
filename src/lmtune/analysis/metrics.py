@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from statistics import mean, quantiles
-from typing import Iterable, Sequence
 
-from bench.runners.base import RequestRow
-
+from lmtune.runners.base import RequestRow
 
 _P = [0.50, 0.95, 0.99]
 
@@ -57,15 +56,12 @@ def summarize_requests(
         success = 0
         for r in rows:
             ok = True
-            if ttft_slo_ms is not None:
-                if r.ttft_ms is None or r.ttft_ms > ttft_slo_ms:
-                    ok = False
-                    slo_ttft_vio += 1 if (r.ttft_ms is None or r.ttft_ms > ttft_slo_ms) else 0
-            if e2e_slo_ms is not None:
-                if r.e2e_ms is None or r.e2e_ms > e2e_slo_ms:
-                    if ok:
-                        ok = False
-                    slo_e2e_vio += 1 if (r.e2e_ms is None or r.e2e_ms > e2e_slo_ms) else 0
+            if ttft_slo_ms is not None and (r.ttft_ms is None or r.ttft_ms > ttft_slo_ms):
+                ok = False
+                slo_ttft_vio += 1
+            if e2e_slo_ms is not None and (r.e2e_ms is None or r.e2e_ms > e2e_slo_ms):
+                ok = False
+                slo_e2e_vio += 1
             if ok:
                 success += 1
         goodput = success / len(rows)

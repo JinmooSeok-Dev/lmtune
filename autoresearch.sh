@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Autoresearch benchmark wrapper.
 #
-# Pipeline: (optional) restart endpoint → bench_score.py × 3 workloads →
+# Pipeline: (optional) restart endpoint → lmtune_score.py × 3 workloads →
 #           emit `METRIC name=value` lines on stdout for autoresearch.
 #
 # Env vars:
@@ -26,13 +26,15 @@ PY="${PY:-./.venv/bin/python}"
 
 if [ ! -x "$PY" ]; then PY="python3"; fi
 
-# bench CLI: prefer venv, fall back to PATH
+# bench CLI: prefer venv, fall back to PATH. Also prepend venv bin to PATH so
+# bench's child runners (guidellm, aiperf, vllm) resolve from the venv.
 VENV_BENCH="$ROOT/.venv/bin/bench"
 if [ -x "$VENV_BENCH" ]; then
     export BENCH_BIN="${BENCH_BIN:-$VENV_BENCH}"
+    export PATH="$ROOT/.venv/bin:$PATH"
 fi
 
-BENCH_SCORE="$PY scripts/bench_score.py"
+BENCH_SCORE="$PY scripts/lmtune_score.py"
 
 log() { echo "[autoresearch.sh] $*" >&2; }
 
@@ -113,4 +115,40 @@ done
 echo "METRIC slo_pass_all=${SLO_PASS_ALL}"
 
 log "total_score=$TOTAL_SCORE slo_pass_all=$SLO_PASS_ALL"
+
+# --- Phase S6 옵션: lmtune search study 에 결과 기록 (USE_BENCH_SEARCH=1 + BENCH_STUDY + BENCH_TRIAL 필요) ---
+#
+# 사용 흐름 (autoresearch 외부 LLM 에이전트):
+#   1. lmtune search start --space ... --max-trials 0 --name <run>     # study 만 만들고 종료
+#   2. lmtune search ask <study_id> > params.json                       # 다음 trial params
+#   3. (params 를 endpoint YAML 의 engine_args 에 적용)
+#   4. USE_BENCH_SEARCH=1 BENCH_STUDY=<study_id> BENCH_TRIAL=<trial_id> ./autoresearch.sh
+#   5. 본 분기가 lmtune search tell 호출
+if [ "${USE_BENCH_SEARCH:-0}" = "1" ] && [ -n "${BENCH_STUDY:-}" ] && [ -n "${BENCH_TRIAL:-}" ]; then
+    BENCH_BIN="${BENCH_BIN:-bench}"
+    METRICS_TMP=$(mktemp)
+    {
+        printf '{\n'
+        printf '  "total_score": %s,\n' "$TOTAL_SCORE"
+        printf '  "metrics": {\n'
+        for W in $WORKLOADS; do
+            printf '    "throughput_avg_%s": %s,\n' "$W" "${THR_AVG[$W]:-0}"
+            printf '    "ttft_p99_%s": %s,\n'      "$W" "${TTFT_P99[$W]:-0}"
+            printf '    "e2e_p99_%s": %s,\n'      "$W" "${E2E_P99[$W]:-0}"
+        done
+        printf '    "slo_pass_all": %s\n' "$SLO_PASS_ALL"
+        printf '  },\n'
+        if [ "$SLO_PASS_ALL" = "1" ]; then printf '  "accepted": true\n'; else printf '  "accepted": false\n'; fi
+        printf '}\n'
+    } > "$METRICS_TMP"
+
+    log "USE_BENCH_SEARCH=1 → lmtune search tell study=$BENCH_STUDY trial=$BENCH_TRIAL"
+    if "$BENCH_BIN" search tell "$BENCH_STUDY" --trial "$BENCH_TRIAL" --metrics-json "$METRICS_TMP"; then
+        log "tell ok"
+    else
+        log "WARN: lmtune search tell failed (continuing)"
+    fi
+    rm -f "$METRICS_TMP"
+fi
+
 exit 0

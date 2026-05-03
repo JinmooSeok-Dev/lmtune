@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
 
-from bench.endpoints import EndpointSpec
-from bench.profiles import ProfileSpec
-from bench.runners.base import RunArtifact
-
+from lmtune.endpoints import EndpointSpec
+from lmtune.profiles import ProfileSpec
+from lmtune.runners.base import RunArtifact
 
 _SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
@@ -44,8 +43,8 @@ class DuckDBStore:
         profile_yaml_text: str,
         git_sha: str | None = None,
     ):
-        started = datetime.fromtimestamp(artifact.started_at, tz=timezone.utc) if artifact.started_at else None
-        finished = datetime.fromtimestamp(artifact.finished_at, tz=timezone.utc) if artifact.finished_at else None
+        started = datetime.fromtimestamp(artifact.started_at, tz=UTC) if artifact.started_at else None
+        finished = datetime.fromtimestamp(artifact.finished_at, tz=UTC) if artifact.finished_at else None
         self.conn.execute(
             """
             INSERT OR REPLACE INTO runs
@@ -238,8 +237,10 @@ class DuckDBStore:
         """
         rows = []
         for (m, wl), v in metrics.items():
-            if v is None: continue
-            if isinstance(v, (list, tuple, dict)): continue   # multi-obj sentinel
+            if v is None:
+                continue
+            if isinstance(v, (list, tuple, dict)):
+                continue   # multi-obj sentinel
             try:
                 fv = float(v)
             except (TypeError, ValueError):
@@ -369,4 +370,4 @@ def _endpoint_meta(ep: EndpointSpec) -> dict:
 def _epoch_to_ts(v: float | None):
     if v is None:
         return None
-    return datetime.fromtimestamp(v, tz=timezone.utc)
+    return datetime.fromtimestamp(v, tz=UTC)

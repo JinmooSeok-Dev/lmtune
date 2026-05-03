@@ -1,4 +1,4 @@
-apiVersion: bench/search/v1alpha1
+apiVersion: lmtune/search/v1alpha1
 kind: SearchSpace
 name: continuous-sensitivity
 

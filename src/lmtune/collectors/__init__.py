@@ -1,5 +1,5 @@
-from bench.collectors.prometheus import PrometheusCollector, PromSample, scrape_metrics_endpoint
-from bench.collectors.request_log import parse_request_log
+from lmtune.collectors.prometheus import PrometheusCollector, PromSample, scrape_metrics_endpoint
+from lmtune.collectors.request_log import parse_request_log
 
 __all__ = [
     "PromSample",

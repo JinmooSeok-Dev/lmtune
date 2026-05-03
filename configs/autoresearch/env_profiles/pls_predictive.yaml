@@ -1,0 +1,34 @@
+# Profile: Predicted-Latency-Scheduling (regression model based).
+#
+# EPP sidecar 가 trace 로 회귀 모델을 fitting → 다음 request 의 TTFT 예측 → 라우팅 결정.
+# 실험적 path. 예측 모델은 linear / GBM / MLP 중 GBM 이 보통 best-known.
+name: pls_predictive
+priority: 2
+description: |
+  Predicted Latency Scheduling — EPP-based regression model routes incoming
+  requests by predicted TTFT. Model trained online on rolling window.
+
+applies_when:
+  well_lit_path: predicted-latency-scheduling
+
+env_locked:
+  PLS_ENABLE: "1"
+  PLS_FALLBACK_POLICY: round-robin     # 모델 미수렴 시 fallback
+
+env_tunable:
+  - name: PLS_MODEL_TYPE
+    kind: categorical
+    values: [linear, gbm, mlp]
+    cost_tier: 3
+  - name: PLS_WINDOW_SIZE
+    kind: categorical
+    values: ["64", "256", "1024"]
+    cost_tier: 4
+  - name: PLS_UPDATE_INTERVAL_S
+    kind: categorical
+    values: ["1", "5", "30"]
+    cost_tier: 4
+  - name: PLS_FEATURE_SET
+    kind: categorical
+    values: [basic, full]
+    cost_tier: 3

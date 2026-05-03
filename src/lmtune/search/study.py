@@ -15,19 +15,19 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import optuna
 from ulid import ULID
 
-from bench.search.objective import Objective, ObjectiveResult
-from bench.search.samplers import make_sampler, suggest_from_axis
-from bench.search.space import SearchSpace
-from bench.search.trial import Trial, TrialStatus
-from bench.storage.duckdb_store import DuckDBStore
-
+from lmtune.search.objective import Objective, ObjectiveResult
+from lmtune.search.samplers import make_sampler, suggest_from_axis
+from lmtune.search.space import SearchSpace
+from lmtune.search.trial import Trial, TrialStatus
+from lmtune.storage.duckdb_store import DuckDBStore
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class Study:
             context=config.context,
             n_samples=config.n_samples,
         )
-        from bench.search.pruners import make_pruner
+        from lmtune.search.pruners import make_pruner
         pruner = make_pruner(config.pruner) if config.pruner else None
         if config.directions:
             self._optuna_study = optuna.create_study(
@@ -167,10 +167,7 @@ class Study:
                 # via the same ordering the caller configured (directions/objectives).
                 # We rely on the caller to stash the list on result.metrics under ("_values", None).
                 raw = result.metrics.get(("_values", None))
-                if raw is None:
-                    value = [float(result.score or 0.0)]
-                else:
-                    value = [float(v) for v in raw]
+                value = [float(result.score or 0.0)] if raw is None else [float(v) for v in raw]
             else:
                 value = result.score
 
@@ -269,5 +266,5 @@ def _distributions_for(axes, params: dict) -> dict:
 
 
 def load_space_from_path(path: str | Path) -> SearchSpace:
-    from bench.search.space import load_space as _ls
+    from lmtune.search.space import load_space as _ls
     return _ls(path)

@@ -10,8 +10,9 @@ v3 문서(워크로드_데이터셋_가이드_v3.md) §6 의 매핑을 재현:
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 
 @dataclass
@@ -54,7 +55,7 @@ class DatasetLoader:
         self.task_id_field = task_id_field
 
     @classmethod
-    def from_slug(cls, slug: str, **kwargs) -> "DatasetLoader":
+    def from_slug(cls, slug: str, **kwargs) -> DatasetLoader:
         if slug not in KNOWN_DATASETS:
             raise KeyError(f"unknown dataset slug: {slug} (known: {sorted(KNOWN_DATASETS)})")
         hf_id, split, subset = KNOWN_DATASETS[slug]
@@ -62,8 +63,7 @@ class DatasetLoader:
 
     def iter_samples(self, limit: int | None = None) -> Iterable[DatasetSample]:
         raw = load_hf_dataset(self.dataset_id, self.subset, self.split)
-        count = 0
-        for row in raw:
+        for count, row in enumerate(raw, start=1):
             prompt = row.get(self.prompt_field) or row.get("instruction") or row.get("problem") or ""
             if not isinstance(prompt, str):
                 prompt = str(prompt)
@@ -75,7 +75,6 @@ class DatasetLoader:
                 task_id=str(task_id) if task_id is not None else None,
                 extra={k: v for k, v in row.items() if k not in {self.prompt_field, self.response_field, self.task_id_field}},
             )
-            count += 1
             if limit is not None and count >= limit:
                 break
 

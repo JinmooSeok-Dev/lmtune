@@ -1,4 +1,4 @@
-from bench.search.objective import CallableObjective, ObjectiveResult
+from lmtune.search.objective import CallableObjective, ObjectiveResult
 
 
 def test_callable_objective_scalar_return():

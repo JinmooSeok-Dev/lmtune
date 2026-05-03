@@ -10,37 +10,42 @@ from rich.console import Console
 from rich.table import Table
 from ulid import ULID
 
-from bench.analysis import (
+from lmtune.analysis import (
     build_nway_table,
     compare_runs,
     nway_to_markdown,
-    requests_to_dataframe,
     variance_across_runs,
 )
-from bench.collectors import PrometheusCollector
-from bench.detectors import run_all_rules
-from bench.endpoints import load_endpoint
-from bench.profiles import SLOSpec, discover_profiles, load_profile
-from bench.runners import get_runner
-from bench.runners.base import RequestRow
-from bench.storage import DuckDBStore
-from bench.visualization import render_run_report
-
+from lmtune.collectors import PrometheusCollector
+from lmtune.detectors import run_all_rules
+from lmtune.endpoints import load_endpoint
+from lmtune.profiles import SLOSpec, discover_profiles, load_profile
+from lmtune.runners import get_runner
+from lmtune.runners.base import RequestRow
+from lmtune.storage import DuckDBStore
+from lmtune.visualization import render_run_report
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="LLM endpoint 벤치마크 자동화 CLI")
 console = Console()
 
 # Phase S1: search subcommand group
-from bench.cli_search import app as _search_app  # noqa: E402
+from lmtune.cli_search import app as _search_app  # noqa: E402
+
 app.add_typer(_search_app, name="search")
 
 # Phase S4: orchestrate (direct deployment) subcommand group
-from bench.cli_orchestrate import app as _orchestrate_app  # noqa: E402
+from lmtune.cli_orchestrate import app as _orchestrate_app  # noqa: E402
+
 app.add_typer(_orchestrate_app, name="orchestrate")
+
+# Phase W: dashboard subcommand group
+from lmtune.cli_dashboard import app as _dashboard_app  # noqa: E402
+
+app.add_typer(_dashboard_app, name="dashboard")
 
 
 def _default_db_path() -> Path:
-    return Path(os.environ.get("BENCH_DB", "data/db/bench.duckdb"))
+    return Path(os.environ.get("LMTUNE_DB", "data/db/lmtune.duckdb"))
 
 
 def _default_raw_dir() -> Path:

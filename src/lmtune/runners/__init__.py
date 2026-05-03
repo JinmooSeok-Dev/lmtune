@@ -1,7 +1,7 @@
-from bench.runners.aiperf import AIPerfRunner
-from bench.runners.base import RunArtifact, Runner, RunnerError
-from bench.runners.guidellm import GuideLLMRunner
-from bench.runners.vllm_bench import VllmBenchRunner
+from lmtune.runners.aiperf import AIPerfRunner
+from lmtune.runners.base import RunArtifact, Runner, RunnerError
+from lmtune.runners.guidellm import GuideLLMRunner
+from lmtune.runners.vllm_bench import VllmBenchRunner
 
 
 def get_runner(kind: str) -> Runner:

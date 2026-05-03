@@ -43,7 +43,7 @@ class DeploymentSpec(BaseModel):
 
 
 class EndpointSpec(BaseModel):
-    apiVersion: str = "bench/v1alpha1"
+    apiVersion: str = "lmtune/v1alpha1"
     slug: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9\-_]*$")
     name: str
     url: HttpUrl

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from bench.analysis.distributions import ecdf
-from bench.runners.base import RequestRow
-from bench.visualization.plots import register_plot
+from lmtune.analysis.distributions import ecdf
+from lmtune.runners.base import RequestRow
+from lmtune.visualization.plots import register_plot
 
 
 @register_plot("cdf")

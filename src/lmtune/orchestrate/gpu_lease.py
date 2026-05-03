@@ -14,7 +14,6 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 
-
 _LEASE_DIR = Path(os.environ.get("BENCH_GPU_LEASE_DIR", "/tmp"))
 
 

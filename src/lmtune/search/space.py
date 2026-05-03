@@ -15,7 +15,6 @@ from typing import Any, Literal
 
 import yaml
 
-
 AxisKind = Literal["categorical", "bool", "int", "float", "log_uniform"]
 
 
@@ -28,6 +27,11 @@ class Axis:
     high: float | None = None
     step: int | float | None = None
     active_if: dict[str, Any] = field(default_factory=dict)
+    # cost_tier — Phase W 의 cost-aware sampler hint.
+    # 1=topology(영구), 2=BIOS/cmdline(reboot, ~10min), 3=helmfile(~3min),
+    # 4=vllm restart(~30s), 5=env only(0s), 6=runtime(<1s).
+    # 미지정 = 4 (vllm restart 가정, 가장 흔한 케이스).
+    cost_tier: int = 4
 
     def __post_init__(self):
         if self.kind == "categorical":
@@ -50,17 +54,14 @@ class Axis:
         """Conditional gate. Empty active_if → always active."""
         if not self.active_if:
             return True
-        for k, v in self.active_if.items():
-            if context.get(k) != v:
-                return False
-        return True
+        return all(context.get(k) == v for k, v in self.active_if.items())
 
 
 @dataclass(slots=True)
 class SearchSpace:
     name: str
     axes: list[Axis]
-    api_version: str = "bench/search/v1alpha1"
+    api_version: str = "lmtune/search/v1alpha1"
 
     def axis_by_name(self, name: str) -> Axis:
         for a in self.axes:
@@ -111,6 +112,8 @@ def _axis_to_dict(a: Axis) -> dict:
             d["step"] = a.step
     if a.active_if:
         d["active_if"] = a.active_if
+    if a.cost_tier != 4:
+        d["cost_tier"] = a.cost_tier
     return d
 
 
@@ -135,10 +138,11 @@ def parse_space(raw: dict) -> SearchSpace:
                 high=spec.get("high"),
                 step=spec.get("step"),
                 active_if=spec.get("active_if") or {},
+                cost_tier=int(spec.get("cost_tier", 4)),
             )
         )
     return SearchSpace(
         name=raw.get("name") or "unnamed",
         axes=axes,
-        api_version=raw.get("apiVersion", "bench/search/v1alpha1"),
+        api_version=raw.get("apiVersion", "lmtune/search/v1alpha1"),
     )

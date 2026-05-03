@@ -1,0 +1,31 @@
+# Profile: Precise prefix-cache aware routing (ZMQ pub/sub for KV events).
+#
+# precise-prefix-cache-aware path 의 EPP scorer 가 ZMQ pub/sub 로 KV cache 상태를
+# 라우터에 broadcast. exact-match scorer 가 best-known.
+name: precise_prefix_zmq
+priority: 2
+description: |
+  Precise prefix-cache aware routing. Routers consume KV-events stream to score requests.
+  ZMQ pub/sub backend, exact-match scorer.
+
+applies_when:
+  well_lit_path: precise-prefix-cache-aware
+
+env_locked:
+  KV_EVENTS_BACKEND: zmq-pubsub
+  KV_EVENTS_TOPIC: kv-cache-state
+  PRECISE_SCORER_ALGO: exact-match
+
+env_tunable:
+  - name: PRECISE_SCORER_TYPE
+    kind: categorical
+    values: [exact-match, prefix-tree, hybrid]
+    cost_tier: 3
+  - name: KV_EVENTS_PUBLISH_INTERVAL_MS
+    kind: categorical
+    values: ["50", "100", "500"]
+    cost_tier: 5
+  - name: PRECISE_CACHE_TTL_SEC
+    kind: categorical
+    values: ["30", "120", "600"]
+    cost_tier: 5

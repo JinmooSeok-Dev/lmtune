@@ -1,3 +1,3 @@
-from bench.storage.duckdb_store import DuckDBStore
+from lmtune.storage.duckdb_store import DuckDBStore
 
 __all__ = ["DuckDBStore"]

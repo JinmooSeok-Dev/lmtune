@@ -1,0 +1,392 @@
+{
+  "studies": [
+    {
+      "study_id": "st-01KQMYS90H4228W644KMRHRPY3",
+      "name": "w-local-mvp",
+      "strategy": "tpe",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 10,
+      "n_completed": 10,
+      "top_score": 736.2411127341741,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-05-03 03:21:33.078685",
+      "finished_at": "2026-05-03 03:47:52.501217"
+    },
+    {
+      "study_id": "st-01KQMYRVQ3PRMTHZZDA94565FS",
+      "name": "w-local-mvp",
+      "strategy": "tpe",
+      "direction": "maximize",
+      "status": "running",
+      "n_trials": 1,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-05-03 03:21:19.463694",
+      "finished_at": null
+    },
+    {
+      "study_id": "st-01KQCX8F8A9M620HDX8GGDCMWS",
+      "name": "minikube-s6-validation",
+      "strategy": "tpe",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 5,
+      "n_completed": 4,
+      "top_score": 1390.936935381454,
+      "endpoint_slug": null,
+      "profile_slugs": [],
+      "created_at": "2026-04-30 00:20:58.383388",
+      "finished_at": "2026-04-30 00:20:58.392342"
+    },
+    {
+      "study_id": "st-01KQCM1FRZNMYJ9EAJQYEB2DEY",
+      "name": "B0-validate",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 2,
+      "n_completed": 2,
+      "top_score": 0.0,
+      "endpoint_slug": null,
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-29 21:39:52.355940",
+      "finished_at": "2026-04-29 21:39:52.435329"
+    },
+    {
+      "study_id": "st-01KPWS8M6WJ8YEGNENM4VJTJ9K",
+      "name": "s5f2-nsga2-live",
+      "strategy": "nsga2",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 8,
+      "n_completed": 8,
+      "top_score": 811.0654409876128,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 18:03:18.240177",
+      "finished_at": "2026-04-23 18:22:15.521658"
+    },
+    {
+      "study_id": "st-01KPWR4375B8YYB66Q3H19Z97J",
+      "name": "s5f1-continuous-v2",
+      "strategy": "tpe",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 8,
+      "n_completed": 8,
+      "top_score": 750.779068721573,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 17:43:21.192862",
+      "finished_at": "2026-04-23 18:02:24.292155"
+    },
+    {
+      "study_id": "st-01KPWPT9912RV4P51T7D3WDRB7",
+      "name": "s5f-continuous-tpe",
+      "strategy": "tpe",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 8,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 17:20:31.141499",
+      "finished_at": "2026-04-23 17:24:26.476346"
+    },
+    {
+      "study_id": "st-01KPWH6YFWNGBZHNXNG9346T9C",
+      "name": "live-s4-adapter",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 3,
+      "n_completed": 3,
+      "top_score": 751.3615738621088,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 15:42:34.624113",
+      "finished_at": "2026-04-23 15:49:38.102533"
+    },
+    {
+      "study_id": "st-01KPWFD8017FYNX1EJPSKYENYG",
+      "name": "live-s3-pool-2",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "running",
+      "n_trials": 2,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 15:11:03.815685",
+      "finished_at": null
+    },
+    {
+      "study_id": "st-01KPWF2DNTEZ78FPM63Y35K3SC",
+      "name": "live-s3-pool-1",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 3,
+      "n_completed": 3,
+      "top_score": 775.8900440911249,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 15:05:09.186032",
+      "finished_at": "2026-04-23 15:10:49.680202"
+    },
+    {
+      "study_id": "st-01KPWEXD64NFV10GF5G791MVC6",
+      "name": "live-s3-pool",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 4,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 15:02:24.843669",
+      "finished_at": "2026-04-23 15:03:42.092141"
+    },
+    {
+      "study_id": "st-01KPWDDCTB9MPJRYA9Z4CFVYZX",
+      "name": "live-s2-tpe-12",
+      "strategy": "tpe",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 12,
+      "n_completed": 12,
+      "top_score": 775.9920820186236,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 14:36:11.598997",
+      "finished_at": "2026-04-23 14:58:26.850626"
+    },
+    {
+      "study_id": "st-01KPWCYBYKYNSBR8F91N6K9Q84",
+      "name": "live-s2-tpe",
+      "strategy": "tpe",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 3,
+      "n_completed": 3,
+      "top_score": 773.8157355644112,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 14:27:59.191136",
+      "finished_at": "2026-04-23 14:33:36.081028"
+    },
+    {
+      "study_id": "st-01KPWCAZ7PWJB6Y8WNBJYBQHAC",
+      "name": "live-s1-smoke6",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 2,
+      "n_completed": 2,
+      "top_score": 775.1494735077389,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 14:17:23.577506",
+      "finished_at": "2026-04-23 14:21:07.723815"
+    },
+    {
+      "study_id": "st-01KPWC7SN5G9CCHN2AGVHTQN9J",
+      "name": "live-s1-smoke5",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 2,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 14:15:39.560813",
+      "finished_at": "2026-04-23 14:16:53.931402"
+    },
+    {
+      "study_id": "st-01KPWC0E6TYPJ9Y9C204YQ65QS",
+      "name": "live-smoke-v2",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 2,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "autotune-short"
+      ],
+      "created_at": "2026-04-23 14:11:38.561701",
+      "finished_at": "2026-04-23 14:12:52.272758"
+    },
+    {
+      "study_id": "st-01KPWBRTC9ADW7PD7RPYTVYWRR",
+      "name": "live-s1-smoke4",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 2,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 14:07:28.780686",
+      "finished_at": "2026-04-23 14:08:43.027124"
+    },
+    {
+      "study_id": "st-01KPWBKMPJPAYMYT6BAK47NG4X",
+      "name": "live-s1-smoke3",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 2,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 14:04:39.125313",
+      "finished_at": "2026-04-23 14:05:54.003205"
+    },
+    {
+      "study_id": "st-01KPWBH27QTV7KBGEJM507XQCF",
+      "name": "live-s1-smoke2",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 2,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 14:03:14.682996",
+      "finished_at": "2026-04-23 14:03:16.058796"
+    },
+    {
+      "study_id": "st-01KPWBF2KQTGCNT8V09D80DXKP",
+      "name": "live-s1-smoke",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 2,
+      "n_completed": 0,
+      "top_score": null,
+      "endpoint_slug": "local-vllm-autotune",
+      "profile_slugs": [
+        "short"
+      ],
+      "created_at": "2026-04-23 14:02:09.530452",
+      "finished_at": "2026-04-23 14:02:09.755906"
+    },
+    {
+      "study_id": "st-01KPWB6AYEWK4PDSNG0Y9H2CYB",
+      "name": "vllm-engine-args-tier1",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 3,
+      "n_completed": 3,
+      "top_score": 0.0,
+      "endpoint_slug": null,
+      "profile_slugs": [],
+      "created_at": "2026-04-23 13:57:23.170959",
+      "finished_at": "2026-04-23 13:57:23.212823"
+    },
+    {
+      "study_id": "st-01KPWB57F12FFJ873SAW0M29M7",
+      "name": "vllm-engine-args-tier1",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 3,
+      "n_completed": 3,
+      "top_score": 0.0,
+      "endpoint_slug": null,
+      "profile_slugs": [],
+      "created_at": "2026-04-23 13:56:46.837574",
+      "finished_at": "2026-04-23 13:56:46.877067"
+    },
+    {
+      "study_id": "st-01KPWB56ED7XZJSGQY0WRM2AW9",
+      "name": "vllm-engine-args-tier1",
+      "strategy": "lhc",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 5,
+      "n_completed": 5,
+      "top_score": 0.0,
+      "endpoint_slug": null,
+      "profile_slugs": [],
+      "created_at": "2026-04-23 13:56:46.106604",
+      "finished_at": "2026-04-23 13:56:46.181863"
+    },
+    {
+      "study_id": "st-01KPWB55QXH2ZDCHVRXEMCYM0P",
+      "name": "vllm-engine-args-grid-tier1",
+      "strategy": "grid",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 6,
+      "n_completed": 6,
+      "top_score": 0.0,
+      "endpoint_slug": null,
+      "profile_slugs": [],
+      "created_at": "2026-04-23 13:56:45.056995",
+      "finished_at": "2026-04-23 13:56:45.167197"
+    },
+    {
+      "study_id": "st-01KPWB4S3ZRVG2DPF7KEKC9Q77",
+      "name": "vllm-engine-args-tier1",
+      "strategy": "random",
+      "direction": "maximize",
+      "status": "completed",
+      "n_trials": 5,
+      "n_completed": 5,
+      "top_score": 0.0,
+      "endpoint_slug": null,
+      "profile_slugs": [],
+      "created_at": "2026-04-23 13:56:32.139931",
+      "finished_at": "2026-04-23 13:56:32.224273"
+    }
+  ]
+}

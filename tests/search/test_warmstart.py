@@ -5,8 +5,8 @@ from pathlib import Path
 
 import duckdb
 
-from bench.search.space import Axis, SearchSpace
-from bench.search.warmstart import warmstart_from_archive
+from lmtune.search.space import Axis, SearchSpace
+from lmtune.search.warmstart import warmstart_from_archive
 
 
 def _seed_fixture_db(path: Path) -> None:

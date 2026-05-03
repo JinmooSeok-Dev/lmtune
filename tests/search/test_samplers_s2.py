@@ -5,9 +5,9 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from bench.search import CallableObjective, SearchSpace, Study, StudyConfig
-from bench.search.space import Axis
-from bench.storage.duckdb_store import DuckDBStore
+from lmtune.search import CallableObjective, SearchSpace, Study, StudyConfig
+from lmtune.search.space import Axis
+from lmtune.storage.duckdb_store import DuckDBStore
 
 
 def _sp_mixed() -> SearchSpace:
@@ -32,7 +32,7 @@ def _sp_cat() -> SearchSpace:
 
 
 def _fake_store(tmp: Path) -> DuckDBStore:
-    return DuckDBStore(tmp / "bench.duckdb")
+    return DuckDBStore(tmp / "lmtune.duckdb")
 
 
 def _obj_mixed(params):

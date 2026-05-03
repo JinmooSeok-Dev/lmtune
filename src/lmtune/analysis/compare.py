@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from lmtune.analysis.registry import direction_of
+
 
 @dataclass
 class MetricDelta:
@@ -23,7 +25,7 @@ class RunComparison:
 
     def to_markdown(self, regression_threshold_pct: float = 10.0) -> str:
         lines = [
-            f"# Run Comparison",
+            "# Run Comparison",
             f"- baseline: `{self.baseline_run_id}`",
             f"- candidate: `{self.candidate_run_id}`",
             f"- regression threshold: ±{regression_threshold_pct}%",
@@ -44,9 +46,6 @@ class RunComparison:
             for d in self.improvements:
                 lines.append(f"- {d.metric}[{d.p}]: {d.baseline:.2f} → {d.candidate:.2f} ({d.delta_pct:+.2f}%)")
         return "\n".join(lines) + "\n"
-
-
-from bench.analysis.registry import direction_of
 
 
 def compare_runs(

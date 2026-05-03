@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from bench.analysis import compare_runs
-from bench.analysis.metrics import percentiles, summarize_requests
-from bench.runners.base import RequestRow
+from lmtune.analysis import compare_runs
+from lmtune.analysis.metrics import percentiles, summarize_requests
+from lmtune.runners.base import RequestRow
 
 
 def test_percentiles_small_and_large():

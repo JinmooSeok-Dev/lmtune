@@ -4,15 +4,15 @@ import math
 
 import pytest
 
-from bench.analysis import compare_runs
-from bench.analysis.derived import (
+from lmtune.analysis import compare_runs
+from lmtune.analysis.derived import (
     BUILTIN_FORMULAS,
     DerivedSpec,
     compute_derived,
     resolve_builtin,
     safe_eval,
 )
-from bench.analysis.registry import (
+from lmtune.analysis.registry import (
     MetricDef,
     by_category,
     direction_of,
@@ -20,7 +20,6 @@ from bench.analysis.registry import (
     list_all,
     register,
 )
-
 
 # ---------- Registry ----------
 

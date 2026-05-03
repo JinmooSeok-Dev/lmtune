@@ -4,12 +4,12 @@ from pathlib import Path
 
 import yaml
 
-from bench.deploy.base import merge_params_into_endpoint
+from lmtune.deploy.base import merge_params_into_endpoint
 
 
 def _baseline(path: Path) -> None:
     path.write_text(yaml.safe_dump({
-        "apiVersion": "bench/v1alpha1",
+        "apiVersion": "lmtune/v1alpha1",
         "slug": "x",
         "url": "http://localhost:8000/v1",
         "model": "Qwen/Qwen2.5-1.5B-Instruct",

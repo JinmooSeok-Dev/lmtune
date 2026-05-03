@@ -1,0 +1,83 @@
+# LLM domain prior — hand-curated, LLM-free path.
+#
+# autoresearch agent (Claude/GPT/local LLM) 가 매 study 마다 새로 추론하지
+# 않고, 본 YAML 에 사전 컴파일된 prior 를 사용한다.  새 모델/워크로드 등장 시
+# 만 사용자가 갱신 (또는 [agent] extra 의 LLMOracle 이 자동 갱신).
+#
+# 사용:
+#   from bench.search.llm_prior import LLMDomainPrior
+#   prior = LLMDomainPrior.from_yaml("configs/autoresearch/axis_priors.yaml")
+#   priority = prior.get_priority("enable_chunked_prefill", context={...})
+#   seeds = prior.to_warmstart_seeds(space, context, n=3)
+#
+# Priority weights (TPE prior multiplier):
+#   high = 2.0  (sampler 가 우선 탐색)
+#   medium = 1.0
+#   low = 0.3   (값이 거의 영향 없으므로 archive default 사용)
+#
+# 본 prior 는 사람이 작성한 출발점일 뿐. ANOVA / RandomForest importance
+# 가 archive 에서 재학습되면 자동으로 prior 를 update.
+
+apiVersion: lmtune/autoresearch/v1alpha1
+kind: AxisPriors
+
+default_priorities:
+  # vLLM engine_args (cost_tier=4, vllm restart 마다)
+  enable_chunked_prefill: high
+  enable_prefix_caching: high
+  max_num_seqs: high
+  gpu_memory_utilization: high
+  max_model_len: medium
+  kv_cache_dtype: medium
+  block_size: low
+  enable_async_scheduling: medium
+
+  # Parallelism (cost_tier=3, helmfile redeploy 마다)
+  tp: medium       # macro 영역, archive warmstart 가 더 정확
+  pp: low
+  dp: low
+  ep: medium       # MoE 에서만
+
+  # System / NCCL env (cost_tier=5)
+  NCCL_ALGO: medium
+  NCCL_BUFFSIZE: low
+  NCCL_LL_THRESHOLD: low
+
+  # KV transport (cost_tier=5)
+  NIXL_CHUNK_SIZE_MB: high      # P/D 에서 직접 영향
+  NIXL_NUM_STREAMS: medium
+
+  # LMCache
+  LMCACHE_LOCAL_CPU_SIZE_GB: high
+  LMCACHE_REMOTE_URL: medium
+  LMCACHE_COMPRESS: low
+
+# Contextual overrides — 특정 (model, workload, path) 조합에서 priority 재조정
+contextual_overrides:
+  # MoE + long-context: DBO/EPLB/EP 가 핵심
+  - applies_when: {model_family: moe, workload_class: long-context}
+    priorities:
+      enable_dbo: high
+      enable_eplb: high
+      ep: high
+      max_model_len: high
+
+  # 코딩 에이전트 워크로드: prefix cache 가 핵심
+  - applies_when: {workload_class: coding-agent}
+    priorities:
+      enable_prefix_caching: high
+      LMCACHE_REMOTE_URL: high
+      precise_prefix_cache_aware: high
+
+  # P/D disaggregation: NIXL 튜닝이 핵심
+  - applies_when: {well_lit_path: pd-disaggregation}
+    priorities:
+      NIXL_CHUNK_SIZE_MB: high
+      NIXL_NUM_STREAMS: high
+      prefill_decode_ratio: high
+
+  # MLA 모델 (DSV3, DSR1): MLA latent dim 자체는 모델 스펙이라 axis 아님
+  - applies_when: {has_mla: true}
+    priorities:
+      kv_cache_dtype: high     # FP8 KV 가 latent 압축과 잘 맞음
+      max_model_len: high      # MLA 가 긴 context 에 강함

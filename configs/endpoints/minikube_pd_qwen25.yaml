@@ -1,0 +1,36 @@
+apiVersion: lmtune/v1alpha1
+slug: minikube-pd-qwen25
+name: "K8s/llm-d P/D Qwen2.5-1.5B sample endpoint (minikube example; works on k3s/B200/vanilla-k8s/OpenShift with url+namespace 변경)"
+url: http://127.0.0.1:8011/v1
+model: Qwen/Qwen2.5-1.5B
+tokenizer: Qwen/Qwen2.5-1.5B
+api_type: openai
+
+deployment:
+  engine: vllm
+  version: "0.5.1"
+  parallelism:
+    tp: 1
+    dp: 1
+    ep: false
+  engine_args:
+    enable_prefix_caching: false
+    max_num_seqs: 32
+    max_model_len: 4096
+    block_size: 16
+    enforce_eager: true
+    gpu_memory_utilization: 0.85
+    kv_transfer_config: '{"kv_connector":"NixlConnector","kv_role":"kv_both"}'
+
+# 사용자 환경별 갈아끼울 필드:
+#   url           : 자기 cluster 의 service URL or kubectl port-forward 로컬 포트
+#   namespace     : helmfile 의 release namespace
+#   deployment    : 환경별 baseline (B200 에선 tp=8, multi-node 에선 dp 등)
+notes: |
+  K8s/llm-d 트랙 진입용 sample. minikube 에서 S6 live validation 됨.
+  실제 환경 (k3s 2-node B200, vanilla-k8s, OpenShift) 에 적용할 때:
+    1. peer repo 의 helmfile 로 llm-d 가 배포돼 있어야 함 (`helmfile apply` 1회)
+    2. `url` 은 그 cluster 의 Service URL 또는 `kubectl port-forward`
+    3. `kv_transfer_config` 의 NixlConnector 는 P/D disagg 시. inference-scheduling base 에선 제거.
+  autoresearch.sh 는 SKIP_RESTART=1 로 호출 — engine_args 는 helmfile 에 baked, 본 endpoint 는 측정 전용.
+tags: [llmd, pd-disagg, k8s-sample, qwen25-1.5b, s6-validation]

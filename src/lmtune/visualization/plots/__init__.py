@@ -7,8 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
-
+from collections.abc import Callable
 
 _REGISTRY: dict[str, Callable] = {}
 
@@ -29,21 +28,22 @@ def list_plots() -> list[str]:
 
 
 # 하위 모듈 import 하여 registry 채우기
-from bench.visualization.plots import (  # noqa: F401,E402
+from lmtune.visualization.plots import (  # noqa: F401,E402
+    axis_importance_bar,
     cdf,
     histogram,
+    parallel_coords,
+    pareto,
     phase_breakdown,
+    token_snowball,
     ttft_vs_input_len,
     ttft_vs_turn,
-    token_snowball,
     variance_box,
 )
 
-
 # Backward compat — 기존 호출자(`from bench.visualization import plot_ttft_vs_turn`)
-from bench.visualization.plots.ttft_vs_input_len import plot_ttft_vs_input_len  # noqa: F401,E402
-from bench.visualization.plots.ttft_vs_turn import plot_ttft_vs_turn  # noqa: F401,E402
-
+from lmtune.visualization.plots.ttft_vs_input_len import plot_ttft_vs_input_len  # noqa: F401,E402
+from lmtune.visualization.plots.ttft_vs_turn import plot_ttft_vs_turn  # noqa: F401,E402
 
 __all__ = [
     "get_plot",

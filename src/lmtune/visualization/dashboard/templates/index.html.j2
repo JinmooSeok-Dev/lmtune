@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>bench autotuner dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5">
+    <h1 class="text-2xl font-bold tracking-tight">bench autotuner</h1>
+    <p class="text-slate-500 text-sm mt-1">
+      Output G — InferenceX-style static dashboard. {{ n_studies }} study/studies indexed.
+    </p>
+    <div class="mt-3 flex flex-wrap gap-3 text-sm">
+      <a href="matrix.html" class="text-blue-600 hover:underline font-semibold">📊 Model × HW matrix</a>
+      <span class="text-slate-300">|</span>
+      <a href="compare.html" class="text-blue-600 hover:underline">Cross-study compare</a>
+      {% if has_spaces %}
+      <span class="text-slate-300">|</span>
+      <a href="spaces.html" class="text-blue-600 hover:underline">
+        Search-space catalog ({{ spaces_summary.n_spaces }} spaces · {{ spaces_summary.total_axes }} axes · {{ spaces_summary.n_profiles }} env-profiles)
+      </a>
+      {% endif %}
+      <span class="text-slate-300">|</span>
+      <span class="text-slate-500">Schema: <code>{{ data.schema_version }}</code></span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6">
+  <h2 class="text-lg font-semibold mb-3">Studies</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for s in data.studies %}
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">{{ s.name }}</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          {% if s.status == 'completed' %}bg-green-100 text-green-800
+          {% elif s.status == 'running' %}bg-blue-100 text-blue-800
+          {% else %}bg-slate-100 text-slate-700{% endif %}">{{ s.status }}</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              {% if s.strategy == 'tpe' %}bg-blue-50 text-blue-700
+              {% elif s.strategy == 'nsga2' %}bg-purple-50 text-purple-700
+              {% elif s.strategy == 'cma_es' %}bg-emerald-50 text-emerald-700
+              {% elif s.strategy == 'random' %}bg-slate-100 text-slate-700
+              {% elif s.strategy == 'lhc' %}bg-amber-50 text-amber-800
+              {% elif s.strategy == 'grid' %}bg-zinc-100 text-zinc-700
+              {% else %}bg-slate-100 text-slate-700{% endif %}">{{ s.strategy }}</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>{{ s.model or '?' }}</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>{{ s.hw or s.endpoint_slug or '?' }}</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>{{ s.n_completed }} <span class="text-slate-400">completed</span> / {{ s.n_pruned }} <span class="text-slate-400">pruned</span> / {{ s.n_trials }} <span class="text-slate-400">total</span></dd></div>
+        {% if s.n_axes %}
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">{{ s.n_axes }}</span></dd></div>
+        {% endif %}
+        {% if s.pareto_front and s.pareto_front|length > 0 %}
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">{{ s.pareto_front|length }} non-dom</span></dd></div>
+        {% endif %}
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">{% if s.top_score is not none %}{{ "%.2f"|format(s.top_score) }}{% else %}—{% endif %}</dd></div>
+      </dl>
+      {% if s.top_params %}
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{{ s.top_params|tojson(indent=2) }}</pre>
+      </details>
+      {% endif %}
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="{{ s.study_id }}">{{ s.study_id[:14] }}…</span>
+        <a href="studies/{{ s.study_id }}.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    {% else %}
+    <p class="text-slate-500 col-span-full">No studies yet. Run <code>bench search start</code> to populate.</p>
+    {% endfor %}
+  </div>
+
+  {% if data.perf_history %}
+  <h2 class="text-lg font-semibold mt-8 mb-3">Perf changelog</h2>
+  <ul class="space-y-2">
+    {% for h in data.perf_history %}
+    <li class="bg-white border border-slate-200 rounded p-3 text-sm">
+      <div class="flex justify-between">
+        <code class="text-slate-500">{{ h.config_keys|join(', ') }}</code>
+        {% if h.pr_link %}<a href="{{ h.pr_link }}" class="text-blue-600 text-xs hover:underline">PR ↗</a>{% endif %}
+      </div>
+      <ul class="list-disc list-inside text-xs text-slate-600 mt-1">
+        {% for d in h.description %}<li>{{ d }}</li>{% endfor %}
+      </ul>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</main>
+
+<footer class="max-w-7xl mx-auto px-6 py-6 text-xs text-slate-400">
+  Generated by <code>bench dashboard build</code>. JSON: <a href="data/studies_index.json" class="hover:underline">studies_index</a> · <a href="data/throughput_vs_latency.json" class="hover:underline">tvl</a> · <a href="data/perf_history.json" class="hover:underline">perf_history</a>
+</footer>
+</body>
+</html>

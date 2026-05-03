@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Iterator, Literal
-
+from typing import Literal
 
 ArrivalKind = Literal["constant", "poisson", "diurnal", "burst", "replay"]
 

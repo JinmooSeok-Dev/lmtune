@@ -5,10 +5,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from bench.endpoints import EndpointSpec
-from bench.profiles import ProfileSpec
-from bench.runners.base import RequestRow, Runner, RunnerError
-
+from lmtune.endpoints import EndpointSpec
+from lmtune.profiles import ProfileSpec
+from lmtune.runners.base import RequestRow, Runner
 
 _METRIC_MAP = {
     "time_to_first_token_ms": "ttft",

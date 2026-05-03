@@ -1,0 +1,43 @@
+# Profile: Tiered prefix cache via LMCache (HBM → CPU → NVMe → Redis/Mooncake).
+#
+# vLLM 0.6+ 의 LMCache 통합. prefix hit rate 가 throughput 의 dominant factor 인
+# 코딩 에이전트 / multi-turn 워크로드에 적합.
+name: tiered_prefix_lmcache
+priority: 2
+description: |
+  Tiered prefix cache externalized via LMCache. CPU 백킹 → NVMe (GDS) → optional
+  remote Redis or Mooncake. Cost of Dynamic Reasoning paper 의 51.7% cost 절감 검증 가능.
+
+applies_when:
+  well_lit_path: tiered-prefix-cache
+  enable_prefix_caching: true
+
+env_locked:
+  # LMCache 활성
+  LMCACHE_PINNED_MEMORY: "on"
+  LMCACHE_PREFETCH: "on"
+  LMCACHE_EVICTION_POLICY: lru
+  # vLLM 통합
+  VLLM_ENABLE_LMCACHE: "1"
+
+env_tunable:
+  - name: LMCACHE_LOCAL_CPU_SIZE_GB
+    kind: categorical
+    values: ["16", "64", "256"]
+    cost_tier: 4
+  - name: LMCACHE_REMOTE_URL
+    kind: categorical
+    values:
+      - none
+      - "redis://127.0.0.1:6379"
+      - "mooncake://master.local:50051"
+      - "disk:///mnt/cache"
+    cost_tier: 3   # 백엔드 변경은 deploy 변경
+  - name: LMCACHE_CHUNK_SIZE
+    kind: categorical
+    values: ["256", "512", "1024"]
+    cost_tier: 4
+  - name: LMCACHE_COMPRESS
+    kind: categorical
+    values: [none, lz4, zstd]
+    cost_tier: 4

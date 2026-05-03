@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Compare studies — bench autotuner</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5">
+    <div class="text-sm text-slate-500 mb-2">
+      <a href="index.html" class="text-blue-600 hover:underline">← all studies</a>
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight">Cross-study compare</h1>
+    <p class="text-slate-500 text-sm mt-1">
+      모든 study 의 trial 을 (throughput × TTFT p99) 평면에 함께 그려 모델/HW/stack 비교.
+      같은 워크로드 prefer: short → aggregate.
+    </p>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Throughput vs TTFT — all trials</h2>
+    <p class="text-xs text-slate-500 mb-3">한 study = 한 색. 점 위에 hover 해서 study/trial 확인.</p>
+    <div class="flex flex-wrap gap-3 items-center mb-3 text-xs">
+      <label>model
+        <select id="filter-model" class="ml-1 border border-slate-300 rounded px-2 py-1 font-mono"></select>
+      </label>
+      <label>HW
+        <select id="filter-hw" class="ml-1 border border-slate-300 rounded px-2 py-1 font-mono"></select>
+      </label>
+      <label>strategy
+        <select id="filter-strategy" class="ml-1 border border-slate-300 rounded px-2 py-1 font-mono"></select>
+      </label>
+      <button id="filter-reset" class="ml-2 px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">reset</button>
+      <span id="filter-count" class="text-slate-400 ml-2"></span>
+    </div>
+    <canvas id="all-trials-scatter" width="900" height="440"></canvas>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-1">Cross-study running-best — 어느 sampler 가 빨리 수렴하나</h2>
+    <p class="text-xs text-slate-500 mb-3">
+      x = trial seq, y = 그 시점까지 best score. 가파를수록 sampler 가 좋은 영역을 빨리 찾음.
+      직선 = 새 best 찾지 못함 (exploiting).
+    </p>
+    <canvas id="convergence-line" width="900" height="380"></canvas>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-1">Cross-study Pareto — TTFT × throughput</h2>
+    <p class="text-xs text-slate-500 mb-3">
+      각 study 의 비지배 front 만 표시. 한 study = 한 색.
+      어느 (모델, HW, stack) 조합이 어느 영역의 trade-off 를 지배하는지.
+    </p>
+    <canvas id="pareto-cross" width="900" height="380"></canvas>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Top-1 score per study</h2>
+    <canvas id="top-score-bar" width="900" height="280"></canvas>
+  </section>
+
+  {% if perf_history %}
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-1">Perf-changelog timeline</h2>
+    <p class="text-xs text-slate-500 mb-3">
+      <code>b200/perf-changelog.yaml</code> append-only. 새 vLLM/llm-d 기능 도입 시점 마커.
+      study 의 created_at 과 cross-reference 해 "어떤 변경 후 score 가 바뀌었나" 추적 가능.
+    </p>
+    <ol class="relative border-l border-slate-200 ml-2 space-y-2">
+      {% for h in perf_history %}
+      <li class="ml-4">
+        <div class="absolute w-3 h-3 bg-blue-500 rounded-full -left-[6.5px] mt-1"></div>
+        <div class="text-xs">
+          <span class="font-mono text-slate-500">{{ h.landed_at or '—' }}</span>
+          {% if h.pr_link %}<a href="{{ h.pr_link }}" class="ml-2 text-blue-600 hover:underline">PR ↗</a>{% endif %}
+          {% if h.evals_only %}<span class="ml-1 text-amber-600">[evals]</span>{% endif %}
+          <span class="ml-2 font-mono text-slate-400">{{ h.config_keys|join(', ') }}</span>
+        </div>
+        <ul class="list-disc list-inside text-xs text-slate-600 mt-0.5">
+          {% for d in h.description %}<li>{{ d }}</li>{% endfor %}
+        </ul>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <h2 class="text-lg font-semibold mb-3">Side-by-side study summary</h2>
+    <div class="overflow-auto">
+      <table class="text-xs w-full">
+        <thead class="bg-slate-100 text-slate-700">
+          <tr>
+            <th class="text-left p-2">study</th>
+            <th class="text-left p-2">strategy</th>
+            <th class="text-left p-2">model</th>
+            <th class="text-left p-2">HW</th>
+            <th class="text-right p-2">trials</th>
+            <th class="text-right p-2">top score</th>
+            <th class="text-left p-2">top params (truncated)</th>
+            <th class="text-left p-2">link</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for s in studies %}
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2"><span class="font-semibold">{{ s.name }}</span><div class="font-mono text-slate-400 text-[10px]">{{ s.study_id[:14] }}…</div></td>
+            <td class="p-2 font-mono">{{ s.strategy }}</td>
+            <td class="p-2">{{ s.model or '?' }}</td>
+            <td class="p-2">{{ s.hw or s.endpoint_slug or '?' }}</td>
+            <td class="p-2 text-right">{{ s.n_completed }}/{{ s.n_trials }}</td>
+            <td class="p-2 text-right font-bold">{% if s.top_score is not none %}{{ "%.3f"|format(s.top_score) }}{% else %}—{% endif %}</td>
+            <td class="p-2 text-xs font-mono text-slate-600 max-w-md truncate" title="{{ s.top_params|tojson }}">{{ s.top_params|tojson }}</td>
+            <td class="p-2"><a href="studies/{{ s.study_id }}.html" class="text-blue-600 hover:underline">detail →</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer class="max-w-7xl mx-auto px-6 py-6 text-xs text-slate-400">
+  Generated by <code>bench dashboard build</code>.
+</footer>
+
+<script>
+const STUDIES = {{ studies|tojson }};
+
+// distinct hue per study
+function hueFor(i, n) { return Math.round(360 * i / Math.max(1, n)); }
+
+// scatter — datasets indexed by study_id
+const allDatasets = STUDIES.map((s, i) => {
+  const points = (s.points || [])
+    .filter(p => p.throughput_avg != null && p.ttft_p99 != null)
+    .map(p => ({x: p.ttft_p99, y: p.throughput_avg, study_name: s.name, trial_id: p.trial_id, seq: p.seq}));
+  return {
+    label: s.name,
+    data: points,
+    backgroundColor: `hsla(${hueFor(i, STUDIES.length)}, 75%, 50%, 0.65)`,
+    pointRadius: 5,
+    _meta: {
+      study_id: s.study_id,
+      model: s.model || '(unknown)',
+      hw: s.hw || s.endpoint_slug || '(unknown)',
+      strategy: s.strategy || '(unknown)',
+    },
+  };
+}).filter(d => d.data.length > 0);
+
+let scatterChart = null;
+if (allDatasets.length > 0) {
+  scatterChart = new Chart(document.getElementById('all-trials-scatter'), {
+    type: 'scatter',
+    data: {datasets: allDatasets.map(d => ({...d, hidden: false}))},
+    options: {
+      scales: {
+        x: {title: {display: true, text: 'TTFT p99 (ms)'}},
+        y: {title: {display: true, text: 'throughput (tok/s)'}},
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = ctx.raw;
+              return `${p.study_name} seq=${p.seq} ttft=${p.x.toFixed(0)}ms tput=${p.y.toFixed(1)}`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// filters
+function fillFilter(id, values) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '';
+  const oAll = document.createElement('option');
+  oAll.value = '__ALL__';
+  oAll.textContent = '(all)';
+  sel.appendChild(oAll);
+  Array.from(values).sort().forEach(v => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = v;
+    sel.appendChild(o);
+  });
+}
+
+const models = new Set();
+const hws = new Set();
+const strategies = new Set();
+allDatasets.forEach(d => {
+  models.add(d._meta.model);
+  hws.add(d._meta.hw);
+  strategies.add(d._meta.strategy);
+});
+fillFilter('filter-model', models);
+fillFilter('filter-hw', hws);
+fillFilter('filter-strategy', strategies);
+
+function applyFilters() {
+  if (!scatterChart) return;
+  const m = document.getElementById('filter-model').value;
+  const h = document.getElementById('filter-hw').value;
+  const s = document.getElementById('filter-strategy').value;
+  let kept = 0;
+  scatterChart.data.datasets.forEach((d, i) => {
+    const meta = allDatasets[i]._meta;
+    const ok = (m === '__ALL__' || meta.model === m)
+            && (h === '__ALL__' || meta.hw === h)
+            && (s === '__ALL__' || meta.strategy === s);
+    d.hidden = !ok;
+    if (ok) kept += 1;
+  });
+  document.getElementById('filter-count').textContent = `→ ${kept}/${allDatasets.length} studies visible`;
+  scatterChart.update();
+}
+
+['filter-model', 'filter-hw', 'filter-strategy'].forEach(id => {
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+document.getElementById('filter-reset').addEventListener('click', () => {
+  document.getElementById('filter-model').value = '__ALL__';
+  document.getElementById('filter-hw').value = '__ALL__';
+  document.getElementById('filter-strategy').value = '__ALL__';
+  applyFilters();
+});
+applyFilters();
+
+// top-score bar
+const labels = STUDIES.map(s => s.name);
+const scores = STUDIES.map(s => s.top_score);
+new Chart(document.getElementById('top-score-bar'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: 'top-1 score',
+      data: scores,
+      backgroundColor: STUDIES.map((_, i) => `hsla(${hueFor(i, STUDIES.length)}, 75%, 50%, 0.7)`),
+    }],
+  },
+  options: {
+    scales: {
+      y: {title: {display: true, text: 'score (per study direction)'}},
+    },
+  }
+});
+
+// convergence (running best per study)
+const convergenceDatasets = STUDIES.map((s, i) => {
+  const trace = (s.points || [])
+    .filter(p => p.score != null)
+    .sort((a, b) => a.seq - b.seq);
+  if (trace.length === 0) return null;
+  const dir = s.direction || 'maximize';
+  const better = (a, b) => dir === 'maximize' ? a > b : a < b;
+  let best = trace[0].score;
+  const pts = trace.map(p => {
+    if (better(p.score, best)) best = p.score;
+    return {x: p.seq, y: best};
+  });
+  return {
+    label: `${s.name} (${s.strategy})`,
+    data: pts,
+    borderColor: `hsl(${hueFor(i, STUDIES.length)}, 75%, 50%)`,
+    backgroundColor: 'transparent',
+    stepped: true,
+    pointRadius: 0,
+    tension: 0,
+  };
+}).filter(Boolean);
+if (convergenceDatasets.length > 0) {
+  new Chart(document.getElementById('convergence-line'), {
+    type: 'line',
+    data: {datasets: convergenceDatasets},
+    options: {
+      scales: {
+        x: {type: 'linear', title: {display: true, text: 'trial seq'}},
+        y: {title: {display: true, text: 'running-best score'}},
+      },
+      interaction: {mode: 'index', intersect: false},
+      plugins: {
+        legend: {position: 'right', labels: {boxWidth: 12, font: {size: 10}}},
+      },
+    },
+  });
+}
+
+// cross-study Pareto — each study's pareto_front overlay
+const paretoDatasets = STUDIES.map((s, i) => {
+  const front = s.pareto_front || [];
+  if (front.length === 0) return null;
+  return {
+    label: s.name,
+    data: front.map(p => ({x: p.x, y: p.y, study_name: s.name, seq: p.seq})),
+    borderColor: `hsl(${hueFor(i, STUDIES.length)}, 75%, 45%)`,
+    backgroundColor: `hsla(${hueFor(i, STUDIES.length)}, 75%, 45%, 0.85)`,
+    pointStyle: 'rectRot',
+    pointRadius: 5,
+    showLine: true,
+    fill: false,
+    borderWidth: 2,
+  };
+}).filter(Boolean);
+if (paretoDatasets.length > 0) {
+  new Chart(document.getElementById('pareto-cross'), {
+    type: 'scatter',
+    data: {datasets: paretoDatasets},
+    options: {
+      scales: {
+        x: {title: {display: true, text: 'TTFT p99 (ms) — lower better'}},
+        y: {title: {display: true, text: 'throughput (tok/s) — higher better'}},
+      },
+      plugins: {
+        legend: {position: 'right', labels: {boxWidth: 12, font: {size: 10}}},
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = ctx.raw;
+              return `${p.study_name} seq=${p.seq} ttft=${p.x.toFixed(0)}ms tput=${p.y.toFixed(1)}`;
+            }
+          }
+        }
+      }
+    }
+  });
+} else {
+  document.getElementById('pareto-cross').parentElement.innerHTML +=
+    '<p class="text-xs text-slate-400 mt-2">(no Pareto data — needs studies with TTFT × throughput metrics)</p>';
+}
+</script>
+</body>
+</html>

@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from bench.analysis.aggregate import (
+from lmtune.analysis.aggregate import (
     aggregate,
     requests_to_dataframe,
     session_totals_from_requests,
 )
-from bench.analysis.distributions import (
+from lmtune.analysis.distributions import (
     detect_bimodality,
     ecdf,
     fit_zipf_s,
     histogram,
     variance_stats,
 )
-from bench.analysis.nway import build_nway_table, variance_across_runs
-from bench.runners.base import RequestRow
+from lmtune.analysis.nway import build_nway_table, variance_across_runs
+from lmtune.runners.base import RequestRow
 
 
 def _rows_for_variance():

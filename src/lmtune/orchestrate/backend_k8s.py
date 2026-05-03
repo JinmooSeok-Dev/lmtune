@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import shutil
 import subprocess
 import time
@@ -27,13 +26,12 @@ from typing import Any
 
 import yaml
 
-from bench.orchestrate.backend import (
+from lmtune.orchestrate.backend import (
     TrialBackend,
     TrialHandle,
     TrialPayload,
     TrialResult,
 )
-
 
 log = logging.getLogger(__name__)
 

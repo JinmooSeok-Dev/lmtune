@@ -22,7 +22,7 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from bench.search.objective import Objective, ObjectiveResult
+from lmtune.search.objective import Objective, ObjectiveResult
 
 
 @dataclass(slots=True)

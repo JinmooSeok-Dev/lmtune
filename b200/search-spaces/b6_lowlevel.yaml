@@ -1,0 +1,708 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b6-lowlevel
+
+# Phase B6 [Track B-II] — Low-level system tuning axes (사용자 차별화 포인트).
+#
+# 4 sub-section (plan § Phase B6):
+#   B6.1 Host         — PCIe / IOMMU / NUMA / Memory / CPU
+#   B6.2 Interconnect — InfiniBand / NVLink / NVSwitch / NCCL collective + Switch
+#   B6.3 GPUDirect    — GDR (NIC↔GPU) / GDS (NVMe↔GPU) / GPU P2P / DCB
+#   B6.4 KV transport — NIXL / UCX / LMCache / Mooncake + NCCL 추가
+#
+# Scope:
+#   - per-trial 가능 (env / sysctl / podSpec): NCCL_*, hugepages_*, cpu_pinning,
+#     gdr_*, nixl_*, ucx_*, lmcache_*, mooncake_*
+#   - study-level (host reboot / kernel cmdline / BIOS): pcie_*, iommu_*,
+#     transparent_hugepages, smt, cstates_max, cpu_governor (irqbalance 외 일부)
+#   - switch (NOS): aec_cable_*, ecn_*, pfc_*
+#
+# 모든 axis 의 active_if 키는 system_snapshot.sh 가 캡처하는 컨텍스트와 매칭.
+#   capability.gpu_p2p / capability.rdma / capability.gpudirect_rdma / capability.gds
+#   capability.nvls / capability.sharp
+#   fabric.type ∈ {ib, roce, ethernet}
+#   adapter.kv_transport ∈ {nixl, ucx_only, lmcache, mooncake}
+#   scope ∈ {per_trial, study_level, switch_nos, host_reboot}
+#
+# 출처 (모두 plan § B6 의 sub-table 1:1):
+#   - NCCL: NVIDIA NCCL docs
+#   - InfiniBand QoS: NVIDIA Networking Performance Tuning Guide
+#   - SHARP v3: docs.nvidia.com/networking/display/sharpv3xxxlatest
+#   - GPUDirect RDMA / Storage: docs.nvidia.com
+#   - NIXL: peer repo agentic/llm-distributed-inference/llm-d-custom/
+#   - UCX: openucx.org
+#   - LMCache: lmcache/lmcache GitHub
+#   - Mooncake: kvcache-ai/Mooncake
+#
+# 사용 시나리오: B1 winner 위에 axis 추가. 반드시 ANOVA + Sobol pruner 동작
+# (axis 70+ 라 raw sampling infeasible).
+#
+# 사용 예 (host-side 만):
+#   lmtune search start \
+#     --strategy tpe \
+#     --space b200/search-spaces/b6_lowlevel.yaml \
+#     --space-section host \
+#     --warmstart-db data/db/lmtune.duckdb \
+#     -p configs/profiles/autotune/short.yaml \
+#     -p configs/profiles/autotune/medium.yaml \
+#     --backend k8s-job --workers 4 --max-trials 60 \
+#     --name B6-host
+
+axes:
+  # ═══════════════════════════════════════════════════════════════════════
+  # B6.1 — Host-side axis (PCIe / IOMMU / NUMA / Memory / CPU)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ─── PCIe (대부분 study_level — kernel cmdline / BIOS) ───
+  pcie_aspm:
+    type: categorical
+    values: [default, performance, powersave, off]
+    active_if: {scope: study_level}
+    section: host
+    apply_via: kernel_cmdline    # pcie_aspm=...
+
+  pcie_acs_override:
+    type: categorical
+    values: [disabled, downstream, multifunction]
+    active_if: {scope: study_level}
+    section: host
+    apply_via: kernel_cmdline    # pcie_acs_override=...
+
+  pcie_max_payload:
+    type: categorical
+    values: [auto, 256B, 512B]
+    active_if: {scope: study_level}
+    section: host
+    apply_via: sysfs    # /sys/bus/pci/devices/*/max_payload_size
+
+  pcie_aer:
+    type: categorical
+    values: [on, off]
+    active_if: {scope: study_level}
+    section: host
+    apply_via: kernel_cmdline    # pcie_aer=...
+
+  # ─── IOMMU ───
+  iommu_passthrough:
+    type: categorical
+    values: [on, off, strict]
+    active_if: {scope: study_level}
+    section: host
+    apply_via: kernel_cmdline    # iommu=pt | iommu=on
+
+  # ─── NUMA ───
+  numa_balancing:
+    type: categorical
+    values: [0, 1]
+    section: host
+    apply_via: sysctl    # /proc/sys/kernel/numa_balancing
+
+  cpu_pinning_strategy:
+    type: categorical
+    values: [none, numa-aware, single-numa-node, rail-aligned]
+    section: host
+    apply_via: k8s_topology_manager
+    # k8s CPU manager + topology manager static policy
+
+  gpu_numa_affinity:
+    type: categorical
+    values: [auto, explicit-per-rank]
+    section: host
+    apply_via: container_env    # NUMA_NODE_BIND
+
+  # ─── Memory ───
+  transparent_hugepages:
+    type: categorical
+    values: [always, madvise, never]
+    active_if: {scope: study_level}
+    section: host
+    apply_via: sysfs    # /sys/kernel/mm/transparent_hugepage/enabled
+
+  hugepages_1gi:
+    type: categorical
+    values: [0, 8, 16, 32]
+    active_if: {scope: host_reboot}
+    section: host
+    apply_via: kernel_cmdline    # default_hugepagesz=1G hugepagesz=1G hugepages=N
+
+  numa_interleave:
+    type: categorical
+    values: [none, all-nodes]
+    section: host
+    apply_via: container_entrypoint    # numactl --interleave=all
+
+  # ─── CPU ───
+  cpu_governor:
+    type: categorical
+    values: [performance, ondemand, powersave]
+    active_if: {scope: study_level}
+    section: host
+    apply_via: sysfs    # /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+
+  cstates_max:
+    type: categorical
+    values: [c0, c1, default]
+    active_if: {scope: study_level}
+    section: host
+    apply_via: bios
+
+  smt:
+    type: categorical
+    values: [on, off]
+    active_if: {scope: host_reboot}
+    section: host
+    apply_via: kernel_cmdline    # nosmt
+
+  irqbalance:
+    type: categorical
+    values: [on, off, pinned-to-cpus]
+    section: host
+    apply_via: systemd_unit
+
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # B6.2 — Interconnect axis (IB / NVLink / NVSwitch / NCCL collective)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ─── InfiniBand fabric ───
+  ib_mtu:
+    type: categorical
+    values: [2048, 4096]
+    active_if: {fabric.type: ib}
+    section: interconnect
+    apply_via: ibportstate
+
+  ib_sl:
+    type: categorical
+    values: [0, 3]
+    active_if: {fabric.type: ib}
+    section: interconnect
+    apply_via: container_env    # NCCL_IB_SL
+
+  ib_qp_type:
+    type: categorical
+    values: [RC, UC, UD]
+    active_if: {fabric.type: ib}
+    section: interconnect
+    apply_via: rdma_verbs
+
+  ib_traffic_class:
+    type: categorical
+    values: [0, 96, 106, 184]    # DSCP CS0/CS3/CS6/EF
+    active_if: {fabric.type: roce}
+    section: interconnect
+    apply_via: container_env    # NCCL_IB_TC
+
+  ib_pkey:
+    type: categorical
+    values: [default, isolated]
+    active_if: {fabric.type: ib}
+    section: interconnect
+    apply_via: ibstat
+
+  ib_gid_index:
+    type: categorical
+    values: [0, 1, 3]
+    active_if: {fabric.type: roce}
+    section: interconnect
+    apply_via: container_env    # NCCL_IB_GID_INDEX (RoCE v2 = 3)
+
+  ib_adaptive_routing:
+    type: categorical
+    values: [on, off]
+    active_if: {scope: switch_nos, fabric.type: ib}
+    section: interconnect
+    apply_via: switch_cli
+
+  ib_congestion_control:
+    type: categorical
+    values: [ecn, dcqcn, off]
+    active_if: {fabric.type: roce}
+    section: interconnect
+    apply_via: container_env    # NCCL_IB_CONGESTION_CONTROL
+
+  # ─── SHARP (in-network reduction, NVIDIA Quantum-2) ───
+  sharp_enable:
+    type: bool
+    active_if: {capability.sharp: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_SHARP_ENABLE / NCCL_COLLNET_ENABLE
+
+  sharp_group_size_thresh:
+    type: categorical
+    values: [2, 4, 8, 16]
+    active_if: {capability.sharp: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_SHARP_GROUP_SIZE_THRESH
+
+  # ─── HCA / NIC ───
+  rdma_pf_per_pod:
+    type: categorical
+    values: [1, 2, 4, 8]
+    active_if: {capability.rdma: true}
+    section: interconnect
+    apply_via: k8s_sriov_nad    # NetworkAttachmentDefinition
+
+  hca_count_per_gpu:
+    type: categorical
+    values: [1, 2]
+    active_if: {capability.rdma: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_IB_HCA per-rank mapping
+
+  nccl_ib_qps_per_connection:
+    type: categorical
+    values: [1, 2, 4, 8]
+    active_if: {capability.rdma: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_IB_QPS_PER_CONNECTION
+
+  cq_moderation:
+    type: categorical
+    values: [default, low-latency, high-throughput]
+    active_if: {capability.rdma: true}
+    section: interconnect
+    apply_via: mlxconfig
+
+  # ─── NVLink / NVSwitch ───
+  nvlink_p2p:
+    type: categorical
+    values: [auto, force-on, force-off]
+    active_if: {capability.gpu_p2p: true}
+    section: interconnect
+    apply_via: sysfs    # /sys/class/nvlink/
+
+  nvlink_sharp:
+    type: bool
+    active_if: {capability.nvls: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_NVLS_ENABLE (NCCL 2.23+)
+
+  nvls_chunksize:
+    type: categorical
+    values: [auto, 1MB, 2MB, 4MB]
+    active_if: {capability.nvls: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_NVLS_CHUNKSIZE
+
+  # ─── NCCL collective tuning ───
+  nccl_algo:
+    type: categorical
+    values: [Tree, Ring, CollNet, NVLS]
+    section: interconnect
+    apply_via: container_env    # NCCL_ALGO
+
+  nccl_proto:
+    type: categorical
+    values: [Simple, LL, LL128]
+    section: interconnect
+    apply_via: container_env    # NCCL_PROTO
+
+  nccl_p2p_level:
+    type: categorical
+    values: [NVL, PIX, PXB, PHB, NODE, SYS]
+    active_if: {capability.gpu_p2p: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_P2P_LEVEL
+
+  nccl_buffsize:
+    type: categorical
+    values: [default, 2MB, 4MB, 8MB]
+    section: interconnect
+    apply_via: container_env    # NCCL_BUFFSIZE
+
+  nccl_ll_threshold:
+    type: categorical
+    values: [default, 16384, 32768]
+    section: interconnect
+    apply_via: container_env    # NCCL_LL_THRESHOLD
+
+  nccl_min_nchannels:
+    type: categorical
+    values: [auto, 4, 8, 16]
+    section: interconnect
+    apply_via: container_env    # NCCL_MIN_NCHANNELS
+
+  nccl_cross_nic:
+    type: categorical
+    values: [0, 1]
+    active_if: {capability.rdma: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_CROSS_NIC
+
+  nccl_ib_timeout:
+    type: categorical
+    values: [18, 23]
+    active_if: {capability.rdma: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_IB_TIMEOUT
+
+  nccl_ib_retry_cnt:
+    type: categorical
+    values: [7, 14]
+    active_if: {capability.rdma: true}
+    section: interconnect
+    apply_via: container_env    # NCCL_IB_RETRY_CNT
+
+  nccl_graph_register:
+    type: categorical
+    values: [0, 1]
+    section: interconnect
+    apply_via: container_env    # NCCL_GRAPH_REGISTER
+
+  # ─── Switch / cable (NOS scope, study-level) ───
+  aec_cable_link_training:
+    type: categorical
+    values: [auto, fixed-3.5dB, fixed-4.5dB]
+    active_if: {scope: switch_nos}
+    section: interconnect
+    apply_via: switch_nos_cli
+
+  ecn_marking_threshold:
+    type: categorical
+    values: [default, low, high]
+    active_if: {scope: switch_nos, fabric.type: roce}
+    section: interconnect
+    apply_via: switch_nos_cli
+
+  pfc_priority:
+    type: categorical
+    values: [3, 5]
+    active_if: {scope: switch_nos, fabric.type: roce}
+    section: interconnect
+    apply_via: switch_nos_cli
+
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # B6.3 — GPU Direct axis (GDR / GDS / P2P / DCB)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ─── GPUDirect RDMA (NIC ↔ GPU memory) ───
+  gdr_enable:
+    type: categorical
+    values: [0, 1]
+    active_if: {capability.gpudirect_rdma: true}
+    section: gpudirect
+    apply_via: kernel_module    # nvidia_peermem / nv_peer_mem
+
+  nccl_net_gdr_level:
+    type: categorical
+    values: [LOC, PIX, PXB, PHB, NODE, SYS]
+    active_if: {capability.gpudirect_rdma: true}
+    section: gpudirect
+    apply_via: container_env    # NCCL_NET_GDR_LEVEL
+
+  nccl_net_gdr_read:
+    type: categorical
+    values: [0, 1]
+    active_if: {capability.gpudirect_rdma: true}
+    section: gpudirect
+    apply_via: container_env    # NCCL_NET_GDR_READ
+
+  nccl_net_gdr_c2c:
+    type: categorical
+    values: [0, 1]
+    active_if: {capability.gpudirect_rdma: true, gpu.arch: sm_100}
+    section: gpudirect
+    apply_via: container_env    # NCCL_NET_GDR_C2C (B200 sm_100 신규)
+
+  dma_buf_enable:
+    type: categorical
+    values: [0, 1]
+    active_if: {capability.dmabuf: true}
+    section: gpudirect
+    apply_via: kernel_module    # Linux ≥ 6.2
+
+  # ─── GPUDirect Storage (NVMe ↔ GPU) ───
+  gds_enable:
+    type: categorical
+    values: [0, 1]
+    active_if: {capability.gds: true}
+    section: gpudirect
+    apply_via: cufile_config    # /etc/cufile.json
+
+  cufile_io_threadpool_size:
+    type: categorical
+    values: [0, 4, 16, 64]
+    active_if: {capability.gds: true}
+    section: gpudirect
+    apply_via: cufile_config
+
+  cufile_max_direct_io_size_kb:
+    type: categorical
+    values: [16384, 65536, 1048576]
+    active_if: {capability.gds: true}
+    section: gpudirect
+    apply_via: cufile_config
+
+  nvme_block_size:
+    type: categorical
+    values: [4096, 65536, 131072]
+    active_if: {capability.nvme: true, scope: study_level}
+    section: gpudirect
+    apply_via: nvme_namespace_format
+
+  nvme_io_queue_depth:
+    type: categorical
+    values: [32, 128, 1024]
+    active_if: {capability.nvme: true}
+    section: gpudirect
+    apply_via: nvme_driver
+
+  kv_offload_target:
+    type: categorical
+    values: [hbm, gds-nvme, gds-shared-nvme]
+    active_if: {capability.gds: true}
+    section: gpudirect
+    apply_via: vllm_arg    # --kv-cache-offload (B2 결합)
+
+  # ─── GPU P2P ───
+  gpu_p2p_disable:
+    type: categorical
+    values: [0, 1]
+    section: gpudirect
+    apply_via: container_env    # CUDA_DISABLE_P2P (debug)
+
+  cuda_visible_devices_order:
+    type: categorical
+    values: [default, rail-aligned]
+    section: gpudirect
+    apply_via: container_env    # CUDA_DEVICE_ORDER
+
+  nccl_collnet_enable:
+    type: categorical
+    values: [0, 1]
+    active_if: {capability.sharp: true}
+    section: gpudirect
+    apply_via: container_env    # NCCL_COLLNET_ENABLE
+
+  # ─── DCB / Lossless (RoCE) ───
+  pfc_enable:
+    type: bool
+    active_if: {fabric.type: roce}
+    section: gpudirect
+    apply_via: mlnx_qos    # mlnx_qos -i mlx5_0 --pfc
+
+  dscp_to_priority_map:
+    type: categorical
+    values: [default, custom-1, custom-2]
+    active_if: {fabric.type: roce}
+    section: gpudirect
+    apply_via: mlnx_qos
+
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # B6.4 — KV-Cache Transport & Inference-layer Communication
+  #        (NIXL / UCX / LMCache / Mooncake + 추가 NCCL env)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ─── NIXL (NV InferenceXfer Library — vLLM P/D 의 KV transport) ───
+  nixl_transport:
+    type: categorical
+    values: [tcp, rdma, ucx, gpudirect]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: helmfile_values    # peer pd/values-*.yaml kv_transfer_config
+
+  nixl_chunk_size_mb:
+    type: categorical
+    values: [1, 4, 16, 64]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: container_env    # NIXL_CHUNK_SIZE
+
+  nixl_concurrent_streams:
+    type: categorical
+    values: [1, 2, 4, 8]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: container_env    # NIXL_NUM_STREAMS
+
+  nixl_compression:
+    type: categorical
+    values: [none, zstd, lz4]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: container_env    # NIXL_COMPRESSION
+
+  nixl_serializer_workers:
+    type: categorical
+    values: [1, 4, 8]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: container_env    # NIXL_SERIALIZER_WORKERS
+
+  prefill_decode_ratio:
+    type: categorical
+    values: ["1:1", "1:2", "2:1", "1:4", "4:1"]
+    active_if: {well_lit_path: pd-disaggregation}
+    section: kv_transport
+    apply_via: helmfile_values    # prefill.replicas / decode.replicas
+
+  # ─── UCX (Unified Communication X — NIXL 의 backend) ───
+  ucx_tls:
+    type: categorical
+    values:
+      - "self,sm,cuda_copy,cuda_ipc"        # intra-node only
+      - "self,sm,cuda_copy,cuda_ipc,rc_x"   # + RDMA RC
+      - "self,sm,cuda_copy,cuda_ipc,dc_x"   # + RDMA DC (scalable)
+      - "self,sm,cuda_copy,cuda_ipc,ud_x"   # + RDMA UD (datagram)
+    active_if: {adapter.kv_transport: nixl, nixl_transport: ucx}
+    section: kv_transport
+    apply_via: container_env    # UCX_TLS
+
+  ucx_net_devices:
+    type: categorical
+    values: ["all", "mlx5_0:1", "mlx5_0:1,mlx5_1:1"]
+    active_if: {adapter.kv_transport: nixl, nixl_transport: ucx}
+    section: kv_transport
+    apply_via: container_env    # UCX_NET_DEVICES
+
+  ucx_rndv_thresh:
+    type: categorical
+    values: [auto, 8192, 32768, 131072]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: container_env    # UCX_RNDV_THRESH
+
+  ucx_rc_qp_count:
+    type: categorical
+    values: [1, 2, 4, 8]
+    active_if: {adapter.kv_transport: nixl, nixl_transport: ucx}
+    section: kv_transport
+    apply_via: container_env    # UCX_RC_QP_COUNT
+
+  ucx_max_rndv_rails:
+    type: categorical
+    values: [1, 2, 4]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: container_env    # UCX_MAX_RNDV_RAILS
+
+  ucx_zcopy_thresh:
+    type: categorical
+    values: [auto, 0, 1024]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: container_env    # UCX_ZCOPY_THRESH
+
+  ucx_memtype_cache:
+    type: categorical
+    values: [y, n]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: container_env    # UCX_MEMTYPE_CACHE
+
+  ucx_use_mt_mutex:
+    type: categorical
+    values: [y, n]
+    active_if: {adapter.kv_transport: nixl}
+    section: kv_transport
+    apply_via: container_env    # UCX_USE_MT_MUTEX
+
+  # ─── LMCache (vLLM 0.6+ prefix cache 외부화) ───
+  lmcache_local_cpu_size_gb:
+    type: categorical
+    values: [0, 16, 64, 256]
+    active_if: {adapter.kv_transport: lmcache}
+    section: kv_transport
+    apply_via: container_env    # LMCACHE_LOCAL_CPU_SIZE_GB
+
+  lmcache_remote_url:
+    type: categorical
+    values: [none, "redis://127.0.0.1:6379", "mooncake://master.local:50051", "disk:///mnt/cache"]
+    active_if: {adapter.kv_transport: lmcache}
+    section: kv_transport
+    apply_via: container_env    # LMCACHE_REMOTE_URL
+
+  lmcache_chunk_size:
+    type: categorical
+    values: [256, 512, 1024]    # tokens
+    active_if: {adapter.kv_transport: lmcache}
+    section: kv_transport
+    apply_via: container_env    # LMCACHE_CHUNK_SIZE
+
+  lmcache_eviction_policy:
+    type: categorical
+    values: [lru, fifo, lfu]
+    active_if: {adapter.kv_transport: lmcache}
+    section: kv_transport
+    apply_via: container_env    # LMCACHE_EVICTION_POLICY
+
+  lmcache_compress:
+    type: categorical
+    values: [none, lz4, zstd]
+    active_if: {adapter.kv_transport: lmcache}
+    section: kv_transport
+    apply_via: container_env    # LMCACHE_COMPRESS
+
+  lmcache_pinned_memory:
+    type: bool
+    active_if: {adapter.kv_transport: lmcache}
+    section: kv_transport
+    apply_via: container_env    # LMCACHE_PINNED_MEMORY
+
+  lmcache_prefetch:
+    type: bool
+    active_if: {adapter.kv_transport: lmcache}
+    section: kv_transport
+    apply_via: container_env    # LMCACHE_PREFETCH
+
+  # ─── Mooncake (Moonshot's KV cache distributed store) ───
+  mooncake_local_buffer_size_gb:
+    type: categorical
+    values: [16, 64, 128]
+    active_if: {adapter.kv_transport: mooncake}
+    section: kv_transport
+    apply_via: container_env    # MOONCAKE_LOCAL_BUFFER_SIZE
+
+  mooncake_protocol:
+    type: categorical
+    values: [tcp, rdma, gdr-rdma]
+    active_if: {adapter.kv_transport: mooncake}
+    section: kv_transport
+    apply_via: container_env    # MOONCAKE_PROTOCOL
+
+  mooncake_replication_factor:
+    type: categorical
+    values: [1, 2, 3]
+    active_if: {adapter.kv_transport: mooncake}
+    section: kv_transport
+    apply_via: container_env
+
+
+# ─────────── Section grouping (sampler 가 section 별 부분 sweep 가능) ───────────
+sections:
+  host:
+    description: "B6.1 Host-side (PCIe / IOMMU / NUMA / Memory / CPU)"
+    cost_tier: 2    # study-level: host reboot 또는 sysctl, ~3 min/trial swap
+  interconnect:
+    description: "B6.2 IB / NVLink / NVSwitch / NCCL collective + Switch"
+    cost_tier: 5    # 대부분 env, ~30s/trial swap
+  gpudirect:
+    description: "B6.3 GDR / GDS / P2P / DCB"
+    cost_tier: 5
+  kv_transport:
+    description: "B6.4 NIXL / UCX / LMCache / Mooncake + NCCL 추가"
+    cost_tier: 5
+
+
+# ─────────── Per-trial 측정 hook ───────────
+# 본 search-space 의 trial 직전·직후에 아래 스크립트로 시스템 상태 캡처.
+# 결과는 b200/studies/<study>/system_snapshots/<trial>.json 으로 archive.
+measurement_hooks:
+  pre_trial:
+    - b200/scripts/system_snapshot.sh
+    - b200/scripts/rdma_bench.sh    # 363+ Gbps baseline 측정
+  post_trial:
+    - b200/scripts/system_snapshot.sh
+
+# ─────────── Cost / Importance 권고 ───────────
+# 70+ axis 직접 sweep infeasible. 권장 절차:
+#   1) section=interconnect 로 ANOVA (per-trial axis 만, ~60 trial)
+#   2) ANOVA p<0.01 axis 만 b3 / b5 와 결합
+#   3) host section 은 따로 (study-level cost) — daily/weekly rotation
+default_pruner:
+  type: anova_then_rf_importance
+  freeze_threshold_p_value: 0.01
+  drop_threshold_importance: 0.05

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Search-space catalog — bench autotuner</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5">
+    <div class="text-sm text-slate-500 mb-2">
+      <a href="index.html" class="text-blue-600 hover:underline">← all studies</a>
+      <span class="text-slate-300 mx-2">/</span>
+      <a href="compare.html" class="text-blue-600 hover:underline">compare</a>
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight">Search-space + env-profile catalog</h1>
+    <p class="text-slate-500 text-sm mt-1">
+      <strong>{{ n_spaces }}</strong> search-space YAMLs · <strong>{{ total_axes }}</strong> total axes ·
+      <strong>{{ n_profiles }}</strong> env-profiles. Macro × Env-Profile × Micro architecture 의
+      "사용자가 보는 진입면". 각 study 가 어느 axis 묶음 위에서 도는지 한눈에 비교.
+    </p>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+{% if spaces %}
+<section class="bg-white border border-slate-200 rounded-lg p-5">
+  <h2 class="text-lg font-semibold mb-3">Search spaces</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for s in spaces %}
+    <article class="border border-slate-200 rounded-lg p-4">
+      <header class="flex items-baseline justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">{{ s.name }}</h3>
+        <div class="flex gap-2 text-xs">
+          <span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">{{ s.n_axes }} axes</span>
+          {% if s.n_constraints %}
+          <span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">{{ s.n_constraints }} constraints</span>
+          {% endif %}
+        </div>
+      </header>
+      {% if s.description %}
+      <p class="text-xs text-slate-500 mb-2 line-clamp-3">{{ s.description }}</p>
+      {% endif %}
+      <p class="text-xs font-mono text-slate-400 mb-2 truncate" title="{{ s.path }}">{{ s.path }}</p>
+      {% if s.sections %}
+      <details class="text-xs mb-2">
+        <summary class="cursor-pointer text-slate-600 hover:text-slate-800">sections × cost-tier</summary>
+        <table class="mt-1 w-full">
+          <thead class="bg-slate-50 text-slate-500"><tr><th class="text-left p-1">section</th><th class="text-right p-1">cost</th></tr></thead>
+          <tbody>
+          {% for k, v in s.sections.items() %}
+            <tr class="border-t border-slate-100"><td class="p-1 font-mono">{{ k }}</td>
+              <td class="p-1 text-right font-mono">{% if v is mapping %}{{ v.cost_tier }}{% else %}{{ v }}{% endif %}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </details>
+      {% endif %}
+      <details class="text-xs">
+        <summary class="cursor-pointer text-slate-600 hover:text-slate-800">all axes ({{ s.n_axes }})</summary>
+        <table class="mt-1 w-full">
+          <thead class="bg-slate-50 text-slate-500">
+            <tr>
+              <th class="text-left p-1">axis</th>
+              <th class="text-left p-1">type</th>
+              <th class="text-left p-1">values</th>
+              <th class="text-left p-1">cost</th>
+              <th class="text-left p-1">apply via</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for a in s.axes %}
+            <tr class="border-t border-slate-100">
+              <td class="p-1 font-mono">{{ a.name }}{% if a.active_if %} <span class="text-amber-600 text-[10px]">conditional</span>{% endif %}</td>
+              <td class="p-1 font-mono text-slate-600">{{ a.type }}</td>
+              <td class="p-1 font-mono text-slate-700 max-w-[16rem] truncate" title="{{ a.values }}">{{ a.values }}</td>
+              <td class="p-1 font-mono">{% if a.cost_tier is not none %}{{ a.cost_tier }}{% else %}—{% endif %}</td>
+              <td class="p-1 font-mono text-slate-600">{{ a.apply_via or '—' }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </details>
+      {% if s.default_objectives %}
+      <details class="text-xs mt-2">
+        <summary class="cursor-pointer text-slate-600">default objectives</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto">{{ s.default_objectives|tojson(indent=2) }}</pre>
+      </details>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if profiles %}
+<section class="bg-white border border-slate-200 rounded-lg p-5">
+  <h2 class="text-lg font-semibold mb-1">Env-profiles — Macro × Env × Micro 의 binding 정의</h2>
+  <p class="text-xs text-slate-500 mb-3">
+    각 profile 의 <code>applies_when:</code> 가 macro 와 매칭되면 자동으로 env_locked (sampler 가 안 만짐) 와
+    env_tunable (micro axis 로 합류) 이 trial 에 주입됨. priority 0 = always-on (host baseline), 더 큰 숫자 = path/parallelism 매칭 시에만.
+  </p>
+  <div class="overflow-auto">
+    <table class="w-full text-xs">
+      <thead class="bg-slate-100 text-slate-700">
+        <tr>
+          <th class="text-left p-2">profile</th>
+          <th class="text-left p-2">priority</th>
+          <th class="text-left p-2">applies_when</th>
+          <th class="text-right p-2">locked</th>
+          <th class="text-right p-2">tunable</th>
+          <th class="text-left p-2">path</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in profiles %}
+        <tr class="border-t border-slate-100 hover:bg-slate-50 align-top">
+          <td class="p-2 font-mono">{{ p.name }}</td>
+          <td class="p-2 font-mono text-center">{% if p.priority is not none %}{{ p.priority }}{% else %}—{% endif %}</td>
+          <td class="p-2 font-mono text-slate-600 max-w-md">
+            {% if p.applies_when is mapping %}{{ p.applies_when|tojson }}{% else %}{{ p.applies_when }}{% endif %}
+          </td>
+          <td class="p-2 text-right font-mono">{{ p.n_locked }}</td>
+          <td class="p-2 text-right font-mono">{{ p.n_tunable }}</td>
+          <td class="p-2 font-mono text-slate-400">{{ p.path }}</td>
+        </tr>
+        <tr class="border-t border-slate-50">
+          <td colspan="6" class="p-2 pl-4 bg-slate-50/60">
+            <details class="text-xs">
+              <summary class="cursor-pointer text-slate-500 hover:text-slate-700">env_locked / env_tunable</summary>
+              <div class="grid md:grid-cols-2 gap-3 mt-2">
+                <div>
+                  <h4 class="text-slate-600 mb-1">locked (sampler 가 안 만짐)</h4>
+                  <pre class="p-2 bg-white border border-slate-100 rounded overflow-auto text-[10px]">{{ p.env_locked|tojson(indent=2) }}</pre>
+                </div>
+                <div>
+                  <h4 class="text-slate-600 mb-1">tunable (micro axis 로 sampler 에 노출)</h4>
+                  <pre class="p-2 bg-white border border-slate-100 rounded overflow-auto text-[10px]">{{ p.env_tunable|tojson(indent=2) }}</pre>
+                </div>
+              </div>
+            </details>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+</main>
+
+<footer class="max-w-7xl mx-auto px-6 py-6 text-xs text-slate-400">
+  Generated by <code>bench dashboard build</code>. 본 페이지는 <code>b200/search-spaces/*.yaml</code> +
+  <code>configs/autoresearch/env_profiles/*.yaml</code> 의 정적 introspection.
+</footer>
+</body>
+</html>

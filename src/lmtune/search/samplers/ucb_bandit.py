@@ -26,7 +26,7 @@ from typing import Any
 import optuna
 from optuna.samplers import BaseSampler, RandomSampler
 
-from bench.search.space import SearchSpace
+from lmtune.search.space import SearchSpace
 
 
 class UCB1Sampler(BaseSampler):

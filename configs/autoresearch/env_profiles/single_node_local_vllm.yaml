@@ -1,0 +1,33 @@
+# Profile: single-node local vLLM (Phase W-Local target).
+#
+# applies_when 가 매칭되면 env_locked 가 sampler 의 탐색 대상에서 빠지고
+# (best-known 기본값으로 고정), env_tunable 만 fine-tune 대상으로 노출됨.
+#
+# 본 profile 은 vllm_restart.sh 가 set 하는 단일-GPU 단일 노드 baseline.
+# Phase W-Local 의 RTX 5060 Ti 환경에서 시작점.
+name: single_node_local_vllm
+priority: 0
+description: |
+  Single-node single-GPU vLLM baseline (no NCCL/UCX/LMCache cross-node).
+  intraNode = NVLink only, crossNode disabled. NIXL/UCX 비활성.
+
+applies_when:
+  node_split_strategy: single-node
+  adapter: local-vllm
+
+env_locked:
+  # NCCL: single-GPU 라 collective op 자체가 거의 발생하지 않음.
+  NCCL_IB_DISABLE: "1"
+  NCCL_P2P_LEVEL: NVL
+  # UCX/NIXL 비활성 (cross-node 없음)
+  NIXL_TRANSPORT: "tcp"  # if used at all
+  # CUDA P2P
+  CUDA_DEVICE_ORDER: PCI_BUS_ID
+
+env_tunable:
+  # 단일 GPU baseline 에서 의미 있는 micro axis는 거의 없음.
+  # 추후 vLLM 의 compilation 옵션 등을 expose 가능.
+  - name: NCCL_BUFFSIZE
+    kind: categorical
+    values: ["default", "2MB", "4MB"]
+    cost_tier: 5

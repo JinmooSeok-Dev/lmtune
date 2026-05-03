@@ -1,0 +1,36 @@
+# Profile: minikube llm-d P/D (Phase W-Minikube target).
+#
+# 두 GPU (RTX 3060 + 5060 Ti) 가 동일 host 에 있고, NIXL TCP fallback 으로 KV
+# transfer 동작. RDMA 없음. peer repo phase2/pd 의 helmfile 이 모델을 깐다.
+name: minikube_pd_qwen25
+priority: 1   # adapter=llmd-k8s 가 단일-노드보다 우선
+description: |
+  llm-d P/D disaggregation on minikube (single-host, intra-host NIXL TCP).
+  Prefill on GPU1 (RTX 5060 Ti), Decode on GPU0 (RTX 3060). No RDMA.
+
+applies_when:
+  adapter: llmd-k8s
+  well_lit_path: pd-disaggregation
+  fabric: tcp-loopback   # endpoint YAML 에서 명시
+
+env_locked:
+  # NIXL: intra-host TCP fallback (RDMA 미설정 시)
+  NIXL_TRANSPORT: tcp
+  # NCCL: single-host 이므로 IB 비활성, NVLink 부재 (서로 다른 GPU 모델)
+  NCCL_IB_DISABLE: "1"
+  NCCL_P2P_LEVEL: SYS    # 동일 host PCIe 통과
+  # UCX 미사용 (NIXL TCP)
+  # GPU 분리
+  CUDA_DEVICE_ORDER: PCI_BUS_ID
+
+env_tunable:
+  # NIXL chunk size 가 prefill→decode KV 전송 throughput 에 직접 영향
+  - name: NIXL_CHUNK_SIZE_MB
+    kind: categorical
+    values: [4, 16, 64]
+    cost_tier: 5
+  # NIXL stream 동시성
+  - name: NIXL_NUM_STREAMS
+    kind: categorical
+    values: [1, 2, 4]
+    cost_tier: 5

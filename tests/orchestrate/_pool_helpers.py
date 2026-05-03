@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bench.orchestrate.backend import TrialPayload, TrialResult
+from lmtune.orchestrate.backend import TrialPayload, TrialResult
 
 
 def run_mock_trial(payload: TrialPayload) -> TrialResult:

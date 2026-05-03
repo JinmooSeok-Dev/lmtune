@@ -9,13 +9,13 @@ Phase S3 introduces:
 - GPU lease             — flock on /tmp so two workers never grab the same GPU
 """
 
-from bench.orchestrate.backend import (
+from lmtune.orchestrate.backend import (
     TrialBackend,
     TrialHandle,
     TrialPayload,
     TrialResult,
 )
-from bench.orchestrate.gpu_lease import GPULease, try_acquire_gpu
+from lmtune.orchestrate.gpu_lease import GPULease, try_acquire_gpu
 
 __all__ = [
     "TrialBackend",

@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "bench"
+name = "lmtune"
 version = "0.1.0"
 description = "Coding agent 워크로드 기반 LLM endpoint 벤치마크 자동화 시스템"
 readme = "README.md"
@@ -54,19 +54,56 @@ distributed = [
 ]
 
 [project.scripts]
-bench = "bench.cli:app"
+lmtune = "lmtune.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"bench.storage" = ["*.sql"]
-"bench.visualization" = ["grafana/*.json"]
+"lmtune.storage" = ["*.sql"]
+"lmtune.visualization" = ["grafana/*.json"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["data/archive", "scripts/archived"]
+
+[tool.ruff.lint]
+# CLAUDE.md 의 권장 룰셋: E (pycodestyle errors), F (pyflakes),
+# I (isort), B (bugbear), UP (pyupgrade), SIM (simplify).
+select = ["E", "F", "I", "B", "UP", "SIM"]
+# 흔한 false-positive 또는 프로젝트 컨벤션과 충돌하는 룰 제외:
+#   E501  — line-too-long: ruff format 이 처리, 긴 URL/주석은 그대로 둔다
+#   B008  — function-call-in-default: typer 의 typer.Option(...) 패턴 다수 사용
+#   SIM117 — multiple-with-statements: 가독성 우선
+ignore = ["E501", "B008", "SIM117"]
+
+[tool.ruff.lint.per-file-ignores]
+# 테스트는 long line / unused import 일부 허용
+"tests/**" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["lmtune"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.coverage.run]
+branch = true
+source = ["src/lmtune"]
+omit = [
+    "src/lmtune/**/__main__.py",
+    "src/lmtune/visualization/dashboard/templates/*",
+]
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]

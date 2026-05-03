@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from bench.collectors.prometheus import _parse_labels, scrape_metrics_endpoint  # type: ignore[attr-defined]
-from bench.collectors.request_log import parse_request_log, summarize
+from lmtune.collectors.prometheus import (  # type: ignore[attr-defined]
+    _parse_labels,
+    scrape_metrics_endpoint,
+)
+from lmtune.collectors.request_log import parse_request_log, summarize
 
 
 def test_parse_labels_handles_escaping():
@@ -27,7 +30,7 @@ some_other_metric{foo="bar"} 1.0
         def raise_for_status(self):
             return None
 
-    import bench.collectors.prometheus as mod
+    import lmtune.collectors.prometheus as mod
 
     monkeypatch.setattr(mod.requests, "get", lambda *a, **kw: FakeResp())
     samples = scrape_metrics_endpoint("http://fake/metrics")

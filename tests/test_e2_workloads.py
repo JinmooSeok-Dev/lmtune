@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 import random
-from pathlib import Path
 
 import pytest
 
-from bench.profiles import ProfileSpec, TraceWorkload
-from bench.workloads import (
+from lmtune.profiles import ProfileSpec, TraceWorkload
+from lmtune.workloads import (
     ArrivalPattern,
     ArrivalScheduler,
     DistributionSampler,
     TraceReplay,
     sample_zipf,
 )
-from bench.workloads.arrival import empirical_rate
-from bench.workloads.datasets import KNOWN_DATASETS, DatasetLoader
-
+from lmtune.workloads.arrival import empirical_rate
+from lmtune.workloads.datasets import KNOWN_DATASETS, DatasetLoader
 
 # ---------- Distributions ----------
 
@@ -50,7 +48,7 @@ def test_arrival_constant_rate():
     times = list(ArrivalScheduler(pat))
     # 10 req/s × 2s ≈ 20개, 간격 0.1
     assert 18 <= len(times) <= 22
-    gaps = [b - a for a, b in zip(times, times[1:])]
+    gaps = [b - a for a, b in zip(times, times[1:], strict=False)]
     assert all(abs(g - 0.1) < 1e-6 for g in gaps)
 
 
@@ -59,7 +57,7 @@ def test_arrival_poisson_count_range():
     times = list(ArrivalScheduler(pat, seed=1))
     # 평균 60, 여유 있게 30~100 사이
     assert 30 <= len(times) <= 100
-    assert all(b >= a for a, b in zip(times, times[1:]))
+    assert all(b >= a for a, b in zip(times, times[1:], strict=False))
 
 
 def test_arrival_diurnal_peak_gt_valley():
@@ -133,7 +131,7 @@ def test_dataset_loader_from_slug_sets_fields():
 def test_dataset_loader_graceful_missing_datasets(monkeypatch):
     # `datasets` 패키지 미설치 시 NotImplementedError 가 분명한 메시지로 올라와야 함
     loader = DatasetLoader(dataset_id="x/y")
-    import bench.workloads.datasets as m
+    import lmtune.workloads.datasets as m
 
     def fake_load(*args, **kwargs):
         raise NotImplementedError("HF datasets missing")

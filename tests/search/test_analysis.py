@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bench.search.analysis import anova_per_axis, axis_importance, tighten_bounds
+from lmtune.search.analysis import anova_per_axis, axis_importance, tighten_bounds
 
 
 def _trials_x_dominates(n_per_group: int = 6):

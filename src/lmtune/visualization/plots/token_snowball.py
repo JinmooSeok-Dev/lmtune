@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from bench.runners.base import RequestRow
-from bench.visualization.plots import register_plot
+from lmtune.runners.base import RequestRow
+from lmtune.visualization.plots import register_plot
 
 
 @register_plot("token_snowball")
@@ -32,7 +32,7 @@ def plot_token_snowball(
 
     fig, ax = plt.subplots(figsize=(9, 5))
     avg_by_turn: dict[int, list[int]] = defaultdict(list)
-    for conv, points in per_conv.items():
+    for _conv, points in per_conv.items():
         points.sort()
         turns = [t for t, _ in points]
         toks = [t for _, t in points]

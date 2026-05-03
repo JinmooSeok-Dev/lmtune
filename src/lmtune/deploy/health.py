@@ -7,7 +7,7 @@ from typing import Any
 
 import requests
 
-from bench.deploy.base import HealthReport
+from lmtune.deploy.base import HealthReport
 
 
 def probe_openai_models(url: str, timeout_s: float = 5.0) -> HealthReport:

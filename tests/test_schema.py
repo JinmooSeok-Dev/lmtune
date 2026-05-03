@@ -2,9 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from bench.endpoints import EndpointSpec, load_endpoint
-from bench.profiles import ProfileSpec, load_profile
-
+from lmtune.endpoints import EndpointSpec, load_endpoint
+from lmtune.profiles import ProfileSpec, load_profile
 
 ROOT = Path(__file__).resolve().parents[1]
 

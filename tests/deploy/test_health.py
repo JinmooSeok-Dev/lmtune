@@ -5,27 +5,34 @@ import json
 import threading
 from contextlib import contextmanager
 
-import pytest
-
-from bench.deploy.health import probe_openai_models, warmup_one_token
+from lmtune.deploy.health import probe_openai_models, warmup_one_token
 
 
 class _Handler(http.server.BaseHTTPRequestHandler):
-    def log_message(self, *a, **k): pass
+    def log_message(self, *a, **k):
+        pass
+
     def do_GET(self):
         if self.path.endswith("/v1/models"):
             body = json.dumps({"object": "list", "data": [{"id": "demo"}]}).encode()
-            self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
             self.wfile.write(body)
             return
-        self.send_response(404); self.end_headers()
+        self.send_response(404)
+        self.end_headers()
+
     def do_POST(self):
         if self.path.endswith("/v1/chat/completions"):
             body = json.dumps({"choices": [{"message": {"content": "."}}]}).encode()
-            self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
             self.wfile.write(body)
             return
-        self.send_response(404); self.end_headers()
+        self.send_response(404)
+        self.end_headers()
 
 
 @contextmanager

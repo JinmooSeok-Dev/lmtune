@@ -12,15 +12,15 @@ S4 ships two concrete adapters:
 Both implement the same interface so Objective / Driver code doesn't branch.
 """
 
-from bench.deploy.base import (
+from lmtune.deploy.base import (
     ApplyResult,
     DeploymentAdapter,
     HealthReport,
     merge_params_into_endpoint,
 )
-from bench.deploy.health import probe_openai_models, warmup_one_token
-from bench.deploy.local_vllm import LocalVLLMAdapter
-from bench.deploy.llmd_k8s import LLMDK8sAdapter
+from lmtune.deploy.health import probe_openai_models, warmup_one_token
+from lmtune.deploy.llmd_k8s import LLMDK8sAdapter
+from lmtune.deploy.local_vllm import LocalVLLMAdapter
 
 __all__ = [
     "ApplyResult",

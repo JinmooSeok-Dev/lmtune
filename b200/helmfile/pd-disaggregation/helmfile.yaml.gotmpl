@@ -1,0 +1,76 @@
+# b200/helmfile/pd-disaggregation/helmfile.yaml.gotmpl
+#
+# B200 16-GPU 클러스터 — well-lit path #5 (P/D disaggregation)
+#
+# 구조:
+#   - prefill replica  (단일 B200 노드, TP=4 또는 8)
+#   - decode replica   (단일 B200 노드, TP=4 또는 8)
+#   - routing-sidecar (decode 안에 sidecar 로 NIXL v2 transport)
+#
+# 사용법:
+#   NS=b200-pd helmfile -f b200/helmfile/pd-disaggregation/helmfile.yaml.gotmpl --selector role=base apply
+#
+# selector:
+#   --selector role=base  → values-llama-3.1-70b-tp4-pd.yaml (B1)
+#   --selector role=large → values-qwen2.5-72b-tp8-pd.yaml (옵션)
+#
+# Self-contained: peer repo 의존 없음. 패턴은 peer phase2/pd-qwen25-1.5b 참조.
+
+environments:
+  default:
+    values:
+      - provider:
+          name: agentgateway
+
+---
+
+{{- $ns := .Namespace | default (env "NS") | default "b200-pd" -}}
+{{- $rn := (env "RELEASE_NAME_POSTFIX") | default "pd" -}}
+
+repositories:
+  - name: llm-d-modelservice
+    url: https://llm-d-incubation.github.io/llm-d-modelservice/
+  - name: llm-d-infra
+    url: https://llm-d-incubation.github.io/llm-d-infra/
+
+releases:
+  - name: {{ printf "infra-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: llm-d-infra/llm-d-infra
+    version: v1.4.0
+    installed: true
+    labels:
+      type: infrastructure
+      kind: inference-stack
+      role: base
+    values:
+      - gateway:
+          gatewayClassName: agentgateway
+
+  - name: {{ printf "gaie-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: oci://registry.k8s.io/gateway-api-inference-extension/charts/inferencepool
+    version: v1.5.0
+    installed: true
+    needs:
+      - {{ printf "infra-%s" $rn | quote }}
+    values:
+      - values-gaie.yaml
+    labels:
+      kind: inference-stack
+      role: base
+
+  - name: {{ printf "ms-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: llm-d-modelservice/llm-d-modelservice
+    version: v0.4.12
+    installed: true
+    needs:
+      - {{ printf "infra-%s" $rn | quote }}
+      - {{ printf "gaie-%s" $rn | quote }}
+    values:
+      - ../base/values-b200-common.yaml.gotmpl
+      - values-llama-3.1-70b-tp4-pd.yaml
+    labels:
+      kind: inference-stack
+      role: base

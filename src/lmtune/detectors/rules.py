@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from statistics import median
-from typing import Iterable
 
-from bench.analysis.compare import compare_runs
-from bench.profiles import SLOSpec
-from bench.runners.base import RequestRow
-
+from lmtune.analysis.compare import compare_runs
+from lmtune.profiles import SLOSpec
+from lmtune.runners.base import RequestRow
 
 Severity = str  # "info" | "warning" | "critical"
 

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from bench.runners.base import RequestRow
-from bench.visualization.plots import register_plot
+from lmtune.runners.base import RequestRow
+from lmtune.visualization.plots import register_plot
 
 
 @register_plot("ttft_vs_input_len")

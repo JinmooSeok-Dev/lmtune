@@ -1,0 +1,76 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b1-baselines
+
+# Phase B1 [Track B-I] — well-lit path × 모델 baseline.
+# scope 축소: 7 path → 핵심 3 (inference-scheduling + P/D + wide-EP).
+# 나머지 path 는 Track B-III 의 점진 확장으로 이월.
+#
+# 사용 시나리오: 사용자가 B0 통과 후 첫 study. NSGA-II 30-40 trial 로
+# (path × model × engine_args × parallelism) 의 winning 조합 도출.
+#
+# 사용 예:
+#   lmtune search start \
+#     --strategy nsga2 \
+#     --space b200/search-spaces/b1_baselines.yaml \
+#     --endpoint b200/endpoints/b200_smoke.yaml \
+#     -p configs/profiles/autotune/short.yaml \
+#     -p configs/profiles/autotune/medium.yaml \
+#     -p configs/profiles/autotune/long.yaml \
+#     --backend k8s-job --workers 4 --max-trials 40 \
+#     --objectives "throughput_tok.avg:short:maximize,ttft.p99:short:minimize" \
+#     --name B1-baseline
+
+axes:
+  # ─────────── 카테고리 (path × model) ───────────
+  well_lit_path:
+    type: categorical
+    values: [inference-scheduling, pd-disaggregation, wide-ep-lws]
+
+  model_id:
+    type: categorical
+    values:
+      - meta-llama/Llama-3.1-8B-Instruct
+      - meta-llama/Llama-3.1-70B-Instruct
+      - Qwen/Qwen2.5-72B-Instruct
+
+  # ─────────── vLLM engine_args (핵심 5) ───────────
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256]
+
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+
+  kv_cache_dtype:
+    type: categorical
+    values: [auto, fp8_e4m3]
+    # NOTE: nvfp4 는 첫 study 에서 probe → 실패 시 freeze (B200 sm_100 호환 검증)
+
+  # ─────────── parallelism (16-GPU 토폴로지 의존) ───────────
+  tensor_parallel_size:
+    type: categorical
+    values: [1, 2, 4, 8]
+
+  pipeline_parallel_size:
+    type: categorical
+    values: [1, 2]
+
+  # ─────────── path-specific axes (active_if) ───────────
+  data_parallel_size:
+    type: categorical
+    values: [1, 2, 4]
+    active_if: {well_lit_path: wide-ep-lws}
+
+  expert_parallel_size:
+    type: categorical
+    values: [1, 2, 4, 8]
+    active_if: {well_lit_path: wide-ep-lws, model_family: moe}

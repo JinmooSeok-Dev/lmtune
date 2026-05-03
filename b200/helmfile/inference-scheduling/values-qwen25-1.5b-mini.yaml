@@ -1,0 +1,64 @@
+# Qwen2.5-1.5B-Instruct — minikube / single-GPU mini values
+# 가장 가벼운 모델 (~3GB bf16). RTX 16GB / minikube + GPU 환경에서 빠른 sanity check.
+# B200 의 values-llama-3.1-8b-smoke.yaml 과 같은 inference-scheduling 패턴.
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://Qwen/Qwen2.5-1.5B-Instruct"
+  size: 6Gi
+  name: "Qwen/Qwen2.5-1.5B-Instruct"
+  authSecretName: "huggingface-token"      # gated 가 아니지만 일관성 위해 동일 secret 패턴
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "minikube-mini"
+    llm-d.ai/hardware-variant: "any"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "Qwen2.5-1.5B"
+
+routing:
+  servicePort: 8000
+
+decode:
+  parallelism:
+    tensor: 1
+  create: true
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+  containers:
+    - name: "vllm"
+      image: ghcr.io/llm-d/llm-d-cuda:v0.6.0
+      modelCommand: vllmServe
+      args:
+        - "--max-num-seqs"
+        - "32"
+        - "--max-model-len"
+        - "4096"
+        - "--gpu-memory-utilization"
+        - "0.85"
+        - "--block-size"
+        - "16"
+        - "--enforce-eager"           # mini: CUDA graph 비활성 — 16GB GPU 도 여유
+        - "--dtype"
+        - "bfloat16"
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          cpu: "2"
+          memory: 8Gi
+        limits:
+          nvidia.com/gpu: "1"
+          cpu: "8"
+          memory: 16Gi
+      env:
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-token
+              key: HF_TOKEN
+              optional: true

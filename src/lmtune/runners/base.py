@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from bench.endpoints import EndpointSpec
-from bench.profiles import ProfileSpec
+from lmtune.endpoints import EndpointSpec
+from lmtune.profiles import ProfileSpec
 
 
 class RunnerError(RuntimeError):

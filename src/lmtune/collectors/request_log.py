@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
-
 
 _PATTERNS = [
     # vLLM 0.13+ 예: "Received request cmpl-xxx: prompt=..., sampling_params=..., prompt_token_ids=..."

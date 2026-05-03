@@ -1,4 +1,4 @@
-from bench.detectors.rules import (
+from lmtune.detectors.rules import (
     Detection,
     detect_iqr_outliers,
     detect_regression,

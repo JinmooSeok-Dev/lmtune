@@ -1,22 +1,21 @@
 """ProcessPoolBackend end-to-end with a mock objective.
 
-The mock replaces BenchScoreObjective transparently: we spawn the worker with a
+The mock replaces ScoreObjective transparently: we spawn the worker with a
 TrialPayload whose `endpoint_path` points at a fixture file the runner reads
-AND a monkeypatch hook that swaps BenchScoreObjective for a pure-Python stub.
+AND a monkeypatch hook that swaps ScoreObjective for a pure-Python stub.
 For simplicity we call `run_trial_locally` directly with a monkeypatched
 objective — same function the pool executes.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from bench.orchestrate.backend import TrialPayload
-from bench.orchestrate.trial_runner import run_trial_locally
-from bench.search.objective import ObjectiveResult
+from lmtune.orchestrate.backend import TrialPayload
+from lmtune.orchestrate.trial_runner import run_trial_locally
+from lmtune.search.objective import ObjectiveResult
 
 
 class _FakeObj:
@@ -42,7 +41,7 @@ def _payload(params: dict) -> TrialPayload:
 
 
 def test_run_trial_locally_happy_path():
-    with patch("bench.orchestrate.trial_runner.BenchScoreObjective", _FakeObj):
+    with patch("lmtune.orchestrate.trial_runner.ScoreObjective", _FakeObj):
         r = run_trial_locally(_payload({"x": 3}))
     assert r.status == "completed"
     assert r.score == 30.0
@@ -54,7 +53,7 @@ def test_run_trial_locally_returns_crash_on_exception():
         def __init__(self, *a, **kw): pass
         def __call__(self, p): raise RuntimeError("boom")
 
-    with patch("bench.orchestrate.trial_runner.BenchScoreObjective", _Boom):
+    with patch("lmtune.orchestrate.trial_runner.ScoreObjective", _Boom):
         r = run_trial_locally(_payload({"x": 1}))
     assert r.status == "crash"
     assert "boom" in (r.error or "")
@@ -64,7 +63,7 @@ def test_pool_runs_two_trials_concurrently(tmp_path):
     """Use ProcessPoolBackend with an actual pool; mock objective via a
     top-level callable module so it's picklable."""
     pytest.importorskip("optuna")  # import safety
-    from bench.orchestrate.backend_process_pool import ProcessPoolBackend
+    from lmtune.orchestrate.backend_process_pool import ProcessPoolBackend
     from tests.orchestrate._pool_helpers import run_mock_trial
 
     pool = ProcessPoolBackend(workers=2)

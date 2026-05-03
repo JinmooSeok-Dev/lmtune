@@ -1,0 +1,38 @@
+# Phase W K8s/llm-d 트랙 진입용 minimal SearchSpace (3-axis).
+#
+# 트랙: adapter=llmd-k8s. 어떤 K8s cluster 든 (minikube, k3s 멀티노드, vanilla k8s,
+# OpenShift) 동일하게 동작 — endpoint YAML 의 url·namespace·helmfile_path 만
+# 자기 환경에 맞추면 됨.
+#
+# 3-axis 는 모두 cost_tier=3 (helmfile state-values-file overlay → redeploy 필요,
+# ~3 min/trial). B200·B-track 에서는 b3_parallelism / b6_lowlevel 등으로 확장.
+#
+# 사용 (minikube 예):
+#   lmtune search start \
+#     --endpoint configs/endpoints/minikube_pd_qwen25.yaml \
+#     --space b200/search-spaces/w_minikube_minimal.yaml \
+#     --strategy tpe --max-trials 6 --name w-llmd-mvp \
+#     --adapter llmd-k8s
+#
+# 검증된 환경 (Phase S6): minikube + llm-d P/D Qwen2.5-1.5B
+# (Prefill RTX 5060 Ti GPU1, Decode RTX 3060 GPU0).
+
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: w-minikube-minimal
+
+axes:
+  enable_prefix_caching:
+    type: bool
+    cost_tier: 3        # helmfile redeploy
+
+  max_num_seqs:
+    type: categorical
+    values: [16, 32, 64]
+    cost_tier: 3
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.90
+    cost_tier: 3

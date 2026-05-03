@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from bench.search.samplers import grid_search_space
-from bench.search.samplers.lhc import lhc_samples
-from bench.search.space import Axis, SearchSpace
+from lmtune.search.samplers import grid_search_space
+from lmtune.search.samplers.lhc import lhc_samples
+from lmtune.search.space import Axis, SearchSpace
 
 
 def _space() -> SearchSpace:

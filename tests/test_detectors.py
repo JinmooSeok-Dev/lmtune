@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from bench.detectors import (
+from lmtune.detectors import (
     detect_iqr_outliers,
     detect_regression,
     detect_slo_violations,
     run_all_rules,
 )
-from bench.profiles import SLOSpec
-from bench.runners.base import RequestRow
+from lmtune.profiles import SLOSpec
+from lmtune.runners.base import RequestRow
 
 
 def test_slo_violation_warning_and_critical():

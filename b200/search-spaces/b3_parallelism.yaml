@@ -1,0 +1,238 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b3-parallelism
+
+# Phase B3 [Track B-I] — Parallelism axis 정본.
+#
+# 출처: vllm-config-puzzle simulator 의 1:1 port (plan § vllm-config-puzzle Simulator).
+#   - 7 차원 parallelism (tp/pp/dp/ep + ep_strategy/pcp/dcp/sp)
+#   - 2 차원 network topology (intraNode_type / crossNode_type)
+#   - 1 차원 model (model_id → registry 로 has_mla / is_moe / numLayers / numKvHeads expand)
+#   - 10 validation 제약 (vllm-config-puzzle/validation.ts:31~162 1:1 port)
+#
+# 이 search-space 는 단독으로 쓰지 않고 b1 (path × model) 또는 b5 (combined) 와 결합.
+# feasibility filter (src/lmtune/search/feasibility.py) 가 sample 후 80%+ 를 prune.
+#
+# 사용 예:
+#   lmtune search start \
+#     --strategy nsga2 \
+#     --space b200/search-spaces/b3_parallelism.yaml \
+#     --endpoint b200/endpoints/b200_qwen72b.yaml \
+#     -p configs/profiles/autotune/short.yaml \
+#     -p configs/profiles/autotune/medium.yaml \
+#     -p configs/profiles/autotune/long.yaml \
+#     --backend k8s-job --workers 4 --max-trials 80 \
+#     --objectives "throughput_tok.avg:medium:maximize,ttft.p99:medium:minimize,cost_per_token:medium:minimize" \
+#     --name B3-parallelism
+
+axes:
+  # ─────────── (1) Parallelism — 7 차원 (vllm-config-puzzle simulator.ts:33-44) ───────────
+
+  tensor_parallel_size:
+    type: categorical
+    values: [1, 2, 4, 8, 16]
+    # tp=8 = 단일 노드. tp=16 = 인터노드 (NCCL all-reduce cost ↑↑)
+    # 출처: vllm-config-puzzle/parallel/config.ts:17 (perReplicaNpus = tp×pp×pcp)
+
+  pipeline_parallel_size:
+    type: categorical
+    values: [1, 2, 4]
+    # pp >= numLayers 면 infeasible. dense 70B = 80 layers, 405B = 126 layers
+    # 출처: vllm-config-puzzle/memory.ts:10-11 (ppFraction = ceil(layers/pp)/layers)
+
+  data_parallel_size:
+    type: categorical
+    values: [1, 2, 4, 8, 16]
+    # 보통 derive 되지만 (totalNpus / (tp×pp×pcp)) 명시 axis 로도 노출.
+    # 출처: vllm-config-puzzle/parallel/config.ts:18
+
+  expert_parallel_size:
+    type: categorical
+    values: [1, 2, 4, 8, 16]
+    active_if: {model_family: moe}
+    # standard EP: ep = dp×pcp×tp.  wide EP: 효과적 ep = tp×dp.
+    # 출처: vllm-config-puzzle/parallel/config.ts:19-21
+
+  ep_strategy:
+    type: categorical
+    values: [standard, wide]
+    active_if: {model_family: moe}
+    # standard = All-to-All routing (overhead 1 + 0.15 × (1 + active/total))
+    # wide     = DP all-reduce 만 (overhead 1 + 0.10) — All-to-All 없음
+    # 출처: vllm-config-puzzle/parallel/comm-overhead.ts:57-75
+
+  prefill_context_parallel_size:
+    type: categorical
+    values: [1, 2, 4, 8]
+    # PCP — long prompt 의 prefill 을 worker 별 분할. 32K+ context 에서 핵심.
+    # additive comm cost: (pcp-1) × kvPerRank / bw (compounding 아님)
+    # 출처: vllm-config-puzzle/prefill.ts:52,88
+
+  decode_context_parallel_size:
+    type: categorical
+    values: [1, 2, 4]
+    # DCP — decode 시 KV cache 분산 (ring attention).
+    # 제약: tp % dcp == 0 (validation.ts:131) — feasibility 가 자동 prune
+    # 출처: vllm-config-puzzle/decode.ts:58-59
+
+  sequence_parallel:
+    type: bool
+    active_if: {long_context: true}
+    # SP — within-layer sequence split. PCP/DCP 와 직교.
+    # NOTE: vllm-config-puzzle 현재 spEnabled=false placeholder.
+    #       vLLM 0.7+ 에서 활성화 시 axis 토글로 흡수.
+    # 출처: vllm-config-puzzle/config.ts:32
+
+  # ─────────── (2) Network topology — 2 차원 (vllm-config-puzzle simulator.ts:14-25) ───────────
+
+  intra_node_type:
+    type: categorical
+    values: [nvlink, pcie, xgmi]
+    # NVLink (NVIDIA), xGMI (AMD MI300X), PCIe (fallback).
+    # 대역폭: nvlink 900 Gbps, xgmi 896, pcie Gen5 64 / Gen4 32.
+    # 출처: vllm-config-puzzle/constants/comm.ts
+
+  cross_node_type:
+    type: categorical
+    values: [ib, roce, ethernet, none]
+    # IB 400 Gbps. RoCE 400 × 0.77 (1.3× latency penalty). Ethernet ÷ 3 (×3 latency).
+    # cross_node=none → multi-node parallelism (PP, dp>npusPerNode) infeasible.
+    # 출처: vllm-config-puzzle/parallel/comm-overhead.ts:118-191
+
+  # ─────────── (3) High-level node-split strategy ───────────
+  # vllm-config-puzzle 의 (tp,pp,dp,pcp,ep) 조합을 사람-친화 카테고리컬로 압축.
+  # autoresearch agent 가 macro 추론할 때 쓰는 상위 axis.
+  node_split_strategy:
+    type: categorical
+    values:
+      - single-node-tp8           # tp=8, dp=1, pp=1, ep=1
+      - single-node-dp2-tp4       # tp=4, dp=2, pp=1
+      - single-node-tp4-pcp2      # long-context: pcp=2 로 prefill 분산
+      - single-node-wide-ep-dp8   # MoE: dp=8, ep=8, tp=1, ep_strategy=wide
+      - dual-node-dp2-tp8         # 노드별 1 replica, tp=8 intra-node
+      - dual-node-pp2-tp8         # pp=2, tp=8 — pipeline 가로질러 RDMA
+      - dual-node-tp16            # tp=16 인터노드 — NCCL all-reduce cost ↑↑
+      - dual-node-wide-ep-dp16    # MoE wide-EP: dp=16, ep=16, ep_strategy=wide
+      - dual-node-tp8-pp2-pcp2    # ultra-long context + dense large
+      - hybrid-tp8-dp2-pcp2       # parallelism + context split 결합
+
+  # ─────────── (4) MoE 모델 conditional axis (model_family=moe 전용) ───────────
+  # 출처: vllm-config-puzzle/simulator.ts:33-38, memory.ts:32-73, comm-overhead.ts:57-75
+  # 보통 model_id 가 expand 하지만 일부 모델은 sweet-spot 이 axis.
+
+  moe_num_experts:
+    type: categorical
+    values: [16, 64, 128, 256]
+    active_if: {model_family: moe}
+    # DSV3=256, Mixtral 8x7B=8, Qwen3-235B=128
+
+  moe_top_k:
+    type: categorical
+    values: [2, 4, 8]
+    active_if: {model_family: moe}
+    # 활성 expert 수. activeExperts/numExperts 비율이 통신 overhead 결정
+
+  moe_shared_experts:
+    type: categorical
+    values: [0, 1, 2]
+    active_if: {model_family: moe}
+    # DSV3=1, Mixtral=0. 모든 토큰에 활성
+
+  # ─────────── (5) MLA 모델 conditional axis (DeepSeek-V3 류) ───────────
+  # KV cache 메모리 모델이 vanilla/GQA 와 완전히 다름 (memory.ts:18-24).
+  # MLA 는 numKvHeads 와 무관하게 latent 차원에서 KV 압축.
+
+  mla_kv_latent_dim:
+    type: categorical
+    values: [256, 512, 1024]
+    active_if: {has_mla: true}
+    # DSV3 default = 512
+
+  mla_rope_head_dim:
+    type: categorical
+    values: [32, 64, 128]
+    active_if: {has_mla: true}
+    # DSV3 default = 64
+
+  # ─────────── (6) 분산 통신 algorithm — 보조 axis ───────────
+
+  data_parallel_hybrid_lb:
+    type: bool
+    active_if: {data_parallel_size: ">1"}
+    # DP replica 간 hybrid load balancer. heterogeneous workload 에 효과
+
+  expert_parallel_router:
+    type: categorical
+    values: [greedy, latency-aware, eplb]
+    active_if: {model_family: moe}
+    # eplb = Expert Parallelism Load Balancer (B2 의 enable_eplb 와 페어링)
+
+
+# ─────────── Feasibility constraints (vllm-config-puzzle/validation.ts:31-162 1:1) ───────────
+# Sampler 가 sample 한 후 src/lmtune/search/feasibility.py 가 evaluator.
+# 위반 시 trial 즉시 prune (status=infeasible). 80%+ 자동 제거 기대.
+#
+# 본 블록은 src/lmtune/search/feasibility.py 가 읽는 declarative 사양.
+# active_if 와 별개로 axis 간 cross-constraint 를 표현.
+
+feasibility_constraints:
+  # 1. NPU count (validation.ts:31-39)
+  - id: c1_npu_count
+    rule: "tensor_parallel_size * pipeline_parallel_size * prefill_context_parallel_size * data_parallel_size <= environment.total_npus"
+    message: "tp × pp × pcp × dp must fit total NPUs"
+
+  # 2. TP within single node (validation.ts:43-50)
+  - id: c2_tp_single_node
+    rule: "tensor_parallel_size <= environment.npus_per_server"
+    message: "TP must fit in a single node (NCCL ring)"
+
+  # 3. PP layer distribution (validation.ts:54-65)
+  - id: c3_pp_layers
+    rule: "pipeline_parallel_size <= model.num_layers"
+    message: "PP stages cannot exceed model layers"
+
+  # 4. Attention heads divisible by TP (validation.ts:70-76)
+  - id: c4_heads_div_tp
+    rule: "model.num_attention_heads % tensor_parallel_size == 0"
+    message: "TP must divide attention heads"
+
+  # 5. EP expert divisibility (validation.ts:79-87)
+  - id: c5_experts_div_ep
+    rule: "(NOT model.is_moe) OR (model.num_experts % expert_parallel_size == 0)"
+    message: "EP must divide expert count"
+
+  # 6. GPU memory fit (validation.ts:96-104)
+  - id: c6_gpu_memory
+    rule: "surrogate.simulated_total_gb <= environment.gpu_vram_gb * gpu_memory_utilization"
+    message: "Model + KV must fit in GPU HBM (with util)"
+
+  # 7. Storage per server (validation.ts:108-126)
+  - id: c7_storage
+    rule: "model.total_params_b * model.dtype_bytes / 1024 / 1024 / 1024 <= environment.server_storage_gb"
+    message: "Weights must fit on local NVMe"
+
+  # 8. DCP-TP divisibility (validation.ts:130-140)
+  - id: c8_dcp_tp_div
+    rule: "(decode_context_parallel_size == 1) OR (tensor_parallel_size % decode_context_parallel_size == 0)"
+    message: "DCP must divide TP (ring attention within TP group)"
+
+  # 9. PP cross-node interconnect (validation.ts:143-152)
+  - id: c9_pp_cross_node
+    rule: "(pipeline_parallel_size == 1) OR (environment.servers == 1) OR (cross_node_type != 'none')"
+    message: "PP across nodes requires inter-node fabric"
+
+  # 10. Cross-node required for multi-node split (validation.ts:156-162)
+  - id: c10_multi_node
+    rule: "(environment.servers == 1) OR (tensor_parallel_size <= environment.npus_per_server AND pipeline_parallel_size == 1) OR (cross_node_type != 'none')"
+    message: "Multi-node split requires inter-node fabric"
+
+  # 11. PCP intra-node 권장 (vllm-config-puzzle 가 강제하지 않지만 ring attention 비용 ↑)
+  - id: c11_pcp_intra_pref
+    rule: "prefill_context_parallel_size * tensor_parallel_size <= environment.npus_per_server"
+    severity: warning   # hard fail 이 아니라 warning + score penalty
+    message: "PCP × TP > intra-node 시 cross-node ring attention 비용 큼"
+
+  # 12. Wide EP는 dp≥2 의미 있음
+  - id: c12_wide_ep_dp
+    rule: "(ep_strategy != 'wide') OR (data_parallel_size >= 2)"
+    message: "Wide EP는 dp >= 2 일 때만 의미 (dp=1 = standard 와 동일)"

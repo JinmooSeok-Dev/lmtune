@@ -1,0 +1,38 @@
+# Phase W-Local minimal SearchSpace.
+#
+# 4-axis vLLM engine_args 만 — vllm_restart.sh 가 적용 가능한 범위.
+# 모든 axis 는 cost_tier=4 (vllm restart, ~30초/trial) 이라 한 study 가
+# 30초 × N trial + measure 시간 으로 끝난다.
+#
+# 사용:
+#   lmtune search start \
+#     --endpoint configs/endpoints/local_vllm_autotune.yaml \
+#     --space b200/search-spaces/w_local_minimal.yaml \
+#     --strategy tpe --max-trials 10 --name w-local-mvp
+#
+# Phase S5 Round 1/2 archive 의 winner 가 본 space 안에 있으므로 warmstart
+# 가능. 환경: RTX 5060 Ti 16GB, Qwen2.5-1.5B-Instruct.
+
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: w-local-minimal
+
+axes:
+  enable_chunked_prefill:
+    type: bool
+    cost_tier: 4
+
+  enable_prefix_caching:
+    type: bool
+    cost_tier: 4
+
+  max_num_seqs:
+    type: categorical
+    values: [16, 32, 64, 128, 256]
+    cost_tier: 4
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+    cost_tier: 4

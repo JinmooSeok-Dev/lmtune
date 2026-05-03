@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # b200/scripts/probe.sh — 클러스터 진단 (B0)
 #
-# 목적: B200 k3s 클러스터에서 bench search 가 동작할 환경인지 점검.
+# 목적: B200 k3s 클러스터에서 lmtune search 가 동작할 환경인지 점검.
 # 사용: bash b200/scripts/probe.sh [--json]
 #
 # 점검 항목:

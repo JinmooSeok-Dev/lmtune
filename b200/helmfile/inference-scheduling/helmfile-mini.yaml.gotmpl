@@ -1,0 +1,70 @@
+# inference-scheduling helmfile — MINI variant
+# Qwen2.5-1.5B 단일 GPU. minikube / 로컬 sanity check 용.
+#
+# 사용법:
+#   NS=mini-infsch helmfile -f b200/helmfile/inference-scheduling/helmfile-mini.yaml.gotmpl apply
+#
+# B200 production 용은 helmfile.yaml.gotmpl (Llama-8B/70B/Mixtral) 사용.
+
+environments:
+  default:
+    values:
+      - provider:
+          name: none
+
+---
+
+{{- $ns := .Namespace | default (env "NS") | default "mini-infsch" -}}
+{{- $rn := (env "RELEASE_NAME_POSTFIX") | default "mini" -}}
+
+repositories:
+  - name: llm-d-modelservice
+    url: https://llm-d-incubation.github.io/llm-d-modelservice/
+  - name: llm-d-infra
+    url: https://llm-d-incubation.github.io/llm-d-infra/
+
+releases:
+  - name: {{ printf "infra-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: llm-d-infra/llm-d-infra
+    version: v1.4.0
+    installed: true
+    labels:
+      type: infrastructure
+      kind: inference-stack
+      role: mini
+    values:
+      - gateway:
+          provider: agentgateway
+          gatewayClassName: agentgateway
+
+  - name: {{ printf "gaie-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: oci://registry.k8s.io/gateway-api-inference-extension/charts/inferencepool
+    version: v1.5.0
+    installed: true
+    needs:
+      - {{ printf "infra-%s" $rn | quote }}
+    values:
+      - values-gaie.yaml
+    labels:
+      kind: inference-stack
+      role: mini
+
+  - name: {{ printf "ms-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: llm-d-modelservice/llm-d-modelservice
+    version: v0.4.12
+    installed: true
+    needs:
+      - {{ printf "infra-%s" $rn | quote }}
+      - {{ printf "gaie-%s" $rn | quote }}
+    values:
+      - ../base/values-b200-common.yaml.gotmpl
+      - values-qwen25-1.5b-mini.yaml
+    set:
+      - name: "decode.monitoring.podmonitor.enabled"
+        value: false
+    labels:
+      kind: inference-stack
+      role: mini

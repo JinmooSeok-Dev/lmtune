@@ -17,23 +17,78 @@ dict; tests snapshot-compare it. Live smoke requires minikube + helmfile
 from __future__ import annotations
 
 import logging
+import os as _os
 import subprocess
 import tempfile
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import yaml
 
-from bench.deploy.base import ApplyResult, DeploymentAdapter, HealthReport, merge_params_into_endpoint
-from bench.deploy.health import probe_openai_models, warmup_one_token
-
+from lmtune.deploy.base import (
+    ApplyResult,
+    DeploymentAdapter,
+    HealthReport,
+    merge_params_into_endpoint,
+)
+from lmtune.deploy.health import probe_openai_models, warmup_one_token
 
 log = logging.getLogger(__name__)
 
 
 # Peer repo with the llm-d helmfile templates; override via env if needed.
 DEFAULT_HELMFILE_ROOT = Path("/home/jinmoo/ml_ai/agentic/llm-distributed-inference")
+
+# Bench repo root — auto-detected from this file's location (src/bench/deploy/).
+# Override via env LMTUNE_REPO_ROOT if needed (e.g. in CI worktrees).
+DEFAULT_LMTUNE_REPO_ROOT = Path(
+    _os.environ.get("LMTUNE_REPO_ROOT") or Path(__file__).resolve().parents[3]
+)
+
+
+# Well-lit-path 디스패치 테이블. b200/helmfile/<key>/ 가 기준 (self-contained).
+# README placeholder 만 있는 path 는 본 디스패치에서 제외 — 재시도 시 명확한 에러.
+WELL_LIT_PATHS: dict[str, dict[str, str]] = {
+    "inference-scheduling": {
+        "helmfile_file": "b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl",
+        "default_namespace": "b200-infsch",
+    },
+    "pd-disaggregation": {
+        "helmfile_file": "b200/helmfile/pd-disaggregation/helmfile.yaml.gotmpl",
+        "default_namespace": "b200-pd",
+    },
+    "wide-ep-lws": {
+        "helmfile_file": "b200/helmfile/wide-ep-lws/helmfile.yaml.gotmpl",
+        "default_namespace": "b200-wideep",
+    },
+}
+
+
+class UnsupportedWellLitPath(ValueError):
+    """Sampled `well_lit_path` not yet implemented (only README placeholder)."""
+
+
+def resolve_well_lit_path(
+    path_name: str,
+    *,
+    bench_repo_root: Path | None = None,
+) -> tuple[Path, str]:
+    """Map a `well_lit_path` axis value → (helmfile_root, helmfile_file).
+
+    Raises `UnsupportedWellLitPath` if the requested path has no working
+    helmfile in `b200/helmfile/<name>/` (only a README placeholder).
+    """
+    if path_name not in WELL_LIT_PATHS:
+        raise UnsupportedWellLitPath(
+            f"well_lit_path={path_name!r} is not autotune-driveable yet. "
+            f"Available: {sorted(WELL_LIT_PATHS)}. "
+            "(tiered-prefix-cache / precise-prefix-cache / "
+            "predicted-latency-scheduling / workload-autoscaling 은 helmfile 미작성.)"
+        )
+    root = Path(bench_repo_root) if bench_repo_root else DEFAULT_LMTUNE_REPO_ROOT
+    return root, WELL_LIT_PATHS[path_name]["helmfile_file"]
 
 
 @dataclass(slots=True)
@@ -46,15 +101,20 @@ class _K8sTarget:
 def render_values_overlay(
     endpoint_data: Mapping[str, Any],
     *,
-    release_name: str = "ms-phase1",
+    release_name: str | None = None,
+    release_names: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build the minimal Helm values overlay from a merged endpoint dict.
 
-    Shape matches the peer repo's `ms-phase1/values-*.yaml` schema (modelspec
+    Shape matches the peer repo's `ms-{phase}/values-*.yaml` schema (modelspec
     + vllmArgs). Only the keys we set via trials appear — everything else is
     inherited from the base template.
+
+    For multi-release helmfile (e.g. P/D disaggregation = ms-pd-prefill +
+    ms-pd-decode), pass `release_names=[...]` and the same vllmArgs are emitted
+    for each. Single release: legacy `release_name="..."` still works.
     """
-    deployment = dict((endpoint_data.get("deployment") or {}))
+    deployment = dict(endpoint_data.get("deployment") or {})
     engine_args = dict(deployment.get("engine_args") or {})
     parallelism = dict(deployment.get("parallelism") or {})
 
@@ -74,15 +134,21 @@ def render_values_overlay(
     if parallelism.get("ep"):
         vllm_args["enable-expert-parallel"] = True
 
-    overlay: dict[str, Any] = {
-        release_name: {
-            "modelspec": {
-                "modelArtifactUri": f"hf://{endpoint_data.get('model')}",
-            },
-            "vllmArgs": vllm_args,
-        }
+    # Resolve target releases.
+    if release_names:
+        targets = list(release_names)
+    elif release_name:
+        targets = [release_name]
+    else:
+        targets = ["ms-phase1"]
+
+    payload = {
+        "modelspec": {
+            "modelArtifactUri": f"hf://{endpoint_data.get('model')}",
+        },
+        "vllmArgs": vllm_args,
     }
-    return overlay
+    return {name: payload for name in targets}
 
 
 class LLMDK8sAdapter(DeploymentAdapter):
@@ -95,40 +161,111 @@ class LLMDK8sAdapter(DeploymentAdapter):
         environment: str = "dev",
         selector: str = "name=ms-phase1",
         release_name: str = "ms-phase1",
+        release_names: list[str] | None = None,
         namespace: str = "default",
         deployment_name: str = "ms-phase1",
+        deployment_names: list[str] | None = None,
         rollout_timeout_s: int = 600,
         helmfile_file: str = "phase1/helmfile.yaml.gotmpl",
+        dry_run: bool = False,
     ):
         self._root = Path(helmfile_root) if helmfile_root else DEFAULT_HELMFILE_ROOT
         self._env = environment
         self._selector = selector
         self._helmfile_file = helmfile_file
+        # Multi-release P/D 지원: release_names 가 우선, 없으면 release_name 단일.
+        self._release_names = list(release_names) if release_names else [release_name]
+        self._deployment_names = list(deployment_names) if deployment_names else [deployment_name]
         self._target = _K8sTarget(
             namespace=namespace,
             release_name=release_name,
             deployment_name=deployment_name,
         )
         self._rollout_timeout_s = int(rollout_timeout_s)
+        self._dry_run = bool(dry_run)
+
+    @classmethod
+    def from_endpoint(cls, endpoint_data: Mapping[str, Any], *, dry_run: bool = False) -> LLMDK8sAdapter:
+        """Construct from endpoint YAML's `deployment.helmfile_overrides` block.
+
+        Accepts (all optional):
+          deployment.helmfile_overrides:
+            helmfile_root: <path>
+            helmfile_file: phase2/helmfile.yaml.gotmpl
+            environment: dev
+            selector: name=ms-pd
+            namespace: llm-d-pd-qwen25
+            release_names: [ms-pd-prefill, ms-pd-decode]
+            deployment_names: [ms-pd-prefill, ms-pd-decode]
+            rollout_timeout_s: 600
+        """
+        deployment = dict(endpoint_data.get("deployment") or {})
+        ov = dict(deployment.get("helmfile_overrides") or {})
+        return cls(
+            helmfile_root=ov.get("helmfile_root"),
+            environment=ov.get("environment", "dev"),
+            selector=ov.get("selector", "name=ms-phase1"),
+            release_name=ov.get("release_name", "ms-phase1"),
+            release_names=ov.get("release_names"),
+            namespace=ov.get("namespace", "default"),
+            deployment_name=ov.get("deployment_name", "ms-phase1"),
+            deployment_names=ov.get("deployment_names"),
+            rollout_timeout_s=int(ov.get("rollout_timeout_s", 600)),
+            helmfile_file=ov.get("helmfile_file", "phase1/helmfile.yaml.gotmpl"),
+            dry_run=dry_run,
+        )
 
     # ---- public API ----------------------------------------------------
 
     def apply(self, endpoint_path: str | Path, params: Mapping[str, Any]) -> ApplyResult:
         ep = Path(endpoint_path)
-        data = merge_params_into_endpoint(ep, params)
-        overlay = render_values_overlay(data, release_name=self._target.release_name)
 
-        if not self._root.exists():
-            return ApplyResult(
-                ok=False,
-                health=HealthReport(ready=False, detail=f"helmfile root not found: {self._root}"),
-                endpoint_path=ep, adapter=self.adapter_label,
-                notes="peer repo unavailable",
-            )
+        # well_lit_path is a meta-axis; must NOT bleed into engine_args. Strip it
+        # before merging, then resolve per-trial helmfile routing from it.
+        params_clean = {k: v for k, v in dict(params).items() if k != "well_lit_path"}
+        sampled_path = params.get("well_lit_path") if isinstance(params, Mapping) else None
 
+        data = merge_params_into_endpoint(ep, params_clean)
+        overlay = render_values_overlay(
+            data, release_names=self._release_names,
+        )
+
+        # Path-aware routing: if a well_lit_path was sampled, override the static
+        # (helmfile_root, helmfile_file) to point at b200/helmfile/<path>/.
+        if sampled_path:
+            try:
+                helmfile_root, helmfile_file = resolve_well_lit_path(str(sampled_path))
+            except UnsupportedWellLitPath as e:
+                return ApplyResult(
+                    ok=False,
+                    health=HealthReport(ready=False, detail=str(e)),
+                    endpoint_path=ep, adapter=self.adapter_label,
+                    notes="unsupported well_lit_path",
+                )
+        else:
+            helmfile_root, helmfile_file = self._root, self._helmfile_file
+
+        # Always write the overlay (useful for inspection + dry-run + winner export).
         with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as tf:
             yaml.safe_dump(overlay, tf, sort_keys=False)
             overlay_path = Path(tf.name)
+        log.info("LLMDK8sAdapter overlay: %s", overlay_path)
+
+        if self._dry_run:
+            return ApplyResult(
+                ok=True,
+                health=HealthReport(ready=True, detail=f"dry-run; overlay at {overlay_path}"),
+                endpoint_path=ep, adapter=self.adapter_label,
+                notes="dry-run skipped helmfile/rollout/probe",
+            )
+
+        if not helmfile_root.exists():
+            return ApplyResult(
+                ok=False,
+                health=HealthReport(ready=False, detail=f"helmfile root not found: {helmfile_root}"),
+                endpoint_path=ep, adapter=self.adapter_label,
+                notes="repo unavailable",
+            )
 
         # 1. helmfile apply
         cmd = [
@@ -136,11 +273,11 @@ class LLMDK8sAdapter(DeploymentAdapter):
             "--environment", self._env,
             "--selector", self._selector,
             "--state-values-file", str(overlay_path),
-            "-f", str(self._root / self._helmfile_file),
+            "-f", str(helmfile_root / helmfile_file),
             "apply",
         ]
         log.info("LLMDK8sAdapter: %s", " ".join(cmd))
-        proc = subprocess.run(cmd, cwd=str(self._root), capture_output=True, text=True)
+        proc = subprocess.run(cmd, cwd=str(helmfile_root), capture_output=True, text=True)
         if proc.returncode != 0:
             return ApplyResult(
                 ok=False,
@@ -149,20 +286,21 @@ class LLMDK8sAdapter(DeploymentAdapter):
                 notes=f"helmfile apply rc={proc.returncode}",
             )
 
-        # 2. rollout status
-        rollout = subprocess.run(
-            ["kubectl", "-n", self._target.namespace, "rollout", "status",
-             f"deployment/{self._target.deployment_name}",
-             f"--timeout={self._rollout_timeout_s}s"],
-            capture_output=True, text=True,
-        )
-        if rollout.returncode != 0:
-            return ApplyResult(
-                ok=False,
-                health=HealthReport(ready=False, detail=rollout.stderr.strip()[-400:]),
-                endpoint_path=ep, adapter=self.adapter_label,
-                notes="rollout failed",
+        # 2. rollout status — for every deployment in the release set
+        for dep in self._deployment_names:
+            rollout = subprocess.run(
+                ["kubectl", "-n", self._target.namespace, "rollout", "status",
+                 f"deployment/{dep}",
+                 f"--timeout={self._rollout_timeout_s}s"],
+                capture_output=True, text=True,
             )
+            if rollout.returncode != 0:
+                return ApplyResult(
+                    ok=False,
+                    health=HealthReport(ready=False, detail=f"{dep}: " + rollout.stderr.strip()[-400:]),
+                    endpoint_path=ep, adapter=self.adapter_label,
+                    notes=f"rollout failed for {dep}",
+                )
 
         # 3. probe + warmup
         url = (data.get("url") or "").strip()

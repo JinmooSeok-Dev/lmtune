@@ -1,0 +1,43 @@
+# Profile: wide-EP LWS for MoE (dp=8 ep=8 ep_strategy=wide).
+#
+# wide-EP 는 All-to-All 비활성, DP all-reduce 만. expert load balance 가 throughput
+# bottleneck → EPLB + DBO 가 best-known.
+name: wide_ep_lws_dp8
+priority: 2
+description: |
+  Wide-EP for MoE models with LeaderWorkerSet. ep_strategy=wide → All-to-All 비활성,
+  expert balancer (EPLB) + decode batch overlap (DBO) 활성.
+
+applies_when:
+  well_lit_path: wide-ep-lws
+  ep_strategy: wide
+  model_family: moe
+
+env_locked:
+  # NCCL — wide-EP 는 DP all-reduce 만, expert 통신 X
+  NCCL_NVLS_ENABLE: "1"
+  NCCL_ALGO: NVLS              # intra-node 라 NVLS best
+  NCCL_PROTO: Simple
+  NCCL_P2P_LEVEL: NVL
+  # vLLM MoE 최적화
+  VLLM_USE_DEEP_GEMM: "1"      # B200 fp8 GEMM
+  VLLM_ENABLE_DBO: "1"         # decode batch overlap
+  VLLM_MOE_BACKEND: deep_gemm
+
+env_tunable:
+  - name: VLLM_DBO_TOKEN_THRESHOLD
+    kind: categorical
+    values: ["128", "256", "512", "1024"]
+    cost_tier: 5
+  - name: VLLM_EPLB_WINDOW_SIZE
+    kind: categorical
+    values: ["64", "128", "256", "512"]
+    cost_tier: 5
+  - name: VLLM_EPLB_STEP_INTERVAL
+    kind: categorical
+    values: ["16", "32", "64", "128"]
+    cost_tier: 5
+  - name: VLLM_ALL2ALL_BACKEND
+    kind: categorical
+    values: [allgather_reducescatter, deepep_low_latency, deepep_high_throughput]
+    cost_tier: 4

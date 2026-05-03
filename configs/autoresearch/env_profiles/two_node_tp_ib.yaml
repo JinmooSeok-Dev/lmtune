@@ -1,0 +1,56 @@
+# Profile: two-node parallelism over InfiniBand / RoCE (B200 16-GPU 2 노드).
+#
+# Cross-node TP, PP, EP all-reduce 활성. NCCL_IB_HCA rail-aligned, GDR 활성.
+# UCX 는 NIXL backend 일 때만 (별도 profile pd_disagg_nixl).
+#
+# 본 profile 은 NHN Cloud B200 의 363+ Gbps RDMA Perftest 환경의 best-known set.
+name: two_node_tp_ib
+priority: 1
+description: |
+  Two-node parallelism with InfiniBand / RoCE fabric. NCCL all-reduce 가 cross-node 흐름.
+  GPUDirect RDMA + NCCL_NET_GDR_LEVEL=SYS + IB_HCA rail-aligned.
+
+applies_when:
+  node_split_strategy: ["dual-node-tp16", "dual-node-pp2-tp8", "dual-node-dp2-tp8", "dual-node-tp8-pp2-pcp2"]
+  cross_node_type: [ib, roce]
+
+env_locked:
+  # NCCL — IB / RoCE 활성
+  NCCL_IB_DISABLE: "0"
+  NCCL_IB_HCA: "mlx5_0:1,mlx5_1:1,mlx5_2:1,mlx5_3:1"   # rail-aligned, hca_count_per_gpu=1
+  NCCL_NET_GDR_LEVEL: SYS
+  NCCL_NET_GDR_READ: "1"
+  NCCL_CROSS_NIC: "1"
+  NCCL_IB_TIMEOUT: "23"
+  NCCL_IB_RETRY_CNT: "14"
+  NCCL_ALGO: Ring                # cross-node 는 Ring 이 보통 우월
+  NCCL_PROTO: LL128
+  NCCL_P2P_LEVEL: SYS
+  # GPUDirect RDMA
+  NCCL_NET_GDR_C2C: "1"          # B200 sm_100 신규 옵션
+  # CUDA
+  CUDA_DEVICE_ORDER: PCI_BUS_ID
+  # UCX — NIXL 사용 시만, 본 profile 에선 비활성
+  UCX_TLS: "self,sm,cuda_copy,cuda_ipc,rc_x"
+
+env_tunable:
+  - name: NCCL_ALGO
+    kind: categorical
+    values: [Ring, Tree, CollNet]
+    cost_tier: 5
+  - name: NCCL_BUFFSIZE
+    kind: categorical
+    values: [default, "2MB", "4MB", "8MB"]
+    cost_tier: 5
+  - name: NCCL_IB_SL
+    kind: categorical
+    values: ["0", "3"]
+    cost_tier: 5
+  - name: NCCL_IB_QPS_PER_CONNECTION
+    kind: categorical
+    values: ["1", "2", "4", "8"]
+    cost_tier: 5
+  - name: NCCL_GRAPH_REGISTER
+    kind: categorical
+    values: ["0", "1"]
+    cost_tier: 5

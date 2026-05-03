@@ -15,7 +15,7 @@ DECODE_POD=$(kubectl get pods -n b200-infsch -l llm-d.ai/role=decode -o jsonpath
 kubectl port-forward -n b200-infsch pod/$DECODE_POD 8011:8000
 
 # bench smoke
-bench run -p configs/profiles/autotune/short.yaml -e b200/endpoints/b200_smoke.yaml --json-summary
+lmtune run -p configs/profiles/autotune/short.yaml -e b200/endpoints/b200_smoke.yaml --json-summary
 ```
 
 ## 정리

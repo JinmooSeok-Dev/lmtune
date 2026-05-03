@@ -1,0 +1,230 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b4-welllit-paths
+
+# Phase B4 [Track B-III] — well-lit path × engine_args × parallelism 결합 axis.
+#
+# B1 의 7 well-lit-path 를 categorical axis 로 격상 + 각 path 의 path-specific
+# axis 를 active_if 로 노출. 결과: model × workload 조합별 최적 path 자동 결정.
+#
+# LLMDK8sAdapter 가 well_lit_path 값을 helmfile_root 디렉토리로 디스패치:
+#   inference-scheduling     → b200/helmfile/inference-scheduling/
+#   pd-disaggregation        → b200/helmfile/pd-disaggregation/
+#   wide-ep-lws              → b200/helmfile/wide-ep-lws/
+#   tiered-prefix-cache      → b200/helmfile/tiered-prefix-cache/   (B-III 점진)
+#   precise-prefix-cache     → b200/helmfile/precise-prefix-cache/  (B-III 점진)
+#   predicted-latency-sched  → b200/helmfile/predicted-latency-scheduling/ (B-III)
+#   workload-autoscaling     → b200/helmfile/workload-autoscaling/  (B-III)
+#
+# 사용 예 (모델 1개 × workload 3 × path 7 sweep):
+#   lmtune search start \
+#     --strategy nsga2 \
+#     --space b200/search-spaces/b4_welllit_paths.yaml \
+#     --endpoint b200/endpoints/b200_qwen72b.yaml \
+#     -p configs/profiles/autotune/short.yaml \
+#     -p configs/profiles/autotune/medium.yaml \
+#     -p configs/profiles/autotune/long.yaml \
+#     --backend k8s-job --workers 4 --max-trials 80 \
+#     --objectives "throughput_tok.avg:medium:maximize,ttft.p99:short:minimize,e2e.p99:long:minimize" \
+#     --name B4-paths
+
+axes:
+  # ═══════════════════════════════════════════════════════════════════════
+  # 1. 본 study 의 결정 axis — well_lit_path
+  # ═══════════════════════════════════════════════════════════════════════
+
+  well_lit_path:
+    type: categorical
+    values:
+      - inference-scheduling
+      - pd-disaggregation
+      - wide-ep-lws
+      - tiered-prefix-cache
+      - precise-prefix-cache-aware
+      - predicted-latency-scheduling
+      - workload-autoscaling
+    cost_tier: 3
+    # path 변경 = helmfile redeploy = ~3 min/trial
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 2. 모든 path 공통 (B1 의 핵심 5)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256, 512]
+    cost_tier: 4
+
+  enable_prefix_caching:
+    type: bool
+    cost_tier: 4
+
+  enable_chunked_prefill:
+    type: bool
+    cost_tier: 4
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+    cost_tier: 4
+
+  kv_cache_dtype:
+    type: categorical
+    values: [auto, fp8_e4m3, nvfp4]
+    cost_tier: 4
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 3. parallelism (B3 의 macro 만)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  tensor_parallel_size:
+    type: categorical
+    values: [1, 2, 4, 8]
+    cost_tier: 3
+
+  pipeline_parallel_size:
+    type: categorical
+    values: [1, 2]
+    cost_tier: 3
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 4. path-specific axis (active_if 로 path 별 활성)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ─── inference-scheduling 전용 ───
+  scheduler_policy:
+    type: categorical
+    values: [round-robin, kv-cache-aware, prefix-aware, latency-weighted]
+    active_if: {well_lit_path: inference-scheduling}
+    cost_tier: 3
+
+  # ─── pd-disaggregation 전용 ───
+  data_parallel_size:
+    type: categorical
+    values: [1, 2, 4]
+    active_if: {well_lit_path: [pd-disaggregation, wide-ep-lws]}
+    cost_tier: 3
+
+  prefill_decode_ratio:
+    type: categorical
+    values: ["1:1", "1:2", "2:1", "1:4", "4:1"]
+    active_if: {well_lit_path: pd-disaggregation}
+    cost_tier: 3
+    # prefill replica : decode replica
+
+  kv_transfer_backend:
+    type: categorical
+    values: [nixl-rdma, nixl-tcp, nixl-ucx, lmcache]
+    active_if: {well_lit_path: pd-disaggregation}
+    cost_tier: 3
+
+  # ─── wide-ep-lws 전용 ───
+  expert_parallel_size:
+    type: categorical
+    values: [1, 2, 4, 8, 16]
+    active_if: {well_lit_path: wide-ep-lws, model_family: moe}
+    cost_tier: 3
+
+  ep_strategy:
+    type: categorical
+    values: [standard, wide]
+    active_if: {well_lit_path: wide-ep-lws, model_family: moe}
+    cost_tier: 3
+
+  enable_dbo:
+    type: bool
+    active_if: {well_lit_path: wide-ep-lws, model_family: moe}
+    cost_tier: 4
+
+  enable_eplb:
+    type: bool
+    active_if: {well_lit_path: wide-ep-lws, model_family: moe}
+    cost_tier: 4
+
+  # ─── tiered-prefix-cache 전용 ───
+  cache_tier_layout:
+    type: categorical
+    values: [hbm-only, hbm-cpu, hbm-cpu-nvme, hbm-cpu-nvme-redis]
+    active_if: {well_lit_path: tiered-prefix-cache}
+    cost_tier: 3
+
+  lmcache_local_cpu_size_gb:
+    type: categorical
+    values: [16, 64, 256]
+    active_if: {well_lit_path: tiered-prefix-cache}
+    cost_tier: 4
+
+  lmcache_compress:
+    type: categorical
+    values: [none, lz4, zstd]
+    active_if: {well_lit_path: tiered-prefix-cache}
+    cost_tier: 4
+
+  lmcache_pinned_memory:
+    type: bool
+    active_if: {well_lit_path: tiered-prefix-cache}
+    cost_tier: 4
+
+  # ─── precise-prefix-cache-aware 전용 ───
+  precise_scorer_type:
+    type: categorical
+    values: [exact-match, prefix-tree, hybrid]
+    active_if: {well_lit_path: precise-prefix-cache-aware}
+    cost_tier: 3
+
+  kv_events_routing:
+    type: categorical
+    values: [zmq-pubsub, redis-streams, kafka]
+    active_if: {well_lit_path: precise-prefix-cache-aware}
+    cost_tier: 3
+
+  # ─── predicted-latency-scheduling 전용 ───
+  pls_model_type:
+    type: categorical
+    values: [linear, gbm, mlp]
+    active_if: {well_lit_path: predicted-latency-scheduling}
+    cost_tier: 3
+
+  pls_window_size:
+    type: categorical
+    values: [64, 256, 1024]
+    active_if: {well_lit_path: predicted-latency-scheduling}
+    cost_tier: 4
+
+  pls_update_interval_s:
+    type: categorical
+    values: [1, 5, 30]
+    active_if: {well_lit_path: predicted-latency-scheduling}
+    cost_tier: 4
+
+  # ─── workload-autoscaling 전용 ───
+  hpa_metric_type:
+    type: categorical
+    values: [cpu, kv-cache-util, queue-length, ttft-p99]
+    active_if: {well_lit_path: workload-autoscaling}
+    cost_tier: 3
+
+  hpa_target_value:
+    type: categorical
+    values: [50, 70, 80, 90]
+    active_if: {well_lit_path: workload-autoscaling}
+    cost_tier: 3
+
+  hpa_min_replicas:
+    type: categorical
+    values: [1, 2, 4]
+    active_if: {well_lit_path: workload-autoscaling}
+    cost_tier: 3
+
+  hpa_max_replicas:
+    type: categorical
+    values: [4, 8, 16]
+    active_if: {well_lit_path: workload-autoscaling}
+    cost_tier: 3
+
+  keda_scaledobject_polling_interval_s:
+    type: categorical
+    values: [5, 15, 30]
+    active_if: {well_lit_path: workload-autoscaling}
+    cost_tier: 3

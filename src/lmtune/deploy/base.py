@@ -22,17 +22,17 @@ class attribute `adapter_label`, and SearchSpace.active_axes(context) reads
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import yaml
-
 
 _ENGINE_ARG_KEYS: set[str] = {
     "max_num_seqs", "enable_prefix_caching", "enable_chunked_prefill",
     "gpu_memory_utilization", "max_model_len", "kv_cache_dtype",
-    "block_size", "enforce_eager",
+    "block_size", "enforce_eager", "async_scheduling",
 }
 _PARALLELISM_KEYS: set[str] = {"tp", "pp", "dp", "ep", "rsd"}
 

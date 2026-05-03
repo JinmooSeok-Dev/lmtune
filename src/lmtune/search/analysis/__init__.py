@@ -17,8 +17,8 @@ These tools are composable: the recommendations they emit are merged in
 `cli_search.py` for the `bench search prune` subcommand.
 """
 
-from bench.search.analysis.anova import AxisAnova, anova_per_axis
-from bench.search.analysis.importance import axis_importance
-from bench.search.analysis.bound_tighten import tighten_bounds
+from lmtune.search.analysis.anova import AxisAnova, anova_per_axis
+from lmtune.search.analysis.bound_tighten import tighten_bounds
+from lmtune.search.analysis.importance import axis_importance
 
 __all__ = ["AxisAnova", "anova_per_axis", "axis_importance", "tighten_bounds"]

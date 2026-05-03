@@ -1,0 +1,86 @@
+# Mixtral-8x22B Instruct — B200 wide-EP baseline (DP=2, EP=8, TP=1)
+# 단일 노드 8 GPU 에서 dp_size=2 (replica) × ep_size=8 (expert 분산).
+# Mixtral 8x22B = 활성 39B / 총 141B → bf16 약 280GB → 8 GPU × 180GB HBM 으로 충분.
+#
+# wide-EP 의 핵심: expert all-to-all 통신이 throughput bottleneck.
+# B200 fabric 에서 deepep / nixl_ep backend 비교를 axis 화.
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://mistralai/Mixtral-8x22B-Instruct-v0.1"
+  size: 280Gi
+  name: "mistralai/Mixtral-8x22B-Instruct-v0.1"
+  authSecretName: "huggingface-token"
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "b200-wideep"
+    llm-d.ai/hardware-variant: "b200"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "Mixtral-8x22B"
+    llm-d.ai/model-family: "moe"
+
+routing:
+  servicePort: 8000
+
+decode:
+  # modelservice v0.4.12 parallelism schema: tensor / data / dataLocal / workers
+  # (expert 는 vllm CLI flag --enable-expert-parallel + --data-parallel-size 로 표현)
+  parallelism:
+    tensor: 1
+    data: 2
+    dataLocal: 1
+    workers: 1
+  create: true
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+  containers:
+    - name: "vllm"
+      image: ghcr.io/llm-d/llm-d-cuda:v0.6.0
+      modelCommand: vllmServe
+      args:
+        - "--enable-expert-parallel"
+        - "--data-parallel-size"
+        - "2"
+        - "--max-num-seqs"
+        - "128"
+        - "--max-model-len"
+        - "8192"
+        - "--gpu-memory-utilization"
+        - "0.85"
+        - "--block-size"
+        - "32"
+        - "--enable-prefix-caching"
+        - "--enable-chunked-prefill"
+        - "--dtype"
+        - "bfloat16"
+        # B-II 에서 다음 axis 추가 가능:
+        # --enable-dbo
+        # --enable-eplb
+        # --all2all-backend deepep_low_latency
+        # --moe-backend cutlass
+      resources:
+        requests:
+          nvidia.com/gpu: "8"
+          cpu: "16"
+          memory: 128Gi
+        limits:
+          nvidia.com/gpu: "8"
+          cpu: "32"
+          memory: 256Gi
+      env:
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: NCCL_DEBUG
+          value: "WARN"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-token
+              key: HF_TOKEN
+              optional: true
+
+# topology: single-node-affinity (Mixtral 은 단일 노드 권장 — 인터노드 EP all-to-all 비용 큼)

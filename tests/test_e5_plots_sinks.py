@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pandas as pd
 
-from bench.profiles import AnalysisSpec, PlotRequest, ProfileSpec
-from bench.runners.base import RequestRow
-from bench.visualization import list_plots, list_sinks, render_run_report, sink_write
+from lmtune.profiles import AnalysisSpec, PlotRequest, ProfileSpec
+from lmtune.runners.base import RequestRow
+from lmtune.visualization import list_plots, list_sinks, render_run_report, sink_write
 
 
 def _rows_phase_mix():
@@ -30,28 +30,28 @@ def test_plot_registry_contains_new_plots():
 
 
 def test_phase_breakdown_plot_generates(tmp_path):
-    from bench.visualization.plots import get_plot
+    from lmtune.visualization.plots import get_plot
     fn = get_plot("phase_breakdown")
     out = fn(_rows_phase_mix(), tmp_path / "phase.png", metric="input_tokens")
     assert out.exists() and out.stat().st_size > 0
 
 
 def test_cdf_plot_generates(tmp_path):
-    from bench.visualization.plots import get_plot
+    from lmtune.visualization.plots import get_plot
     fn = get_plot("cdf")
     out = fn(_rows_phase_mix(), tmp_path / "cdf.png", metric="ttft_ms")
     assert out.exists() and out.stat().st_size > 0
 
 
 def test_token_snowball_plot_generates(tmp_path):
-    from bench.visualization.plots import get_plot
+    from lmtune.visualization.plots import get_plot
     fn = get_plot("token_snowball")
     out = fn(_rows_phase_mix(), tmp_path / "snowball.png")
     assert out.exists()
 
 
 def test_variance_box_plot_generates(tmp_path):
-    from bench.visualization.plots import get_plot
+    from lmtune.visualization.plots import get_plot
     fn = get_plot("variance_box")
     out = fn({f"run{i}": [100 + i * 10 + j for j in range(20)] for i in range(5)},
              tmp_path / "box.png")

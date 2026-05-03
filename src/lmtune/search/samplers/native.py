@@ -29,8 +29,7 @@ import numpy as np
 from scipy.stats import gaussian_kde
 from scipy.stats.qmc import LatinHypercube
 
-from bench.search.space import Axis, SearchSpace
-
+from lmtune.search.space import Axis, SearchSpace
 
 # --- Random ----------------------------------------------------------------
 
@@ -133,9 +132,12 @@ class NativeTPESampler:
             choices = axis.values or [False, True]
             good_counts = {c: 0.5 for c in choices}  # Laplace smoothing
             bad_counts = {c: 0.5 for c in choices}
-            for v in g_vals: good_counts[v] = good_counts.get(v, 0.5) + 1
-            for v in b_vals: bad_counts[v] = bad_counts.get(v, 0.5) + 1
-            total_g = sum(good_counts.values()); total_b = sum(bad_counts.values())
+            for v in g_vals:
+                good_counts[v] = good_counts.get(v, 0.5) + 1
+            for v in b_vals:
+                bad_counts[v] = bad_counts.get(v, 0.5) + 1
+            total_g = sum(good_counts.values())
+            total_b = sum(bad_counts.values())
             ratios = {c: (good_counts[c] / total_g) / (bad_counts[c] / total_b) for c in choices}
             # Sample from P_good, pick arg-max ratio among candidates.
             cands = self._rng.choices(choices,
@@ -148,7 +150,8 @@ class NativeTPESampler:
         b_arr = np.asarray([float(v) for v in b_vals]) if b_vals else None
         if axis.kind == "log_uniform":
             g_arr = np.log(g_arr)
-            if b_arr is not None: b_arr = np.log(b_arr)
+            if b_arr is not None:
+                b_arr = np.log(b_arr)
 
         try:
             l_kde = gaussian_kde(g_arr)
@@ -161,7 +164,8 @@ class NativeTPESampler:
 
         samples = l_kde.resample(self._n_cand, seed=self._rng.randint(0, 2**31))[0]
         # clip to axis bounds
-        lo = float(axis.low); hi = float(axis.high)
+        lo = float(axis.low)
+        hi = float(axis.high)
         if axis.kind == "log_uniform":
             lo, hi = math.log(lo), math.log(hi)
         samples = np.clip(samples, lo, hi)

@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from bench.detectors import detect_slo_violations
-from bench.endpoints import DeploymentSpec, EndpointSpec, load_endpoint
-from bench.profiles import (
+from lmtune.detectors import detect_slo_violations
+from lmtune.endpoints import DeploymentSpec, EndpointSpec, load_endpoint
+from lmtune.profiles import (
     DatasetWorkload,
     ProfileSpec,
     SLOCheck,
@@ -15,8 +15,7 @@ from bench.profiles import (
     TraceWorkload,
     load_profile,
 )
-from bench.runners import AIPerfRunner
-
+from lmtune.runners import AIPerfRunner
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -28,7 +27,7 @@ def test_synthetic_source_defaults():
     p = load_profile(ROOT / "configs/profiles/smoke.yaml")
     assert isinstance(p.workload, SyntheticWorkload)
     assert p.workload.source == "synthetic"
-    assert p.apiVersion.startswith("bench/")
+    assert p.apiVersion.startswith("lmtune/")
 
 
 def test_dataset_workload_parses():
@@ -69,7 +68,8 @@ def test_unknown_source_rejected():
         "runner": "aiperf", "mode": "concurrency",
         "workload": {"source": "unknown-kind", "concurrency": 1, "request_count": 1},
     }
-    with pytest.raises(Exception):
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
         ProfileSpec.model_validate(raw)
 
 

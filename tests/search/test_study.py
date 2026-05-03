@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from bench.search import CallableObjective, SearchSpace, Study, StudyConfig
-from bench.search.space import Axis
-from bench.storage.duckdb_store import DuckDBStore
+from lmtune.search import CallableObjective, SearchSpace, Study, StudyConfig
+from lmtune.search.space import Axis
+from lmtune.storage.duckdb_store import DuckDBStore
 
 
 def _store(tmp_path: Path) -> DuckDBStore:
-    return DuckDBStore(tmp_path / "bench.duckdb")
+    return DuckDBStore(tmp_path / "lmtune.duckdb")
 
 
 def test_study_grid_exhausts_and_completes(tmp_path: Path):

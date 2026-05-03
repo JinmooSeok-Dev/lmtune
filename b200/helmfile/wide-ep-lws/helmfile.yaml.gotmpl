@@ -1,0 +1,72 @@
+# b200/helmfile/wide-ep-lws/helmfile.yaml.gotmpl
+#
+# B200 16-GPU 클러스터 — well-lit path #2 (wide-EP-LWS)
+#
+# Wide expert parallelism: MoE 모델의 expert 를 여러 GPU 에 나누어 배치.
+# - LWS (LeaderWorkerSet) 모드: peer repo 의 manifests/ 패턴 (Phase B-IV 검토)
+# - modelservice multinode 모드: 본 helmfile (B1 baseline 우선)
+#
+# B1 baseline 으로 Mixtral-8x22B (single node, dp=2 ep=8 tp=1) 채택 — LWS 미요구.
+# Qwen3-Coder-480B / DeepSeek-V3 같은 더 큰 MoE 는 B-IV 에서 LWS 어댑터 추가.
+#
+# 사용법:
+#   NS=b200-wideep helmfile -f b200/helmfile/wide-ep-lws/helmfile.yaml.gotmpl --selector role=base apply
+
+environments:
+  default:
+    values:
+      - provider:
+          name: agentgateway
+
+---
+
+{{- $ns := .Namespace | default (env "NS") | default "b200-wideep" -}}
+{{- $rn := (env "RELEASE_NAME_POSTFIX") | default "wideep" -}}
+
+repositories:
+  - name: llm-d-modelservice
+    url: https://llm-d-incubation.github.io/llm-d-modelservice/
+  - name: llm-d-infra
+    url: https://llm-d-incubation.github.io/llm-d-infra/
+
+releases:
+  - name: {{ printf "infra-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: llm-d-infra/llm-d-infra
+    version: v1.4.0
+    installed: true
+    labels:
+      type: infrastructure
+      kind: inference-stack
+      role: base
+    values:
+      - gateway:
+          gatewayClassName: agentgateway
+
+  - name: {{ printf "gaie-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: oci://registry.k8s.io/gateway-api-inference-extension/charts/inferencepool
+    version: v1.5.0
+    installed: true
+    needs:
+      - {{ printf "infra-%s" $rn | quote }}
+    values:
+      - values-gaie.yaml
+    labels:
+      kind: inference-stack
+      role: base
+
+  - name: {{ printf "ms-%s" $rn | quote }}
+    namespace: {{ $ns }}
+    chart: llm-d-modelservice/llm-d-modelservice
+    version: v0.4.12
+    installed: true
+    needs:
+      - {{ printf "infra-%s" $rn | quote }}
+      - {{ printf "gaie-%s" $rn | quote }}
+    values:
+      - ../base/values-b200-common.yaml.gotmpl
+      - values-mixtral-8x22b-dp2-ep8.yaml
+    labels:
+      kind: inference-stack
+      role: base

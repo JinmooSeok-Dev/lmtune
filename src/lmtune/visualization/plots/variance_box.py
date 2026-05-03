@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from bench.visualization.plots import register_plot
+from lmtune.visualization.plots import register_plot
 
 
 @register_plot("variance_box")

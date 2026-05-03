@@ -18,22 +18,24 @@
 
 ## 진입점
 
+> **B200 클러스터에서 바로 시작**: [`b200/QUICKSTART.md`](QUICKSTART.md) — 3 well-lit-path (inference-scheduling / pd-disaggregation / wide-ep-lws) 를 ~30분에 끝까지 돌려보는 복붙 가능한 명령 시퀀스.
+
 ```bash
 # 1. 환경 진단 (B0 — 최초 1회 + 정기 점검)
 bash b200/scripts/probe.sh
 
 # 2. smoke run (B0 마지막 단계)
-bench search start \
+lmtune search start \
   --strategy random \
   --space b200/search-spaces/b0_smoke.yaml \
   --backend k8s-job --workers 2 --max-trials 4 \
   --study-prefix B0-smoke
 
-# 3. baseline 카탈로그 (B1)
-bench search start \
-  --strategy grid \
+# 3. baseline 카탈로그 (B1) — QUICKSTART.md §8 참조
+lmtune search start \
+  --strategy nsga2 \
   --space b200/search-spaces/b1_baselines.yaml \
-  --backend k8s-job --workers 4
+  --backend k8s-job --workers 4 --max-trials 40
 
 # (이후 phase 별 명령어는 각 phase doc 참조)
 ```
@@ -66,12 +68,19 @@ b200/
 │   ├── b2_vllm_engine.yaml            ← vLLM 최적화 axis (B2)
 │   ├── b3_parallelism.yaml            ← TP/PP/DP/EP + topology axis (B3)
 │   ├── b4_welllit_paths.yaml          ← well-lit path 자체를 axis 로 (B4)
-│   └── b5_combined_pareto.yaml        ← 통합 Pareto search (B5)
+│   ├── b5_combined_pareto.yaml        ← 통합 Pareto search (B5)
+│   ├── b6_lowlevel.yaml               ← PCIe/IOMMU/NUMA/NCCL/RDMA axis (B6)
+│   └── b7_multistack.yaml             ← engine × serving stack axis (B7)
 ├── profiles/                          ← B200 워크로드 preset
 │   ├── ultra_long.yaml                ← 32K context (대모델)
-│   └── coding_agent_burstgpt.yaml     ← BurstGPT 재현
+│   ├── coding_agent_burstgpt.yaml     ← BurstGPT 재현
+│   ├── llmd_official_*.yaml           ← llm-d-benchmark profile 직변환 (B7)
+│   ├── mlperf_*.yaml                  ← MLPerf Inference v5.x scenario (B7)
+│   ├── mooncake_replay.yaml           ← Mooncake trace (B7)
+│   └── azure_llm_*.yaml               ← AzureLLMTraces (B7)
 ├── studies/                           ← phase 별 study export (DuckDB)
 │   └── <phase>_<study_id>/
+├── results/                           ← 공개 가능한 winning config + 리포트 (B8)
 └── docs/
     ├── b200_environment.md            ← 클러스터·드라이버·fabric 스냅샷
     ├── well_lit_paths_catalog.md      ← 7 path × axis 매핑 (B1 산출)
@@ -79,7 +88,12 @@ b200/
     ├── parallelism_combinations.md    ← topology × parallelism (B3 산출)
     ├── path_decision_tree.md          ← workload→path 의사결정 (B4 산출)
     ├── continuous_loop.md             ← B5 운용 가이드
-    └── regression_alerts.md           ← B5 회귀 로그
+    ├── regression_alerts.md           ← B5 회귀 로그
+    ├── lowlevel_axis_catalog.md       ← PCIe/IOMMU/NUMA/NCCL axis 가이드 (B6)
+    ├── rdma_perftest_baseline.md      ← ib_write_bw / ib_read_bw 363 Gbps 재현 절차 (B6)
+    ├── portability_guide.md           ← 다른 GPU/NPU 환경 재사용 가이드 (B7)
+    ├── upstream_pr_candidates.md      ← llm-d / vLLM upstream 기여 후보 (B8)
+    └── blog/                          ← 외부 공개 블로그 초고 (B8)
 ```
 
 ## Phase 진행 상황
@@ -92,6 +106,9 @@ b200/
 | B3 — 병렬 분산 axis | ⏳ pending | search-spaces/b3_parallelism.yaml, src/bench/deploy/llmd_k8s.py 보강 |
 | B4 — well-lit path as axis | ⏳ pending | search-spaces/b4_welllit_paths.yaml, docs/path_decision_tree.md |
 | B5 — Continuous loop | ⏳ pending | scripts/loop.sh, scripts/regression_check.py, docs/continuous_loop.md |
+| B6 — Low-level system axis | ⏳ pending | search-spaces/b6_lowlevel.yaml, scripts/{system_snapshot.sh,rdma_bench.sh}, docs/lowlevel_axis_catalog.md, docs/rdma_perftest_baseline.md |
+| B7 — Multi-engine + Multi-stack | ⏳ pending | src/bench/runners/{sglang,trt_llm,nim}.py, src/bench/deploy/{kserve,ray_serve,triton,nim_adapter}.py, search-spaces/b7_multistack.yaml, docs/portability_guide.md |
+| B8 — Public packaging | ⏳ pending | results/RECIPES.md, docs/blog/, docs/conference_submission_skeleton.md, docs/upstream_pr_candidates.md |
 
 ## 사용자 실행 흐름
 

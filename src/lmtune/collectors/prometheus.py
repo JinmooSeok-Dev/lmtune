@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 import re
 import threading
-import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import requests
@@ -55,7 +54,7 @@ def _parse_labels(s: str | None) -> dict[str, str]:
 def scrape_metrics_endpoint(url: str, timeout: float = 3.0) -> list[PromSample]:
     resp = requests.get(url, timeout=timeout)
     resp.raise_for_status()
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     samples: list[PromSample] = []
     for line in resp.text.splitlines():
         if not line or line.startswith("#"):
@@ -119,5 +118,5 @@ class PrometheusCollector:
                         )
                     self.samples_written += len(samples)
                 except Exception as e:  # noqa: BLE001
-                    fh.write(json.dumps({"ts": datetime.now(tz=timezone.utc).isoformat(), "error": str(e)}) + "\n")
+                    fh.write(json.dumps({"ts": datetime.now(tz=UTC).isoformat(), "error": str(e)}) + "\n")
                 self._stop.wait(self.interval)

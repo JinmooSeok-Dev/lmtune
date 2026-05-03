@@ -11,7 +11,7 @@ from typing import Any
 
 import optuna
 
-from bench.search.space import Axis, SearchSpace
+from lmtune.search.space import Axis, SearchSpace
 
 
 def suggest_from_axis(trial: optuna.Trial, axis: Axis) -> Any:
@@ -77,28 +77,28 @@ def make_sampler(
     if s == "random":
         return optuna.samplers.RandomSampler(seed=seed), None
     if s == "lhc":
-        from bench.search.samplers.lhc import lhc_samples
+        from lmtune.search.samplers.lhc import lhc_samples
         if n_samples is None:
             raise ValueError("lhc sampler requires n_samples")
         samples = lhc_samples(space, n_samples=n_samples, seed=seed, context=context)
         # After pre-seeding, downstream uses RandomSampler for any overflow trials.
         return optuna.samplers.RandomSampler(seed=seed), samples
     if s == "tpe":
-        from bench.search.samplers.tpe import make_tpe
+        from lmtune.search.samplers.tpe import make_tpe
         return make_tpe(seed=seed), None
     if s in ("cma_es", "cma-es", "cmaes"):
-        from bench.search.samplers.cma_es import make_cma_es
+        from lmtune.search.samplers.cma_es import make_cma_es
         return make_cma_es(seed=seed), None
     if s in ("ucb", "ucb1", "bandit"):
-        from bench.search.samplers.ucb_bandit import make_ucb1
+        from lmtune.search.samplers.ucb_bandit import make_ucb1
         return make_ucb1(space=space, seed=seed, context=context), None
     if s in ("nsga2", "nsga-ii", "nsgaii"):
-        from bench.search.samplers.nsga2 import make_nsga2
+        from lmtune.search.samplers.nsga2 import make_nsga2
         return make_nsga2(seed=seed), None
     if s in ("nsga3", "nsga-iii", "nsgaiii"):
-        from bench.search.samplers.nsga2 import make_nsga3
+        from lmtune.search.samplers.nsga2 import make_nsga3
         return make_nsga3(seed=seed), None
     if s in ("botorch", "gp", "bo"):
-        from bench.search.samplers.botorch import make_botorch
+        from lmtune.search.samplers.botorch import make_botorch
         return make_botorch(seed=seed), None
     raise ValueError(f"unknown strategy: {strategy}")

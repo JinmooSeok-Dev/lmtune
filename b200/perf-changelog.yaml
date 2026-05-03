@@ -1,0 +1,20 @@
+# 목적: 외부 (vLLM/llm-d/SGLang/TRT-LLM) PR 머지가 본 repo 의 baseline 에 미치는 영향 시계열 (append-only)
+# phase: B5 continuous loop 의 watch target
+# schema: SemiAnalysisAI/InferenceX `perf-changelog.yaml` 와 동형 (config-keys glob + description bullets + pr-link + evals-only)
+#
+# 운영 규약 (AGENTS.md §4 참조):
+#   - 가운데 삽입 금지. 새 entry 는 파일 끝에 append.
+#   - `config-keys` 는 glob, `*` 는 axis 값 와일드카드
+#   - `description` bullet 은 "변경 + 측정된 영향" 한 줄씩
+#   - `evals-only: true` 는 throughput 측정 변경 없이 quality probe 만 영향받는 경우
+
+- timestamp: 2026-05-03
+  config-keys:
+    - "w-local-*"
+    - "w-minikube-*"
+  description:
+    - "Phase W (Walkthrough MVP) 진입: w_local_minimal (4-axis) + w_minikube_minimal (3-axis) baseline 시드"
+    - "dashboard schema = lmtune/dashboard/v1alpha1-inferencex-compat (InferenceX-app 호환)"
+    - "winner export 산출물 = winner/{params.json, values-overlay.yaml, apply.sh, README.md} 4 파일"
+  pr-link: null
+  evals-only: false

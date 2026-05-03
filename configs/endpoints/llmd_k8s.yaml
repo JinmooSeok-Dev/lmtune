@@ -1,4 +1,4 @@
-apiVersion: bench/v1alpha1
+apiVersion: lmtune/v1alpha1
 slug: llmd-k8s
 name: "llm-d on K8s (A5000 Int4 샘플 구성)"
 # 실제 배포 주소로 변경하세요. 현재 값은 참고용 예시입니다.

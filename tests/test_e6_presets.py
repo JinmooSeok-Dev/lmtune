@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-from bench.profiles import discover_profiles, load_profile
-
+from lmtune.profiles import discover_profiles, load_profile
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESETS_DIR = ROOT / "configs/profiles/research"
@@ -31,7 +28,7 @@ def test_all_9_presets_exist():
 def test_presets_parse_and_have_expected_slugs():
     profiles = discover_profiles(PRESETS_DIR)
     slugs = {p.slug for p in profiles}
-    assert EXPECTED_PRESETS <= slugs
+    assert slugs >= EXPECTED_PRESETS
 
 
 def test_presets_carry_analysis_block():

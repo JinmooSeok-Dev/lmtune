@@ -55,7 +55,7 @@ def axis_importance(
 
     rf = RandomForestRegressor(n_estimators=n_estimators, random_state=seed, n_jobs=-1)
     rf.fit(df_enc.values, y)
-    feat_imp = dict(zip(df_enc.columns, rf.feature_importances_))
+    feat_imp = dict(zip(df_enc.columns, rf.feature_importances_, strict=False))
 
     # Re-aggregate by original axis (sum across one-hot levels).
     per_axis: dict[str, float] = {c: 0.0 for c in df.columns}

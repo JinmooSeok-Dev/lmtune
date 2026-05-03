@@ -3,12 +3,12 @@
 Two built-in implementations:
 - CallableObjective: user-supplied Python function (for tests, synthetic studies, and
                      in-process experiments without vLLM).
-- BenchScoreObjective: invokes scripts/bench_score.py per workload profile and
+- ScoreObjective: invokes scripts/lmtune_score.py per workload profile and
                        aggregates into a total_score + per-workload secondary metrics.
 
 Objectives must be deterministic in schema but noisy in value — the Study layer
-handles N-repeat/CV gates if the underlying Objective supports it (BenchScoreObjective
-delegates to bench_score.py which already implements N=3+CV auto-extend).
+handles N-repeat/CV gates if the underlying Objective supports it (ScoreObjective
+delegates to lmtune_score.py which already implements N=3+CV auto-extend).
 """
 
 from __future__ import annotations
@@ -17,9 +17,10 @@ import json
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
 
 @dataclass(slots=True)
@@ -65,8 +66,8 @@ class CallableObjective:
 
 # ---------------------------------------------------------------------------
 
-class BenchScoreObjective:
-    """Call `scripts/bench_score.py` once per workload profile; sum scores.
+class ScoreObjective:
+    """Call `scripts/lmtune_score.py` once per workload profile; sum scores.
 
     The caller is responsible for having already applied `params` to the endpoint
     YAML and restarted the server (DeploymentAdapter does this in Phase S4; S1
@@ -86,7 +87,7 @@ class BenchScoreObjective:
     ):
         # Optional DeploymentAdapter. When present, each __call__ merges params
         # into the endpoint YAML and restarts/rolls out the server before
-        # launching bench_score.py. This is what turns a hyperparameter trial
+        # launching lmtune_score.py. This is what turns a hyperparameter trial
         # into an actually-deployed configuration (S4 wiring).
         self.adapter = adapter
         self.endpoint_path = Path(endpoint_path)
@@ -104,7 +105,7 @@ class BenchScoreObjective:
                 bench_bin = str(venv_bench)
         self.bench_bin = bench_bin
         self.python_bin = python_bin or sys.executable or shutil.which("python") or "python3"
-        self.script = Path(__file__).resolve().parents[3] / "scripts" / "bench_score.py"
+        self.script = Path(__file__).resolve().parents[3] / "scripts" / "lmtune_score.py"
         if not self.script.exists():
             raise FileNotFoundError(self.script)
 

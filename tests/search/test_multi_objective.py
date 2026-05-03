@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
-from bench.search import CallableObjective, SearchSpace, Study, StudyConfig
-from bench.search.objective import ObjectiveResult
-from bench.search.objective_pareto import ObjectiveKey, ParetoObjective
-from bench.search.space import Axis
-from bench.storage.duckdb_store import DuckDBStore
+from lmtune.search import CallableObjective, SearchSpace, Study, StudyConfig
+from lmtune.search.objective import ObjectiveResult
+from lmtune.search.objective_pareto import ObjectiveKey, ParetoObjective
+from lmtune.search.space import Axis
+from lmtune.storage.duckdb_store import DuckDBStore
 
 
 def _space() -> SearchSpace:

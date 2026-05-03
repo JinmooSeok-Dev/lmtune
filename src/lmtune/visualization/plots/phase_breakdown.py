@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from bench.runners.base import RequestRow
-from bench.visualization.plots import register_plot
-
+from lmtune.runners.base import RequestRow
+from lmtune.visualization.plots import register_plot
 
 _PHASES_ORDER = ["exploration", "editing", "execution", "verification", "other"]
 
@@ -43,7 +42,7 @@ def plot_phase_breakdown(
     ax1.bar(phases, values, edgecolor="black")
     ax1.set_ylabel(metric)
     ax1.set_title(opts.get("title", f"{metric} by phase"))
-    for i, (v, p) in enumerate(zip(values, percentages)):
+    for i, (v, p) in enumerate(zip(values, percentages, strict=False)):
         ax1.text(i, v, f"{p:.1f}%", ha="center", va="bottom")
     ax2.pie(values, labels=phases, autopct="%1.1f%%", startangle=90)
     ax2.set_title("share")

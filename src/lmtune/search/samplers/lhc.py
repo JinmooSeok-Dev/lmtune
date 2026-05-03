@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 from scipy.stats.qmc import LatinHypercube
 
-from bench.search.space import Axis, SearchSpace
+from lmtune.search.space import Axis, SearchSpace
 
 
 def _project(axis: Axis, u: float) -> Any:

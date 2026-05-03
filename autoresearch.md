@@ -32,9 +32,37 @@
 
 ## How to Run
 
+### 운영 모드 1 — Standalone (LLM-guided 가설, 자체 sampler)
+
 ```bash
 ./autoresearch.sh
 ```
+
+### 운영 모드 2 — `lmtune search` 통합 (Phase S6, 권장)
+
+`lmtune search` 의 통계 sampler (TPE/NSGA-II/CMA-ES) 가 다음 trial 을 추천. autoresearch (LLM 에이전트) 는 가설 생성 대신 ask/tell 호출만 담당:
+
+```bash
+# (1) study 만 생성 (실제 trial 0개)
+lmtune search start \
+  --space configs/search/spaces/vllm_engine_args_tier1.yaml \
+  --strategy tpe \
+  --max-trials 0 \
+  --name autoresearch-segment2 \
+  --dry-run
+# → study_id=st-XXXX
+
+# (2) 매 cycle:
+#     ① lmtune search ask → 다음 params (autoresearch 가 받음)
+PARAMS=$(lmtune search ask st-XXXX | jq '.params')
+TRIAL_ID=$(lmtune search ask st-XXXX | jq -r '.trial_id')   # 위와 같은 trial 을 재호출하면 새로 발급되므로 한 번만 호출
+#     ② autoresearch agent 가 endpoint YAML 의 engine_args 에 PARAMS 적용
+#     ③ 측정 + tell:
+USE_BENCH_SEARCH=1 BENCH_STUDY=st-XXXX BENCH_TRIAL=$TRIAL_ID ./autoresearch.sh
+#        본 분기가 자동으로 `lmtune search tell` 호출 — 결과를 study 에 기록
+```
+
+→ LLM 의 도메인 지식 (어떤 axis 가 의미 있는지) + Optuna 의 통계 효율 (이력 기반 효율적 탐색) 결합.
 
 출력 마지막에 machine-readable 라인:
 
@@ -48,7 +76,7 @@ METRIC slo_pass_all=<0|1>
 
 - `ENDPOINT` 환경변수로 대상 전환: `ENDPOINT=configs/endpoints/llmd_k8s.yaml ./autoresearch.sh`
 - 기본값: `configs/endpoints/local_vllm_autotune.yaml`
-- 내부 파이프라인: `scripts/vllm_restart.sh` → `scripts/bench_score.py × {short, medium, long}` 재현성 게이트(N=3, CV≥0.10 → N=5 로 확장)
+- 내부 파이프라인: `scripts/vllm_restart.sh` → `scripts/lmtune_score.py × {short, medium, long}` 재현성 게이트(N=3, CV≥0.10 → N=5 로 확장)
 
 ## Files in Scope
 
@@ -63,7 +91,7 @@ METRIC slo_pass_all=<0|1>
   - `kv_cache_dtype` ∈ {auto, fp8} *(Blackwell sm_120 호환 여부 첫 실험에서 확인. 실패 시 auto 로만 고정)*
   - 양자화 모델 교체(옵션, 비쌈): `model` 을 `Qwen/Qwen3-0.6B`, `Qwen/Qwen2.5-1.5B-Instruct`, `Qwen/Qwen3-1.7B`, `Qwen/Qwen3-4B-FP8` 중에서만 선택 가능
 - `configs/profiles/autotune/{short,medium,long}.yaml` — `synthetic_*`, `concurrency`, `request_count`, `slo` 조정 가능 (단 SLO 값 자체는 위 hard constraint 와 일치)
-- `scripts/bench_score.py` — `--warmup-runs` 도입 같은 측정 로직 개선(선택)
+- `scripts/lmtune_score.py` — `--warmup-runs` 도입 같은 측정 로직 개선(선택)
 
 ## Off Limits
 
@@ -112,7 +140,7 @@ engine_args:
 
 1. **`kv_cache_dtype=fp8`** — weight 아닌 KV 를 8bit 로 줄여 16GB 에서 long context 여유 확보. Blackwell sm_120 호환 첫 실험에서 확인. (Round 2 에서 배제됐던 가장 유망한 축)
 2. **`max_num_seqs` 극값** — 16 (메모리 여유 최대화, 8B+ 실험용) vs 256 (throughput 상한 탐색).
-3. **`warmup_runs` 추가** — Qwen3-0.6B short, Qwen3-4B-FP8 long 이 cold-start 때문에 탈락한 이력. `scripts/bench_score.py` 에 `--warmup-runs 1` 도입하면 통과 가능성.
+3. **`warmup_runs` 추가** — Qwen3-0.6B short, Qwen3-4B-FP8 long 이 cold-start 때문에 탈락한 이력. `scripts/lmtune_score.py` 에 `--warmup-runs 1` 도입하면 통과 가능성.
 4. **`max_model_len=2048`** 로 낮춰 KV 여유 → 8B 계열 재시도 가능.
 5. **Qwen3 thinking mode off** — profile YAML 에 `extra_body: {"enable_thinking": false}` 추가하면 1.7B/4B 개선 여지.
 

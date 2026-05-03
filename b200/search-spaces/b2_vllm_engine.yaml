@@ -1,0 +1,351 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b2-vllm-engine
+
+# Phase B2 [Track B-II] — vLLM 0.6+ engine_args axis 정본.
+#
+# B1 winner 위에 얹어 axis 별 영향력을 ANOVA + Sobol 로 측정.
+# axis 카탈로그 출처: b200/docs/vllm_axis_catalog.md (vLLM release notes 0.5.x ~ 0.7.x)
+#
+# 사용 시나리오: B1 종료 후. winner config 를 endpoint YAML 에 baseline 으로 박아두고
+# 본 search space 는 추가 axis 만 탐색. warm-start 로 B1 archive DB 사용.
+#
+# 사용 예:
+#   lmtune search start \
+#     --strategy tpe \
+#     --space b200/search-spaces/b2_vllm_engine.yaml \
+#     --endpoint b200/endpoints/b200_b1_winner.yaml \
+#     --warmstart-db data/db/lmtune.duckdb \
+#     -p configs/profiles/autotune/short.yaml \
+#     -p configs/profiles/autotune/medium.yaml \
+#     -p configs/profiles/autotune/long.yaml \
+#     --backend k8s-job --workers 4 --max-trials 60 \
+#     --name B2-vllm-engine
+
+axes:
+  # ═══════════════════════════════════════════════════════════════════════
+  # 1. Scheduling / Batching
+  # ═══════════════════════════════════════════════════════════════════════
+
+  max_num_seqs:
+    type: categorical
+    values: [16, 32, 64, 128, 256, 512, 1024]
+    cost_tier: 4
+
+  max_num_batched_tokens:
+    type: categorical
+    values: [2048, 4096, 8192, 16384, 32768]
+    cost_tier: 4
+
+  max_model_len:
+    type: categorical
+    values: [2048, 4096, 8192, 16384, 32768, 65536, 131072]
+    cost_tier: 4
+
+  enable_chunked_prefill:
+    type: bool
+    cost_tier: 4
+
+  chunked_prefill_size:
+    type: categorical
+    values: [512, 1024, 2048, 4096]
+    active_if: {enable_chunked_prefill: true}
+    cost_tier: 4
+
+  async_scheduling:
+    type: bool
+    cost_tier: 4
+    # vLLM 0.6+ 비동기 scheduler. steady-state throughput +5~10%, TTFT trade-off.
+
+  num_scheduler_steps:
+    type: categorical
+    values: [1, 2, 4, 8]
+    cost_tier: 4
+    # multi-step scheduling (vLLM 0.5+, 0.7 에서 deprecated 가능 — 호환성 probe)
+
+  scheduling_policy:
+    type: categorical
+    values: [fcfs, priority]
+    cost_tier: 4
+
+  enable_priority_scheduling:
+    type: bool
+    cost_tier: 4
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 2. KV Cache
+  # ═══════════════════════════════════════════════════════════════════════
+
+  kv_cache_dtype:
+    type: categorical
+    values: [auto, fp8_e4m3, fp8_e5m2, nvfp4]
+    cost_tier: 4
+    # B200 sm_100: nvfp4 native. 첫 trial probe → 실패 시 study-level freeze.
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.78
+    high: 0.94
+    cost_tier: 4
+
+  block_size:
+    type: categorical
+    values: [16, 32, 64, 128]
+    cost_tier: 4
+
+  swap_space_gb:
+    type: categorical
+    values: [0, 4, 16]
+    cost_tier: 4
+    # CPU swap. enable_chunked_prefill=false 와만 호환.
+
+  cpu_offload_gb:
+    type: categorical
+    values: [0, 16, 64]
+    cost_tier: 4
+
+  enable_kv_cache_compression:
+    type: bool
+    cost_tier: 4
+
+  kv_cache_offload_target:
+    type: categorical
+    values: [hbm, cpu, nvme-gds, lmcache]
+    cost_tier: 4
+    # B6.4 의 kv_offload_target 과 페어링 — adapter 가 LMCache 켜는지 결정
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 3. Prefix Cache
+  # ═══════════════════════════════════════════════════════════════════════
+
+  enable_prefix_caching:
+    type: bool
+    cost_tier: 4
+
+  prefix_caching_hash_algo:
+    type: categorical
+    values: [builtin, sha256, xxhash]
+    active_if: {enable_prefix_caching: true}
+    cost_tier: 4
+
+  prefix_cache_eviction_policy:
+    type: categorical
+    values: [lru, lfu]
+    active_if: {enable_prefix_caching: true}
+    cost_tier: 4
+
+  enable_lmcache_integration:
+    type: bool
+    active_if: {enable_prefix_caching: true}
+    cost_tier: 4
+    # vLLM 0.6+ — LMCache 외부 cache 로 prefix offload.
+    # B6.4 의 lmcache_* axis 와 페어링.
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 4. MoE-specific (model_family=moe 전용)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  enable_dbo:
+    type: bool
+    active_if: {model_family: moe}
+    cost_tier: 4
+    # Decode Batch Overlap — MoE expert FFN 과 attention overlap
+
+  dbo_token_threshold:
+    type: categorical
+    values: [128, 256, 512, 1024]
+    active_if: {enable_dbo: true}
+    cost_tier: 4
+
+  enable_eplb:
+    type: bool
+    active_if: {model_family: moe}
+    cost_tier: 4
+    # Expert Parallelism Load Balancer — expert 부하 균형화
+
+  eplb_window_size:
+    type: categorical
+    values: [64, 128, 256, 512]
+    active_if: {enable_eplb: true}
+    cost_tier: 4
+
+  eplb_step_interval:
+    type: categorical
+    values: [16, 32, 64, 128]
+    active_if: {enable_eplb: true}
+    cost_tier: 4
+
+  all2all_backend:
+    type: categorical
+    values:
+      - allgather_reducescatter
+      - deepep_low_latency
+      - deepep_high_throughput
+      - nixl_ep
+    active_if: {model_family: moe}
+    cost_tier: 4
+
+  moe_backend:
+    type: categorical
+    values: [auto, triton, deep_gemm, cutlass, flashinfer_cutlass, marlin]
+    active_if: {model_family: moe}
+    cost_tier: 4
+
+  enable_deep_gemm:
+    type: bool
+    active_if: {model_family: moe}
+    cost_tier: 4
+    # VLLM_USE_DEEP_GEMM env. B200 fp8 GEMM 최적화
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 5. Speculative / MTP / EAGLE Decoding
+  # ═══════════════════════════════════════════════════════════════════════
+
+  speculative_method:
+    type: categorical
+    values: [none, eagle, eagle3, mtp, draft_model, ngram, medusa]
+    cost_tier: 4
+    # eagle3 = vLLM 0.6+, MTP = DeepSeek-V3/R1 native, ngram = cheap fallback
+
+  speculative_num_speculative_tokens:
+    type: categorical
+    values: [1, 2, 4, 5, 8]
+    active_if: {speculative_method: ["eagle", "eagle3", "mtp", "draft_model", "medusa"]}
+    cost_tier: 4
+
+  speculative_draft_tensor_parallel_size:
+    type: categorical
+    values: [1, 2, 4]
+    active_if: {speculative_method: "draft_model"}
+    cost_tier: 4
+
+  speculative_disable_by_batch_size:
+    type: categorical
+    values: [0, 16, 32, 64]
+    active_if: {speculative_method: ["eagle", "eagle3", "mtp", "draft_model"]}
+    cost_tier: 4
+
+  ngram_prompt_lookup_max:
+    type: categorical
+    values: [4, 8, 16]
+    active_if: {speculative_method: ngram}
+    cost_tier: 4
+
+  ngram_prompt_lookup_min:
+    type: categorical
+    values: [1, 2, 4]
+    active_if: {speculative_method: ngram}
+    cost_tier: 4
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 6. Compilation / CUDA Graph
+  # ═══════════════════════════════════════════════════════════════════════
+
+  compilation_mode:
+    type: categorical
+    values: [default, full_cuda_graph, piecewise_cuda_graph, no_compile]
+    cost_tier: 4
+
+  compilation_level:
+    type: categorical
+    values: [0, 1, 2, 3]
+    cost_tier: 4
+    # 0 = no compile, 3 = aggressive (vLLM 0.7+ torch.compile level)
+
+  max_cudagraph_capture_size:
+    type: categorical
+    values: [128, 256, 512, 1024]
+    cost_tier: 4
+
+  cudagraph_num_of_warmups:
+    type: categorical
+    values: [0, 1, 3, 5]
+    cost_tier: 4
+
+  enable_flashinfer_autotune:
+    type: bool
+    cost_tier: 4
+
+  attention_backend:
+    type: categorical
+    values: [auto, flash_attn, flashinfer, xformers, triton, torch_sdpa]
+    cost_tier: 4
+
+  enforce_eager:
+    type: bool
+    cost_tier: 4
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 7. Quantization
+  # ═══════════════════════════════════════════════════════════════════════
+
+  quantization:
+    type: categorical
+    values: [none, awq, gptq, fp8, fp8_dynamic, nvfp4, marlin, modelopt]
+    cost_tier: 3
+    # quantization 전환은 weights re-load. cost_tier=3 (helmfile redeploy)
+    # B200 sm_100 native: nvfp4 / fp8
+
+  weight_dtype:
+    type: categorical
+    values: [auto, bfloat16, float16, fp8]
+    cost_tier: 3
+
+  activation_dtype:
+    type: categorical
+    values: [auto, bfloat16, float16, fp8]
+    cost_tier: 3
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 8. Sampling / Generation
+  # ═══════════════════════════════════════════════════════════════════════
+
+  enable_lora:
+    type: bool
+    cost_tier: 3
+
+  max_loras:
+    type: categorical
+    values: [1, 4, 8, 16]
+    active_if: {enable_lora: true}
+    cost_tier: 3
+
+  max_lora_rank:
+    type: categorical
+    values: [8, 16, 32, 64]
+    active_if: {enable_lora: true}
+    cost_tier: 3
+
+  enable_log_outputs:
+    type: bool
+    cost_tier: 5
+    # log overhead — TPS 영향 측정
+
+  disable_log_stats:
+    type: bool
+    cost_tier: 5
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # 9. Distributed / 분산 (B3 와 페어링)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  distributed_executor_backend:
+    type: categorical
+    values: [mp, ray, external_launcher]
+    cost_tier: 3
+    # mp = multiprocessing (vLLM 기본), ray = Ray, external_launcher = llm-d/torchrun
+
+  worker_use_ray:
+    type: bool
+    cost_tier: 3
+
+  enable_nixl_kv_connector:
+    type: bool
+    active_if: {well_lit_path: pd-disaggregation}
+    cost_tier: 3
+
+  kv_connector_role:
+    type: categorical
+    values: [producer, consumer, both]
+    active_if: {enable_nixl_kv_connector: true}
+    cost_tier: 3

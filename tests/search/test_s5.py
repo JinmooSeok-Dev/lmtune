@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
-import pytest
-
-from bench.search.space import Axis, SearchSpace
-from bench.search.samplers.native import NativeLHCSampler, NativeRandomSampler, NativeTPESampler
-from bench.search.samplers.nsga2 import make_nsga2
-from bench.visualization.plots.pareto import non_dominated, plot_pareto
-from bench.visualization.plots.sobol_bar import plot_sobol
-from bench.visualization.plots.search_trace import plot_search_trace
-
+from lmtune.search.samplers.native import NativeLHCSampler, NativeRandomSampler, NativeTPESampler
+from lmtune.search.samplers.nsga2 import make_nsga2
+from lmtune.search.space import Axis, SearchSpace
+from lmtune.visualization.plots.pareto import non_dominated, plot_pareto
+from lmtune.visualization.plots.search_trace import plot_search_trace
 
 # ------------------ Native samplers ------------------
 
@@ -95,7 +90,7 @@ def test_nsga2_sampler_constructs():
 
 def test_sobol_recovers_dominant_axis():
     """Synthetic: y = 10*a + 0.01*b + noise. Sobol should put a >> b."""
-    from bench.search.analysis.sobol import sobol_from_history
+    from lmtune.search.analysis.sobol import sobol_from_history
 
     trials = []
     import random
@@ -116,7 +111,7 @@ def test_sobol_recovers_dominant_axis():
 
 
 def test_sobol_returns_empty_on_categorical_only():
-    from bench.search.analysis.sobol import sobol_from_history
+    from lmtune.search.analysis.sobol import sobol_from_history
     trials = [
         {"params": {"x": "A"}, "score": 1.0, "status": "completed"},
         {"params": {"x": "B"}, "score": 2.0, "status": "completed"},

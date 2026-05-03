@@ -13,11 +13,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
-
 
 app = typer.Typer(no_args_is_help=True, help="DeploymentAdapter 직접 호출 (디버깅/수동 배포)")
 console = Console()
@@ -32,12 +31,12 @@ def cmd_deploy(
     try:
         params = json.loads(params_json)
     except json.JSONDecodeError as e:
-        raise typer.BadParameter(f"invalid --params-json: {e}")
+        raise typer.BadParameter(f"invalid --params-json: {e}") from e
     if adapter == "local-vllm":
-        from bench.deploy import LocalVLLMAdapter
+        from lmtune.deploy import LocalVLLMAdapter
         ad = LocalVLLMAdapter()
     elif adapter == "llmd-k8s":
-        from bench.deploy import LLMDK8sAdapter
+        from lmtune.deploy import LLMDK8sAdapter
         ad = LLMDK8sAdapter()
     else:
         raise typer.BadParameter(f"unknown adapter: {adapter}")

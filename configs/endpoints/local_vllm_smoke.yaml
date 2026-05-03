@@ -1,4 +1,4 @@
-apiVersion: bench/v1alpha1
+apiVersion: lmtune/v1alpha1
 slug: local-vllm-smoke
 name: "로컬 vLLM smoke (RTX 5060 Ti 16GB + Qwen2.5-1.5B-Instruct)"
 url: http://localhost:8000/v1

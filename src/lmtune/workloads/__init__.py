@@ -1,7 +1,7 @@
-from bench.workloads.arrival import ArrivalPattern, ArrivalScheduler
-from bench.workloads.distributions import DistributionSampler, sample_bimodal, sample_zipf
-from bench.workloads.datasets import DatasetLoader, load_hf_dataset
-from bench.workloads.traces import TraceReplay, load_trace
+from lmtune.workloads.arrival import ArrivalPattern, ArrivalScheduler
+from lmtune.workloads.datasets import DatasetLoader, load_hf_dataset
+from lmtune.workloads.distributions import DistributionSampler, sample_bimodal, sample_zipf
+from lmtune.workloads.traces import TraceReplay, load_trace
 
 __all__ = [
     "ArrivalPattern",

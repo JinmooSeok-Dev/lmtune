@@ -12,14 +12,17 @@ from __future__ import annotations
 
 import logging
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
-import yaml
-
-from bench.deploy.base import ApplyResult, DeploymentAdapter, HealthReport, merge_params_into_endpoint
-from bench.deploy.health import probe_openai_models
-
+from lmtune.deploy.base import (
+    ApplyResult,
+    DeploymentAdapter,
+    HealthReport,
+    merge_params_into_endpoint,
+)
+from lmtune.deploy.health import probe_openai_models
 
 log = logging.getLogger(__name__)
 

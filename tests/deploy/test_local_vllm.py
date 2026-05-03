@@ -8,13 +8,13 @@ from unittest.mock import patch
 
 import yaml
 
-from bench.deploy.base import HealthReport
-from bench.deploy.local_vllm import LocalVLLMAdapter
+from lmtune.deploy.base import HealthReport
+from lmtune.deploy.local_vllm import LocalVLLMAdapter
 
 
 def _endpoint(path: Path, *, model: str = "Qwen/Qwen2.5-1.5B-Instruct") -> None:
     path.write_text(yaml.safe_dump({
-        "apiVersion": "bench/v1alpha1",
+        "apiVersion": "lmtune/v1alpha1",
         "slug": "local-vllm",
         "url": "http://localhost:8000/v1",
         "model": model,
@@ -40,7 +40,7 @@ def test_apply_merges_params_and_returns_ok_when_healthy(tmp_path: Path):
     adapter = LocalVLLMAdapter(restart_script=script)
 
     with patch(
-        "bench.deploy.local_vllm.probe_openai_models",
+        "lmtune.deploy.local_vllm.probe_openai_models",
         return_value=HealthReport(ready=True, latency_ms=3.0, detail="1 model"),
     ):
         result = adapter.apply(ep, {"max_num_seqs": 64, "enable_prefix_caching": True})

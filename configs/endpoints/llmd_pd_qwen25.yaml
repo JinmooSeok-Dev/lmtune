@@ -1,4 +1,4 @@
-apiVersion: bench/v1alpha1
+apiVersion: lmtune/v1alpha1
 slug: llmd-pd-qwen25
 name: "llm-d P/D Qwen2.5-1.5B (minikube)"
 url: http://127.0.0.1:8010/v1

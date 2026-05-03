@@ -9,10 +9,9 @@ For K8s-native deployment, see backend_k8s.py. The interface is identical.
 from __future__ import annotations
 
 from concurrent.futures import Future, ProcessPoolExecutor
-from typing import Any
 
-from bench.orchestrate.backend import TrialBackend, TrialHandle, TrialPayload, TrialResult
-from bench.orchestrate.trial_runner import run_trial_locally
+from lmtune.orchestrate.backend import TrialBackend, TrialHandle, TrialPayload, TrialResult
+from lmtune.orchestrate.trial_runner import run_trial_locally
 
 
 class ProcessPoolBackend(TrialBackend):
@@ -41,9 +40,8 @@ class ProcessPoolBackend(TrialBackend):
     def poll(self, handle: TrialHandle, timeout_s: float | None = None) -> TrialResult | None:
         fut: Future = handle.ref
         try:
-            if timeout_s is None:
-                if not fut.done():
-                    return None
+            if timeout_s is None and not fut.done():
+                return None
             result = fut.result(timeout=timeout_s)
         except TimeoutError:
             return None

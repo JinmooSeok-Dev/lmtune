@@ -5,18 +5,17 @@ from pathlib import Path
 
 import pytest
 
-from bench.endpoints import load_endpoint
-from bench.profiles import load_profile
-from bench.runners.base import RequestRow, RunArtifact
-from bench.storage import DuckDBStore
-
+from lmtune.endpoints import load_endpoint
+from lmtune.profiles import load_profile
+from lmtune.runners.base import RequestRow, RunArtifact
+from lmtune.storage import DuckDBStore
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
 def store(tmp_path):
-    s = DuckDBStore(tmp_path / "bench.duckdb")
+    s = DuckDBStore(tmp_path / "lmtune.duckdb")
     yield s
     s.close()
 

@@ -10,13 +10,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 pip install -e ".[dev]"        # editable + dev extras
-bench --help                    # Typer CLI entrypoint (src/bench/cli.py)
+lmtune --help                   # Typer CLI entrypoint (src/lmtune/cli.py)
 pytest                          # tests/
 ruff check src tests            # lint
 ruff format src tests           # format
 ```
 
-`bench` CLI 서브커맨드: `run` · `sweep` · `report` · `compare` · `detect` · `ls`.
+`lmtune` CLI 서브커맨드: `run` · `sweep` · `report` · `compare` · `detect` · `ls` · `search` · `dashboard` · `repeat` · `variance` · `nway` · `export`.
 
 ## 아키텍처
 
@@ -32,7 +32,7 @@ Runner (AIPerf / vLLM bench / GuideLLM subprocess) → Endpoint under test
 Raw artifact (JSON/CSV, data/raw/)        Collectors (Prom /metrics, request log)
        └──────────────────┬────────────────────────┘
                           ▼
-                  DuckDB (data/db/bench.duckdb) + Parquet
+                  DuckDB (data/db/lmtune.duckdb) + Parquet
                           │
          ┌────────────────┼────────────────┐
          ▼                ▼                ▼
@@ -52,11 +52,11 @@ Raw artifact (JSON/CSV, data/raw/)        Collectors (Prom /metrics, request log
 
 - Raw artifact(AIPerf JSON, vLLM bench 출력)는 `data/raw/<run_id>/` 에 보존하고, 가공 메트릭/요청 행만 DuckDB 에 적재한다. `.gitignore` 에 포함되어 있다.
 - Run 식별자는 ULID. `runs` 테이블에 `profile_yaml`, `endpoint_meta`, `tool_versions` 스냅샷을 저장해 후속 비교 시 재구성 가능하게 한다.
-- 스키마는 `src/bench/storage/schema.sql` 이 정본. 변경 시 마이그레이션이 아닌 신규 테이블/뷰를 추가한다 (초기 단계라 backward compat 유지 대상 아님).
+- 스키마는 `src/lmtune/storage/schema.sql` 이 정본. 변경 시 마이그레이션이 아닌 신규 테이블/뷰를 추가한다 (초기 단계라 backward compat 유지 대상 아님).
 
 ## 확장 포인트
 
-YAML 스키마는 `apiVersion: bench/v1alpha1` 기반으로 다음 축을 비파괴적으로 확장한다.
+YAML 스키마는 `apiVersion: lmtune/v1alpha1` 기반으로 다음 축을 비파괴적으로 확장한다.
 
 - **Workload source**: `workload.source: synthetic | dataset | trace` 디스크리미네이터로 Union 분기. 기본 synthetic. dataset/trace 는 스키마만 예약되어 있고 로더는 추후 구현.
 - **Endpoint deployment**: `deployment: {engine, parallelism, engine_args}` 블록으로 같은 URL 의 vLLM 서빙 구성 축을 식별·비교. 자동화 로직은 이 필드를 읽지 않고 runs 메타로만 저장된다.

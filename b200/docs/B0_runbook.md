@@ -41,6 +41,8 @@ bash b200/scripts/probe.sh --json > b200/studies/B0_smoke/probe.json
 
 ## 2. (옵션) 인터노드 fabric 측정
 
+### 2a. K8s 기반 (NCCL all-reduce + iperf3)
+
 ```bash
 kubectl apply -f b200/scripts/fabric_test.yaml
 
@@ -59,7 +61,22 @@ kubectl logs -n bench-fabric-test job/iperf3-client | tail -20
 kubectl delete -f b200/scripts/fabric_test.yaml
 ```
 
-`b200/docs/b200_environment.md` §4 에 측정값 기록.
+### 2b. Host-level RDMA Perftest baseline (권장)
+
+`ib_write_bw` / `ib_read_bw` / `ib_send_bw` 로 호스트 직접 측정. 자세한 절차는 `b200/docs/rdma_perftest_baseline.md`.
+
+```bash
+# 노드 A (server) — 백그라운드로 3 test 동시
+bash b200/scripts/rdma_bench.sh server &
+
+# 노드 B (client) — server NIC IP 를 인자로
+bash b200/scripts/rdma_bench.sh client <NODE_A_RDMA_IP>
+
+# 결과 확인 (client 측에 summary.json 생성)
+cat data/raw/rdma/$(ls -1t data/raw/rdma/ | head -1)/summary.json
+```
+
+NHN Cloud B200 reference 363.98 Gbps. 측정값을 `b200/docs/b200_environment.md` §4 에 기록.
 
 ## 3. HuggingFace 토큰 (gated 모델)
 
@@ -114,11 +131,11 @@ curl -s --max-time 10 http://127.0.0.1:8011/v1/models | head -50
 
 `b200/endpoints/b200_smoke.yaml` 의 `url` 을 실측치로 갱신 (예: `http://<GW_IP>/v1` 또는 `http://127.0.0.1:8011/v1`).
 
-## 8. bench run smoke
+## 8. lmtune run smoke
 
 ```bash
 source .venv/bin/activate
-bench run -p configs/profiles/autotune/short.yaml -e b200/endpoints/b200_smoke.yaml --json-summary | tee b200/studies/B0_smoke/run_smoke.log
+lmtune run -p configs/profiles/autotune/short.yaml -e b200/endpoints/b200_smoke.yaml --json-summary | tee b200/studies/B0_smoke/run_smoke.log
 ```
 
 기대:
@@ -126,10 +143,10 @@ bench run -p configs/profiles/autotune/short.yaml -e b200/endpoints/b200_smoke.y
 - `slo_pass=true`
 - TTFT p99 ≤ 500 ms (B200 + Llama-3.1-8B 에서 충분히 여유)
 
-## 9. bench search smoke (4 trial)
+## 9. lmtune search smoke (4 trial)
 
 ```bash
-bench search start \
+lmtune search start \
   --strategy random \
   --space b200/search-spaces/b0_smoke.yaml \
   --endpoint b200/endpoints/b200_smoke.yaml \
@@ -141,12 +158,12 @@ bench search start \
 
 # study_id 는 search start 출력의 첫 줄 'study_id=st-XXXX' 에서 확인
 STUDY_ID=$(grep -oE 'st-[A-Z0-9]+' b200/studies/B0_smoke/search.log | head -1)
-bench search status "$STUDY_ID"
+lmtune search status "$STUDY_ID"
 ```
 
 기대:
 - 4 trial 완주 (status=completed)
-- `bench search status` 에 top-3 score 출력
+- `lmtune search status` 에 top-3 score 출력
 - DuckDB `studies` / `trials` 테이블에 행 적재
 
 ## 10. pytest
@@ -178,7 +195,7 @@ git commit -m "B0: B200 cluster onboarding probe results + smoke runs"
 - [ ] probe.sh PASS (또는 WARN 로 기록 + 진행 동의)
 - [ ] helmfile dry-run + apply 성공
 - [ ] /v1/models 응답
-- [ ] bench run smoke status=ok + slo_pass=true
-- [ ] bench search start 4 trial 완주, DuckDB 적재
+- [ ] lmtune run smoke status=ok + slo_pass=true
+- [ ] lmtune search start 4 trial 완주, DuckDB 적재
 - [ ] pytest PASS
 - [ ] 환경 문서 갱신 + commit

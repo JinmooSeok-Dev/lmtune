@@ -1,0 +1,56 @@
+# Profile: P/D disaggregation with NIXL (cross-node KV transport).
+#
+# Prefill replica → Decode replica 의 KV cache 가 NIXL UCX 또는 GPUDirect-RDMA 로 흐름.
+# UCX 의 RDMA RC + cuda_ipc 가 best-known. peer repo phase2/4 의 NixlConnector 와 정합.
+name: pd_disagg_nixl
+priority: 2
+description: |
+  P/D disaggregation with NIXL (NV InferenceXfer Library). KV cache 가 prefill→decode
+  로 NIXL transport 통해 흐름. UCX backend with RDMA RC.
+
+applies_when:
+  well_lit_path: pd-disaggregation
+  cross_node_type: [ib, roce, none]   # intra-host minikube TCP fallback 도 포함
+
+env_locked:
+  # NIXL — UCX backend
+  NIXL_TRANSPORT: ucx
+  NIXL_COMPRESSION: none           # latency 우선이라 compression 비활성
+  # UCX
+  UCX_TLS: "self,sm,cuda_copy,cuda_ipc,rc_x"
+  UCX_NET_DEVICES: "all"
+  UCX_MEMTYPE_CACHE: "y"
+  # NCCL — pd 는 model TP 만 cross-node, KV 는 NIXL 분리
+  NCCL_IB_DISABLE: "0"
+  NCCL_NET_GDR_LEVEL: SYS
+  NCCL_CROSS_NIC: "1"
+
+env_tunable:
+  - name: NIXL_CHUNK_SIZE
+    kind: categorical
+    values: ["1MB", "4MB", "16MB", "64MB"]
+    cost_tier: 5
+  - name: NIXL_NUM_STREAMS
+    kind: categorical
+    values: ["1", "2", "4", "8"]
+    cost_tier: 5
+  - name: NIXL_SERIALIZER_WORKERS
+    kind: categorical
+    values: ["1", "4", "8"]
+    cost_tier: 5
+  - name: UCX_RNDV_THRESH
+    kind: categorical
+    values: [auto, "8192", "32768", "131072"]
+    cost_tier: 5
+  - name: UCX_RC_QP_COUNT
+    kind: categorical
+    values: ["1", "2", "4", "8"]
+    cost_tier: 5
+  - name: UCX_MAX_RNDV_RAILS
+    kind: categorical
+    values: ["1", "2", "4"]
+    cost_tier: 5
+  - name: PREFILL_DECODE_RATIO
+    kind: categorical
+    values: ["1:1", "1:2", "2:1", "1:4", "4:1"]
+    cost_tier: 3   # helmfile redeploy

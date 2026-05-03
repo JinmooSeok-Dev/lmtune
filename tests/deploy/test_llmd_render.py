@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import yaml
 
-from bench.deploy.llmd_k8s import render_values_overlay
+from lmtune.deploy.llmd_k8s import render_values_overlay
 
 
 def test_render_kebab_case_vllm_args():

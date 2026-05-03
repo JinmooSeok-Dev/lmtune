@@ -1,0 +1,8 @@
+ms-phase1:
+  modelspec:
+    modelArtifactUri: hf://<unknown>
+  vllmArgs:
+    enable-chunked-prefill: false
+    enable-prefix-caching: true
+    gpu-memory-utilization: 0.8139042871430157
+    max-num-seqs: 64

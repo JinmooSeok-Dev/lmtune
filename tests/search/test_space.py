@@ -1,9 +1,8 @@
 from pathlib import Path
 
 import pytest
-import yaml
 
-from bench.search.space import Axis, SearchSpace, load_space, parse_space
+from lmtune.search.space import Axis, SearchSpace, load_space, parse_space
 
 
 def test_axis_categorical_requires_values():
@@ -80,6 +79,6 @@ def test_space_yaml_round_trip(tmp_path: Path):
 
 
 def test_parse_space_rejects_wrong_kind():
-    raw = {"apiVersion": "bench/search/v1alpha1", "kind": "Profile", "name": "x", "axes": {}}
+    raw = {"apiVersion": "lmtune/search/v1alpha1", "kind": "Profile", "name": "x", "axes": {}}
     with pytest.raises(ValueError, match="expected kind=SearchSpace"):
         parse_space(raw)

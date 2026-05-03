@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary
 
-2 노드 × 8 B200 = 16-GPU k3s 클러스터에서 `bench search` autotuning 을 운용하기 위한 환경 정의. 본 문서가 단일 출처(single source of truth) 로 모든 helmfile / search-space / endpoint 가 참조한다.
+2 노드 × 8 B200 = 16-GPU k3s 클러스터에서 `lmtune search` autotuning 을 운용하기 위한 환경 정의. 본 문서가 단일 출처(single source of truth) 로 모든 helmfile / search-space / endpoint 가 참조한다.
 
 → _"실제로 어떤 하드웨어·소프트웨어 위에서 도는가?"_
 

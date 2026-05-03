@@ -10,30 +10,29 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Any
 
 import typer
 import yaml
 from rich.console import Console
 from rich.table import Table
 
-from bench.search import (
-    BenchScoreObjective,
+from lmtune.search import (
     CallableObjective,
+    ScoreObjective,
     Study,
     StudyConfig,
     load_space,
 )
-from bench.search.warmstart import warmstart_from_archive
-from bench.storage import DuckDBStore
-
+from lmtune.search.warmstart import warmstart_from_archive
+from lmtune.storage import DuckDBStore
 
 app = typer.Typer(no_args_is_help=True, help="탐색(search) 실행·조회 커맨드")
 console = Console()
 
 
 def _default_db_path() -> Path:
-    return Path(os.environ.get("BENCH_DB", "data/db/bench.duckdb"))
+    return Path(os.environ.get("LMTUNE_DB", "data/db/lmtune.duckdb"))
 
 
 @app.command("start")
@@ -41,21 +40,21 @@ def cmd_start(
     space: Annotated[Path, typer.Option(..., "--space", exists=True, readable=True, help="SearchSpace YAML")],
     strategy: Annotated[str, typer.Option("--strategy", help="grid | random | lhc")] = "random",
     endpoint: Annotated[
-        Optional[Path],
-        typer.Option("--endpoint", "-e", exists=True, readable=True, help="Endpoint YAML (BenchScoreObjective 용)"),
+        Path | None,
+        typer.Option("--endpoint", "-e", exists=True, readable=True, help="Endpoint YAML (ScoreObjective 용)"),
     ] = None,
     profile: Annotated[
-        list[Path],
+        list[Path] | None,
         typer.Option("--profile", "-p", exists=True, readable=True, help="Workload profile YAML (여러개 가능)"),
-    ] = [],
+    ] = None,
     max_trials: Annotated[int, typer.Option("--max-trials", help="최대 trial 수")] = 20,
-    name: Annotated[Optional[str], typer.Option("--name")] = None,
+    name: Annotated[str | None, typer.Option("--name")] = None,
     direction: Annotated[str, typer.Option("--direction")] = "maximize",
     metric_name: Annotated[str, typer.Option("--metric-name")] = "total_score",
-    seed: Annotated[Optional[int], typer.Option("--seed")] = 42,
-    n_samples: Annotated[Optional[int], typer.Option("--n-samples", help="lhc 전용")] = None,
+    seed: Annotated[int | None, typer.Option("--seed")] = 42,
+    n_samples: Annotated[int | None, typer.Option("--n-samples", help="lhc 전용")] = None,
     warmstart_db: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--warmstart-db", exists=True, readable=True, help="과거 DuckDB (archive) 에서 seed 추출"),
     ] = None,
     warmstart_top_k: Annotated[int, typer.Option("--warmstart-top-k")] = 5,
@@ -81,7 +80,7 @@ def cmd_start(
         typer.Option("--budget-hours", help="전체 실험 예산. 경과 시 실행 중 trial 만 마무리"),
     ] = None,
     objectives: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--objectives",
             help="Multi-objective: 쉼표 구분 'metric:workload:direction' 리스트. "
@@ -91,13 +90,14 @@ def cmd_start(
     ] = None,
 ):
     sp = load_space(space)
+    profile = profile or []
     profile_slugs = [p.stem for p in profile]
 
     # Parse multi-objective spec if provided.
     obj_keys: list[Any] = []
     directions_list: list[str] | None = None
     if objectives:
-        from bench.search.objective_pareto import ObjectiveKey
+        from lmtune.search.objective_pareto import ObjectiveKey
         for spec in objectives.split(","):
             parts = [p.strip() for p in spec.split(":")]
             if len(parts) != 3:
@@ -115,10 +115,10 @@ def cmd_start(
     # Build adapter early so SearchSpace active_if can be gated by adapter_label.
     adapter_obj = None
     if adapter == "local-vllm":
-        from bench.deploy import LocalVLLMAdapter
+        from lmtune.deploy import LocalVLLMAdapter
         adapter_obj = LocalVLLMAdapter()
     elif adapter == "llmd-k8s":
-        from bench.deploy import LLMDK8sAdapter
+        from lmtune.deploy import LLMDK8sAdapter
         adapter_obj = LLMDK8sAdapter()
     elif adapter != "none":
         raise typer.BadParameter(f"unknown --adapter: {adapter}")
@@ -139,7 +139,7 @@ def cmd_start(
         context=space_context,
     )
 
-    # Endpoint slug 추출 (BenchScoreObjective 에 쓸 때만 필요)
+    # Endpoint slug 추출 (ScoreObjective 에 쓸 때만 필요)
     if endpoint and not dry_run:
         ep_data = yaml.safe_load(endpoint.read_text(encoding="utf-8"))
         cfg.endpoint_slug = ep_data.get("slug")
@@ -171,17 +171,19 @@ def cmd_start(
     else:
         if not endpoint or not profile:
             raise typer.BadParameter("endpoint 와 profile 은 --dry-run 이 아닌 경우 필수")
-        base_objective = BenchScoreObjective(
+        base_objective = ScoreObjective(
             endpoint_path=endpoint,
             profile_paths=[Path(p) for p in profile],
             adapter=adapter_obj,
         )
         if obj_keys:
-            from bench.search.objective_pareto import ParetoObjective
+            from lmtune.search.objective_pareto import ParetoObjective
             objective = ParetoObjective(base_objective, obj_keys)
+            obj_summary = ", ".join(
+                f"{k.metric}|{k.workload or 'agg'}:{k.direction}" for k in obj_keys
+            )
             console.print(
-                f"[green]multi-objective[/]: {len(obj_keys)} objectives "
-                f"({', '.join(f'{k.metric}|{k.workload or 'agg'}:{k.direction}' for k in obj_keys)})"
+                f"[green]multi-objective[/]: {len(obj_keys)} objectives ({obj_summary})"
             )
         else:
             objective = base_objective
@@ -195,8 +197,8 @@ def cmd_start(
             raise typer.BadParameter("process-pool backend 은 --dry-run 과 호환 안 됨")
         if not endpoint or not profile:
             raise typer.BadParameter("process-pool 백엔드는 endpoint 와 profile 필수")
-        from bench.orchestrate.backend_process_pool import ProcessPoolBackend
-        from bench.orchestrate.driver import run_distributed
+        from lmtune.orchestrate.backend_process_pool import ProcessPoolBackend
+        from lmtune.orchestrate.driver import run_distributed
         pool = ProcessPoolBackend(workers=workers)
         trials = run_distributed(
             study, pool,
@@ -250,7 +252,7 @@ def cmd_status(
     table.add_column("trial_id")
     table.add_column("score", justify="right")
     table.add_column("params", overflow="fold")
-    for trial_id, seq, params_json, score, st in rows:
+    for trial_id, seq, params_json, score, _st in rows:
         table.add_row(str(seq), trial_id, f"{score:.2f}" if score is not None else "-", params_json)
     console.print(table)
 
@@ -318,8 +320,9 @@ def cmd_prune(
 ):
     """Run ANOVA + RF importance + bound-tighten on a study's completed trials."""
     import json as _json
-    from bench.search.analysis import anova_per_axis, axis_importance, tighten_bounds
-    from bench.search.space import parse_space
+
+    from lmtune.search.analysis import anova_per_axis, axis_importance, tighten_bounds
+    from lmtune.search.space import parse_space
 
     store = DuckDBStore(_default_db_path())
     hdr = store.get_study(study_id)
@@ -335,7 +338,7 @@ def cmd_prune(
     # Collect completed trials as {params, score, status}
     raw_trials = store.list_trials(study_id)
     trials: list[dict] = []
-    for trial_id, seq, params_json, status, score, _completed, _backend, _err in raw_trials:
+    for _trial_id, seq, params_json, status, score, _completed, _backend, _err in raw_trials:
         try:
             p = _json.loads(params_json or "{}")
         except _json.JSONDecodeError:
@@ -381,7 +384,8 @@ def cmd_prune(
 def _apply_recommendations(space, anova_list, importance, shrink) -> object:
     """Produce a narrowed SearchSpace copy applying freeze/drop/shrink."""
     from copy import deepcopy
-    from bench.search.space import Axis, SearchSpace
+
+    from lmtune.search.space import Axis, SearchSpace
 
     keep: list[Axis] = []
     imp_drop = {a for a, d in importance.items() if d.get("recommendation") == "drop"}
@@ -417,15 +421,14 @@ def cmd_pareto(
     'throughput_tok_avg' (maximize) and 'ttft_p99' (minimize) — the canonical
     goodput Pareto. Emits the front as JSON + saves a plot.
     """
-    import json as _json
-    from bench.visualization.plots.pareto import plot_pareto, non_dominated
+    from lmtune.visualization.plots.pareto import non_dominated, plot_pareto
 
     store = DuckDBStore(_default_db_path())
     rows = store.list_trials(study_id)
     points: list[list[float]] = []
     labels: list[str] = []
     directions = ["maximize", "minimize"]
-    for trial_id, seq, params_json, status, score, _c, _b, _e in rows:
+    for trial_id, seq, _params_json, status, _score, _c, _b, _e in rows:
         if status != "completed":
             continue
         tm = store.get_trial_metrics(trial_id)
@@ -459,9 +462,10 @@ def cmd_sensitivity(
 ):
     """Global Sobol sensitivity over continuous axes (post-hoc via RF surrogate)."""
     import json as _json
-    from bench.search.analysis.sobol import sobol_from_history
-    from bench.search.space import parse_space
-    from bench.visualization.plots.sobol_bar import plot_sobol
+
+    from lmtune.search.analysis.sobol import sobol_from_history
+    from lmtune.search.space import parse_space
+    from lmtune.visualization.plots.sobol_bar import plot_sobol
 
     store = DuckDBStore(_default_db_path())
     hdr = store.get_study(study_id)
@@ -473,9 +477,11 @@ def cmd_sensitivity(
 
     raw = store.list_trials(study_id)
     trials: list[dict] = []
-    for trial_id, seq, params_json, status, score, _c, _b, _e in raw:
-        try: p = _json.loads(params_json or "{}")
-        except _json.JSONDecodeError: p = {}
+    for _trial_id, _seq, params_json, status, score, _c, _b, _e in raw:
+        try:
+            p = _json.loads(params_json or "{}")
+        except _json.JSONDecodeError:
+            p = {}
         trials.append({"params": p, "score": score, "status": status})
 
     axes_spec = [{"name": a.name, "kind": a.kind, "low": a.low, "high": a.high} for a in sp.axes]
@@ -500,7 +506,7 @@ def cmd_trace(
     out: Annotated[Path, typer.Option("--out")] = Path("search_trace.png"),
 ):
     """Running best score over trial sequence — visual 'is the sampler converging?'"""
-    from bench.visualization.plots.search_trace import plot_search_trace
+    from lmtune.visualization.plots.search_trace import plot_search_trace
 
     store = DuckDBStore(_default_db_path())
     hdr = store.get_study(study_id)
@@ -512,6 +518,197 @@ def cmd_trace(
     scores = [r[4] for r in rows]
     plot_search_trace(seqs, scores, direction=direction, out_path=out)
     console.print(f"[green]saved[/]: {out}")
+
+
+@app.command("ask")
+def cmd_ask(
+    study_id: Annotated[str, typer.Argument(help="study_id (bench search start 가 출력)")],
+    out_json: Annotated[
+        Path | None,
+        typer.Option("--out", help="JSON 출력 파일 (기본: stdout)"),
+    ] = None,
+):
+    """Phase S6 — 외부 LLM 에이전트(autoresearch) 가 호출.
+
+    study_id 의 spec + 과거 trial 이력으로 sampler 를 재구성하고 다음 trial params 를 추천.
+    출력 JSON: `{"study_id", "trial_id", "seq", "params"}`.
+
+    autoresearch.sh 가 이 JSON 의 params 를 endpoint YAML 에 적용한 뒤 측정 → `bench search tell` 호출.
+    """
+    store = DuckDBStore(_default_db_path())
+    hdr = store.get_study(study_id)
+    if not hdr:
+        console.print(f"[red]study not found[/]: {study_id}")
+        raise typer.Exit(1)
+    space_yaml = hdr[3]
+    strategy = hdr[2]
+    direction = hdr[7]
+    metric_name = hdr[6]
+    ep_slug = hdr[4]
+    prof_slugs_json = hdr[5]
+
+    sp = load_space_from_text(space_yaml)
+    cfg = StudyConfig(
+        name=hdr[1], strategy=strategy, space=sp,
+        metric_name=metric_name, direction=direction,
+        endpoint_slug=ep_slug,
+        profile_slugs=json.loads(prof_slugs_json) if prof_slugs_json else [],
+    )
+    # 새 Study 객체 — sampler 새로 만듦. 외부 study_id 를 강제 사용하기 위해 override.
+    study = Study(cfg, store)
+    study.study_id = study_id  # 외부 study_id 로 trial 을 INSERT
+
+    # 과거 completed trial 을 sampler 에 주입 (warmstart)
+    past = store.top_trials(study_id, direction=direction, k=200)
+    seeds: list[tuple[dict, float]] = []
+    for _tid, _seq, params_json, score, _st in past:
+        if score is None:
+            continue
+        try:
+            seeds.append((json.loads(params_json), float(score)))
+        except Exception:  # noqa: BLE001
+            continue
+    if seeds:
+        study.enqueue_warmstart(seeds)
+
+    # 다음 trial 추출 (DuckDB trials 테이블에 status=pending 으로 INSERT 됨)
+    trial = study.ask()
+
+    payload = {
+        "study_id": study_id,
+        "trial_id": trial.trial_id,
+        "seq": trial.seq,
+        "params": trial.params,
+    }
+    out_text = json.dumps(payload, sort_keys=False, indent=2)
+    if out_json:
+        out_json.write_text(out_text)
+    else:
+        # stdout 에 JSON 한 줄 (autoresearch.sh 가 tail | jq)
+        print(out_text)
+
+
+@app.command("tell")
+def cmd_tell(
+    study_id: Annotated[str, typer.Argument(help="study_id")],
+    trial_id: Annotated[str, typer.Option("--trial", help="ask 가 발급한 trial_id")],
+    metrics_json: Annotated[
+        Path | None,
+        typer.Option("--metrics-json", exists=True, readable=True, help="JSON 파일 (없으면 stdin)"),
+    ] = None,
+    score: Annotated[float | None, typer.Option("--score", help="명시적 score 값 — metrics 의 'total_score' 키 우선")] = None,
+):
+    """Phase S6 — 외부 LLM 에이전트가 측정 결과를 study 에 기록.
+
+    metrics-json 형식 (autoresearch.sh 의 METRIC 라인을 변환한 결과):
+    ```json
+    {
+      "total_score": 1906.4,
+      "metrics": {
+        "throughput_avg_short": 130.4,
+        "ttft_p99_short": 192.5,
+        "e2e_p99_short": 760.0,
+        "slo_pass_all": 1
+      },
+      "accepted": true
+    }
+    ```
+    """
+    store = DuckDBStore(_default_db_path())
+    hdr = store.get_study(study_id)
+    if not hdr:
+        console.print(f"[red]study not found[/]: {study_id}")
+        raise typer.Exit(1)
+
+    if metrics_json:
+        data = json.loads(metrics_json.read_text())
+    else:
+        import sys
+        data = json.loads(sys.stdin.read())
+
+    final_score = data.get("total_score") or score or 0.0
+    metrics_in: dict = data.get("metrics", {})
+    accepted = bool(data.get("accepted", True))
+
+    # trials 테이블 직접 업데이트 (study.tell 은 Optuna trial 객체가 필요한데 ask 와 다른 process 라 부재)
+    metrics_for_db: dict[tuple[str, str | None], float] = {}
+    for k, v in metrics_in.items():
+        try:
+            metrics_for_db[(k, None)] = float(v)
+        except (TypeError, ValueError):
+            continue
+
+    # 기존 row 의 seq 와 params 를 살려서 update
+    existing = store.conn.execute(
+        "SELECT seq, params, backend FROM trials WHERE trial_id = ?",
+        [trial_id],
+    ).fetchone()
+    if not existing:
+        console.print(f"[red]trial not found[/]: {trial_id}")
+        raise typer.Exit(1)
+    seq, params_json, backend = existing
+    params = json.loads(params_json)
+
+    status = "completed" if accepted else "pruned"
+    store.record_trial(
+        trial_id=trial_id, study_id=study_id, seq=seq, params=params,
+        status=status, score=final_score, backend=backend or "external",
+        completed=True,
+    )
+    if metrics_for_db:
+        store.record_trial_metrics(trial_id, metrics_for_db)
+
+    console.print(
+        f"[green]recorded[/]: trial={trial_id} status={status} score={final_score:.2f}"
+    )
+
+
+@app.command("export")
+def cmd_export(
+    study_id: Annotated[str, typer.Argument(help="study_id (bench search start 가 출력)")],
+    out_dir: Annotated[Path, typer.Option("--out", help="결과 디렉토리 (winner/ 가 그 아래 생성)")],
+    winner: Annotated[str, typer.Option(
+        "--winner",
+        help="top-N 또는 top-1 (기본). 향후 'pareto' 추가 가능.",
+    )] = "top-1",
+    endpoint: Annotated[Path | None, typer.Option(
+        "--endpoint", "-e", exists=True, readable=True,
+        help="endpoint YAML — adapter 추정 + helmfile_overrides 추출",
+    )] = None,
+):
+    """Export winner trial to a self-contained recipe directory.
+
+    산출:
+      <out>/winner/apply.sh             — dry-run | apply 한 줄 실행
+      <out>/winner/values-overlay.yaml  — helmfile state-values-file
+      <out>/winner/params.json          — raw params dict
+      <out>/winner/README.md            — 사람이 읽을 수 있는 recipe + 적용 절차
+    """
+    from lmtune.search.export_winner import export_winner
+
+    if not winner.startswith("top-"):
+        raise typer.BadParameter("--winner must be 'top-N' (e.g., top-1, top-3)")
+    try:
+        rank = int(winner.split("-", 1)[1])
+    except (IndexError, ValueError) as exc:
+        raise typer.BadParameter(f"invalid --winner: {winner}") from exc
+
+    try:
+        result = export_winner(
+            study_id,
+            db_path=_default_db_path(),
+            out_dir=out_dir,
+            rank=rank,
+            endpoint_yaml_path=endpoint,
+        )
+    except ValueError as e:
+        console.print(f"[red]export failed[/]: {e}")
+        raise typer.Exit(1) from e
+
+    console.print(f"[green]exported[/]: {result.out_dir}")
+    console.print(f"  trial_id={result.trial_id}  score={result.score}  adapter={result.adapter}")
+    for f in result.files:
+        console.print(f"  - {f.relative_to(result.out_dir.parent)}")
 
 
 @app.command("ls")
@@ -546,5 +743,5 @@ def _print_top(store: DuckDBStore, study_id: str, direction: str, k: int = 5):
 
 
 def load_space_from_text(text: str):
-    from bench.search.space import parse_space
+    from lmtune.search.space import parse_space
     return parse_space(yaml.safe_load(text))

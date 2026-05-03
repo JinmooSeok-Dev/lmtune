@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 
-from bench.orchestrate.backend import TrialPayload
-from bench.orchestrate.backend_k8s import render_job_manifest
+from lmtune.orchestrate.backend import TrialPayload
+from lmtune.orchestrate.backend_k8s import render_job_manifest
 
 
 def test_render_manifest_fills_env_and_labels():

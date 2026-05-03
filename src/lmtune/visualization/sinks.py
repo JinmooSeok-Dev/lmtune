@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import pandas as pd
-
 
 _SINKS: dict[str, Callable] = {}
 

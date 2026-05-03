@@ -1,0 +1,42 @@
+# Profile: single-node TP with NVLink (B200 8-GPU 단일 노드).
+#
+# 가장 단순한 macro 매칭 — tp <= 8 이고 cross-node 없음.
+# NVLink P2P 가 best-known, IB 비활성, NIXL/UCX 비활성.
+name: single_node_tp_nvl
+priority: 0
+description: |
+  Single-node TP via NVLink. 8-GPU intra-node only. RDMA / NIXL / UCX 미사용.
+  NVLink P2P + NVLS (NVSwitch SHARP) 활성. NCCL Tree algo 가 보통 best.
+
+applies_when:
+  node_split_strategy: ["single-node-tp8", "single-node-dp2-tp4", "single-node-tp4-pcp2"]
+  intra_node_type: nvlink
+  cross_node_type: ["none", "ib", "roce"]   # 없거나 있어도 활성 안 함
+
+env_locked:
+  # NCCL — single-node NVLink 기본
+  NCCL_P2P_LEVEL: NVL
+  NCCL_IB_DISABLE: "1"
+  NCCL_ALGO: NVLS              # NVSwitch SHARP 우선
+  NCCL_PROTO: Simple
+  NCCL_NVLS_ENABLE: "1"
+  # GPUDirect — intra-node 라 RDMA 비활성
+  NCCL_NET_GDR_LEVEL: SYS      # 사용 안 함
+  # CUDA
+  CUDA_DEVICE_ORDER: PCI_BUS_ID
+  # NIXL / UCX 미사용
+  NIXL_TRANSPORT: tcp          # if any (fallback)
+
+env_tunable:
+  - name: NCCL_BUFFSIZE
+    kind: categorical
+    values: [default, "2MB", "4MB", "8MB"]
+    cost_tier: 5
+  - name: NCCL_NVLS_CHUNKSIZE
+    kind: categorical
+    values: [auto, "1MB", "2MB", "4MB"]
+    cost_tier: 5
+  - name: NCCL_MIN_NCHANNELS
+    kind: categorical
+    values: [auto, 4, 8, 16]
+    cost_tier: 5

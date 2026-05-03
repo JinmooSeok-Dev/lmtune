@@ -1,11 +1,11 @@
-apiVersion: bench/v1alpha1
+apiVersion: lmtune/v1alpha1
 slug: research-variance-10x
 name: "OpenHands 10× run-to-run 편차 검증"
 stage: 3
 description: |
   "How Do Coding Agents Spend Your Money?" (arXiv, ICLR 2026 submission) —
-  같은 task 도 run 마다 토큰 소비가 최대 10× 차이. `bench repeat --count 10` 으로
-  반복 실행 후 `bench variance` 로 μ/σ/CV/max/min 비율 보고.
+  같은 task 도 run 마다 토큰 소비가 최대 10× 차이. `lmtune repeat --count 10` 으로
+  반복 실행 후 `lmtune variance` 로 μ/σ/CV/max/min 비율 보고.
 references: []
 
 runner: aiperf

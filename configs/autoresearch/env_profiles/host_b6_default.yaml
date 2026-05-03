@@ -1,0 +1,46 @@
+# Profile: B6 host-side baseline — 모든 study 에 항상 적용 (study-level default).
+#
+# 본 profile 은 다른 profile 과 합성됨 (priority=0, always-on).
+# Sampler 는 host axis 를 변경 안 하고 best-known 으로 고정. B6 study 활성 시
+# 사용자가 명시적으로 host axis sweep 활성.
+name: host_b6_default
+priority: 0
+description: |
+  B6 host-side baseline (study-level default). cpu_governor=performance, NUMA balance off,
+  hugepages 1Gi=16. CPU pinning numa-aware. always-applied.
+
+applies_when:
+  always: true
+
+env_locked:
+  # CPU governor — performance 고정 (latency 안정성)
+  CPU_GOVERNOR: performance
+  # NUMA — balance off + numa-aware pinning
+  NUMA_BALANCING: "0"
+  # Hugepages — 1Gi 16 페이지 (16 GB) 가 B200 환경 best-known
+  HUGEPAGES_1GI: "16"
+  # IOMMU passthrough on
+  IOMMU_PASSTHROUGH: "on"
+  # PCIe ASPM off (latency 우선)
+  PCIE_ASPM: "off"
+  # Transparent hugepages madvise (KV cache 가 명시적 advise)
+  TRANSPARENT_HUGEPAGES: madvise
+  # IRQ — pinned to non-GPU NUMA node
+  IRQBALANCE: pinned-to-cpus
+  # SMT off (latency 우선)
+  SMT: off
+
+env_tunable:
+  # B6 study 활성 시에만 tunable. 기본 study 에선 위 env_locked 그대로.
+  - name: HUGEPAGES_1GI
+    kind: categorical
+    values: ["0", "8", "16", "32"]
+    cost_tier: 1   # host reboot 필요 (study 1회만)
+  - name: TRANSPARENT_HUGEPAGES
+    kind: categorical
+    values: [always, madvise, never]
+    cost_tier: 2   # sysfs (sysctl 같은 것)
+  - name: NUMA_BALANCING
+    kind: categorical
+    values: ["0", "1"]
+    cost_tier: 2

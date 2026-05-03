@@ -1,4 +1,4 @@
-apiVersion: bench/v1alpha1
+apiVersion: lmtune/v1alpha1
 slug: research-diurnal-34x
 name: "DynamoLLM peak:valley 34.6× diurnal 파형 재현"
 stage: 1

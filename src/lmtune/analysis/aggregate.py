@@ -6,12 +6,11 @@ Jupyter/외부 스크립트에서 그대로 재사용할 수 있도록 Pandas Da
 from __future__ import annotations
 
 import math
-from typing import Iterable, Sequence
+from collections.abc import Iterable, Sequence
 
 import pandas as pd
 
-from bench.runners.base import RequestRow
-
+from lmtune.runners.base import RequestRow
 
 _DEFAULT_AGGS = ("p50", "p95", "p99", "avg", "min", "max", "count")
 

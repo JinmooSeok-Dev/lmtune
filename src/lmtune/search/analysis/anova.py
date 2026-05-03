@@ -83,7 +83,7 @@ def anova_per_axis(
 
         groups: dict[str, list[float]] = {}
         raw_per_group: dict[str, list[Any]] = {}
-        for lbl, raw, sc in zip(labels, raw_values, scores):
+        for lbl, raw, sc in zip(labels, raw_values, scores, strict=False):
             groups.setdefault(lbl, []).append(sc)
             raw_per_group.setdefault(lbl, []).append(raw)
 

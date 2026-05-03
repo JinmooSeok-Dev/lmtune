@@ -14,13 +14,11 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Iterable
 
-from bench.orchestrate.backend import TrialBackend, TrialHandle, TrialPayload, TrialResult
-from bench.search.objective import ObjectiveResult
-from bench.search.study import Study
-from bench.search.trial import Trial, TrialStatus
-
+from lmtune.orchestrate.backend import TrialBackend, TrialHandle, TrialPayload, TrialResult
+from lmtune.search.objective import ObjectiveResult
+from lmtune.search.study import Study
+from lmtune.search.trial import Trial
 
 log = logging.getLogger(__name__)
 
@@ -136,7 +134,7 @@ def run_distributed(
 
     finally:
         if _deadline_hit():
-            for tid, (handle, _trial, _t0) in list(inflight.items()):
+            for _tid, (handle, _trial, _t0) in list(inflight.items()):
                 backend.cancel(handle)
         backend.shutdown()
         study.storage.resume()
