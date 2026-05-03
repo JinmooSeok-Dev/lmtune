@@ -77,6 +77,9 @@ releases:
     values:
       - ../base/values-b200-common.yaml.gotmpl
       - values-llama-3.1-70b-tp4-pd.yaml
+    # See inference-scheduling/helmfile.yaml.gotmpl for rationale —
+    # inject runtimeClassName=nvidia into all Deployments (chart limitation).
+    postRenderer: ../_postrender/postrender.sh
     labels:
       kind: inference-stack
       role: base

@@ -37,6 +37,13 @@ PEER_REPO_URL=<peer repo git URL> bash b200/scripts/setup_host.sh
 #     llm-d 정본 가이드의 prereq/gateway-provider 단계를 wrap한 스크립트.
 bash b200/scripts/setup_gateway_provider.sh agentgateway
 
+# 1c. (사전 조건) 클러스터에 RuntimeClass 'nvidia' 가 등록되어 있어야 한다.
+#     NHN B200 처럼 default runtime=runc 인 multi-RuntimeClass 환경에서 GPU pod 가
+#     libcuda 를 받게 하는 standard 패턴. helmfile post-renderer 가 모든 Deployment
+#     의 spec.template.spec.runtimeClassName 을 'nvidia' 로 자동 주입하므로
+#     클러스터/k3s default runtime 변경은 불필요.
+kubectl get runtimeclass nvidia      # 'nvidia' 가 보이면 OK
+
 # 2. smoke run (B0 마지막 단계)
 lmtune search start \
   --strategy random \

@@ -76,6 +76,10 @@ releases:
       # smoke: 모니터링 비활성 (B0 단계)
       - name: "decode.monitoring.podmonitor.enabled"
         value: false
+    # llm-d-modelservice v0.4.12 가 spec.template.spec.runtimeClassName 를 expose 안 해서
+    # NHN k3s (default runtime=runc + RuntimeClass nvidia) 환경에선 GPU pod 에 libcuda
+    # 가 주입되지 않는다. post-renderer 가 모든 Deployment 에 runtimeClassName=nvidia 주입.
+    postRenderer: ../_postrender/postrender.sh
     labels:
       kind: inference-stack
       role: smoke
