@@ -28,6 +28,10 @@ bash b200/scripts/probe.sh --mode host
 #      회사 개발 PC (kubeconfig 만 있고 RDMA HW · peer repo 는 부재):
 bash b200/scripts/probe.sh --mode client
 
+# 1a. (B200 컨테이너 안에서 한 번) helmfile + peer repo 설치
+#     probe --mode host 의 helmfile / peer_repo FAIL 두 개를 sudo 없이 한 번에 해결
+PEER_REPO_URL=<peer repo git URL> bash b200/scripts/setup_host.sh
+
 # 2. smoke run (B0 마지막 단계)
 lmtune search start \
   --strategy random \

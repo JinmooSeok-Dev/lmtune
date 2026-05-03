@@ -183,14 +183,14 @@ else
   if [ "$MODE" = "client" ]; then
     record "peer_repo" INFO "client 모드 — peer repo 는 B200 컨테이너 (host 모드) 에서만 의미 있음"
   else
-    record "peer_repo" FAIL "$PEER_REPO 없음 (PEER_REPO env 로 경로 지정 가능)"
+    record "peer_repo" FAIL "$PEER_REPO 없음 — fix: PEER_REPO_URL=<git url> bash b200/scripts/setup_host.sh"
   fi
 fi
 
 if command -v helmfile >/dev/null 2>&1; then
   record "helmfile" PASS "$(helmfile --version 2>/dev/null | head -1)"
 else
-  record "helmfile" FAIL "helmfile 미설치"
+  record "helmfile" FAIL "helmfile 미설치 — fix: bash b200/scripts/setup_host.sh"
 fi
 if command -v helm >/dev/null 2>&1; then
   record "helm" PASS "$(helm version --short 2>/dev/null)"
