@@ -55,6 +55,10 @@ decode:
       env:
         - name: VLLM_LOGGING_LEVEL
           value: "INFO"
+        # base values 와 동일 — chart 가 common.env 를 적용 안 할 경우 대비 직접 박기.
+        # llm-d-cuda RHEL 이미지 + Debian multiarch libcuda inject 의 ld search path 보강.
+        - name: LIBRARY_PATH
+          value: "/usr/local/cuda/compat:/usr/lib/x86_64-linux-gnu:/usr/lib64"
         - name: HF_TOKEN
           valueFrom:
             secretKeyRef:

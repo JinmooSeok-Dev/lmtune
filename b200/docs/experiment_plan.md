@@ -209,7 +209,8 @@ lmtune search start \
 
 | Risk | Phase | Mitigation |
 |:---|:---|:---|
-| llm-d-cuda v0.6.0 + B200 sm_100 Triton JIT 실패 | B0 | v0.7.0-rc.2 로 image bump (`e90fb16`). enforce-eager 같은 성능 우회는 baseline 오염 → 안 씀 |
+| **llm-d-cuda RHEL 이미지 + Debian multiarch libcuda inject** → Triton `cuda_utils.c` gcc compile 에서 `cannot find -l:libcuda.so.1` | B0 | base + smoke values 의 env 에 `LIBRARY_PATH=/usr/local/cuda/compat:/usr/lib/x86_64-linux-gnu:/usr/lib64` 추가. 이미지 자체의 잘 알려진 함정 — 모든 well-lit path 가 같은 image 를 쓰므로 base.common.env 적용 |
+| **llm-d-cuda v0.7.0-rc.2 빌드 결함 — cu13 base + cu12 vllm._C wheel ABI mismatch (`libcudart.so.12 not found`)** | B0 | v0.6.0 으로 rollback (`d8ddfa5`). v0.6.0 = cu129 + cu12 + torch cu129 일관, vllm 0.17.1 stable. upstream issue 보고 후보 (B8 `upstream_pr_candidates.md`) |
 | chart 가 `runtimeClassName` 미노출 | B0 | helm post-renderer 가 모든 Deployment 에 inject (`b200/helmfile/_postrender/postrender.sh`) |
 | `gateway.provider=istio` default → k3s Telemetry CRD 부재로 fail | B0 | helmfile 에 `provider: agentgateway` 명시 + `setup_gateway_provider.sh` 로 prereq 자동 |
 | B200 image 풀 대형 (수십 GB) | B0~B1 | image registry 캐시 (peer repo 빌드 결과 또는 in-cluster registry) |

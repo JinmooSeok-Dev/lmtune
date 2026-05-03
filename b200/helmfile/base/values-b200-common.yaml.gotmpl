@@ -44,6 +44,12 @@ common:
       value: "INFO"
     - name: VLLM_USE_TRITON_FLASH_ATTN
       value: "1"
+    # llm-d-cuda 이미지가 RHEL 계열인데 nvidia-container-toolkit 가 libcuda 를
+    # /usr/lib/x86_64-linux-gnu (Debian multiarch) 로 inject. RHEL ld 는 그 path 를
+    # default 에 안 넣어 Triton 의 cuda_utils.c gcc compile 에서 -l:libcuda.so.1
+    # link fail. compile-time ld search path 보강.
+    - name: LIBRARY_PATH
+      value: "/usr/local/cuda/compat:/usr/lib/x86_64-linux-gnu:/usr/lib64"
     - name: NCCL_IB_DISABLE
       value: "0"                         # IB 켬 (RDMA 환경)
     - name: NCCL_NET_GDR_LEVEL
