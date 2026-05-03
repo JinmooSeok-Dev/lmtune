@@ -1,0 +1,58 @@
+apiVersion: lmtune/v1alpha1
+slug: b200-pd-llama70b
+name: "B200 P/D — Llama-3.3-70B (TP=4 prefill + TP=4 decode + NIXL/UCX)"
+url: http://127.0.0.1:8021/v1
+model: meta-llama/Llama-3.1-70B-Instruct
+tokenizer: meta-llama/Llama-3.1-70B-Instruct
+api_type: openai
+
+deployment:
+  engine: vllm
+  version: "0.7.x"
+  parallelism:
+    tp: 4
+    dp: 1
+    ep: false
+  replicas:
+    # b1_pd_ratio.yaml 의 prefill_replicas / decode_replicas 가 trial 별로 override.
+    # 본 default (1,1) 은 첫 helm install 시 사용됨.
+    prefill: 1
+    decode: 1
+  engine_args:
+    enable_prefix_caching: true
+    enable_chunked_prefill: true
+    max_num_seqs: 128
+    max_model_len: 8192
+    block_size: 32
+    gpu_memory_utilization: 0.85
+    kv_cache_dtype: auto
+    dtype: bfloat16
+
+  helmfile_overrides:
+    helmfile_file: b200/helmfile/pd-disaggregation/helmfile.yaml.gotmpl
+    environment: default
+    selector: kind=inference-stack
+    namespace: b200-pd
+    release_names:
+      - "ms-pd"
+    deployment_names:
+      # llm-d-modelservice chart 가 만드는 prefill/decode Deployment 의 정확한 이름은
+      # 첫 helm install 후 `kubectl -n b200-pd get deploy` 로 확인 후 정렬.
+      - "ms-pd-prefill"
+      - "ms-pd-decode"
+    rollout_timeout_s: 1800
+
+notes: |
+  P/D disaggregation 전용 endpoint. 매 trial 마다 prefill_replicas / decode_replicas
+  가 helmfile values 의 prefill.replicas / decode.replicas 로 그대로 emit 되어 in-place
+  rolling update 로 비율이 바뀐다.
+
+  port-forward (클라이언트 PC ↔ B200 ClusterIP):
+    kubectl -n b200-pd port-forward svc/<gateway-svc> 8021:80
+
+  필수 prereq (1회):
+    bash b200/scripts/setup_gateway_provider.sh agentgateway
+    kubectl create namespace b200-pd
+    kubectl -n b200-pd create secret generic huggingface-token \
+      --from-literal=HF_TOKEN="${HF_TOKEN}"
+tags: [b200, pd-disaggregation, llama, 70b, nixl, ucx]

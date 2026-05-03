@@ -117,6 +117,7 @@ def render_values_overlay(
     deployment = dict(endpoint_data.get("deployment") or {})
     engine_args = dict(deployment.get("engine_args") or {})
     parallelism = dict(deployment.get("parallelism") or {})
+    replicas = dict(deployment.get("replicas") or {})
 
     # Dict-to-CLI-flag shape: values-*.yaml uses kebab-case keys.
     vllm_args: dict[str, Any] = {}
@@ -142,12 +143,19 @@ def render_values_overlay(
     else:
         targets = ["ms-phase1"]
 
-    payload = {
+    payload: dict[str, Any] = {
         "modelspec": {
             "modelArtifactUri": f"hf://{endpoint_data.get('model')}",
         },
         "vllmArgs": vllm_args,
     }
+    # P/D disaggregation: replicas.prefill / replicas.decode → helmfile values 의
+    # prefill.replicas / decode.replicas 로 분리 emit. base helmfile values yaml 의
+    # parallelism.tensor 등 다른 prefill/decode 필드는 그대로 상속.
+    if "prefill" in replicas:
+        payload["prefill"] = {"replicas": int(replicas["prefill"])}
+    if "decode" in replicas:
+        payload["decode"] = {"replicas": int(replicas["decode"])}
     return {name: payload for name in targets}
 
 

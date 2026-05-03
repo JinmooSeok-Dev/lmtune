@@ -1,0 +1,45 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b1-pd-ratio
+
+# B1 — pd-disaggregation 의 prefill:decode replica 비율 탐색.
+#
+# 가정: 한 replica = TP=4 = 4 GPU (b200/helmfile/pd-disaggregation/values-llama-3.1-70b-tp4-pd.yaml).
+# 16-GPU 클러스터에서 prefill_replicas + decode_replicas <= 4 가 fit.
+#
+# 조합:
+#   (1,1) =  8 GPU,  (1,2)/(2,1) = 12 GPU,
+#   (1,3)/(3,1)/(2,2) = 16 GPU 사용
+# 9 cell 중 feasibility 로 6 조합 살아남음. 비율로 표현하면 1:1, 1:2, 2:1, 1:3, 3:1, 2:2.
+#
+# 워크로드 의미:
+#   short (256/128) — prefill 비중 약 → decode 늘리면 throughput↑
+#   long  (4096/512) — prefill heavy → prefill 늘려야 TTFT↓
+#   medium → 1:1 또는 1:2 가 sweet spot 인지 검증
+#
+# objective: bench_score 의 composite (NSGA-II 시 multi-obj 가능)
+# warm-start 후보: archive 의 single-replica (1,1) baseline.
+
+axes:
+  prefill_replicas:
+    type: categorical
+    values: [1, 2, 3]
+  decode_replicas:
+    type: categorical
+    values: [1, 2, 3]
+  max_num_seqs:
+    type: categorical
+    values: [64, 128, 256]
+  enable_chunked_prefill:
+    type: bool
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+
+feasibility_constraints:
+  # 한 replica = TP=4 = 4 GPU; 합 4 이하 (16 GPU 클러스터).
+  - id: pd_total_gpu_fit
+    rule: "(prefill_replicas + decode_replicas) <= 4"
+    message: "prefill_replicas + decode_replicas > 4: TP=4 replica 합이 16 GPU 초과"
+  # 의미 없는 0:N 또는 N:0 은 categorical 에 포함 안 했으므로 별도 가드 불필요.

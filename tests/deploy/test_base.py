@@ -55,3 +55,20 @@ def test_merge_unknown_keys_land_in_engine_args(tmp_path: Path):
     ea = merged["deployment"]["engine_args"]
     assert ea["seed"] == 42
     assert ea["foo"] == "bar"
+
+
+def test_merge_pd_replicas_routed_to_replicas_block(tmp_path: Path):
+    """prefill_replicas / decode_replicas 는 deployment.replicas.{prefill,decode} 로."""
+    p = tmp_path / "ep.yaml"
+    _baseline(p)
+    merged = merge_params_into_endpoint(
+        p, {"prefill_replicas": 2, "decode_replicas": 3, "max_num_seqs": 128}
+    )
+    replicas = merged["deployment"]["replicas"]
+    assert replicas["prefill"] == 2
+    assert replicas["decode"] == 3
+    # 다른 키는 영향 없음
+    assert merged["deployment"]["engine_args"]["max_num_seqs"] == 128
+    # P/D 키가 engine_args 로 흘러들지 않음
+    assert "prefill_replicas" not in merged["deployment"]["engine_args"]
+    assert "decode_replicas" not in merged["deployment"]["engine_args"]

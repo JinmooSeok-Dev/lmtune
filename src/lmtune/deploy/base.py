@@ -35,6 +35,9 @@ _ENGINE_ARG_KEYS: set[str] = {
     "block_size", "enforce_eager", "async_scheduling",
 }
 _PARALLELISM_KEYS: set[str] = {"tp", "pp", "dp", "ep", "rsd"}
+# P/D disaggregation 의 release-level replica axis. helmfile values 의 prefill/decode
+# 블록의 replicas 키와 1:1 매핑 (e.g., prefill_replicas=2 → prefill.replicas: 2).
+_PD_REPLICA_KEYS: set[str] = {"prefill_replicas", "decode_replicas"}
 
 
 @dataclass(slots=True)
@@ -67,10 +70,14 @@ def merge_params_into_endpoint(endpoint_path: str | Path, params: Mapping[str, A
     deployment = data.setdefault("deployment", {})
     engine_args = deployment.setdefault("engine_args", {})
     parallelism = deployment.setdefault("parallelism", {})
+    replicas = deployment.setdefault("replicas", {})
 
     for k, v in params.items():
         if k in _PARALLELISM_KEYS:
             parallelism[k] = v
+        elif k in _PD_REPLICA_KEYS:
+            # prefill_replicas → replicas.prefill, decode_replicas → replicas.decode
+            replicas[k.removesuffix("_replicas")] = int(v)
         else:
             engine_args[k] = v
 

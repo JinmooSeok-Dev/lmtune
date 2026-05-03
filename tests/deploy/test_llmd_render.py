@@ -61,3 +61,32 @@ def test_render_is_yaml_safe():
     dumped = yaml.safe_dump(overlay)
     loaded = yaml.safe_load(dumped)
     assert loaded == overlay
+
+
+def test_render_pd_replicas_emit_per_release():
+    """deployment.replicas → overlay 의 prefill.replicas / decode.replicas 분리 emit."""
+    endpoint = {
+        "model": "meta-llama/Llama-3.1-70B-Instruct",
+        "deployment": {
+            "engine_args": {"max_num_seqs": 128},
+            "parallelism": {"tp": 4},
+            "replicas": {"prefill": 2, "decode": 3},
+        },
+    }
+    overlay = render_values_overlay(endpoint, release_names=["ms-pd"])
+    assert "ms-pd" in overlay
+    ms = overlay["ms-pd"]
+    assert ms["prefill"] == {"replicas": 2}
+    assert ms["decode"] == {"replicas": 3}
+    # vllmArgs 가 prefill/decode 와 공존 (chart 가 둘을 별도로 처리)
+    assert ms["vllmArgs"]["max-num-seqs"] == 128
+    assert ms["vllmArgs"]["tensor-parallel-size"] == 4
+
+
+def test_render_omits_replicas_when_absent():
+    """deployment.replicas 가 없으면 overlay 에도 prefill/decode 키 자체가 없어야 한다."""
+    endpoint = {"model": "m", "deployment": {"engine_args": {}, "parallelism": {"tp": 1}}}
+    overlay = render_values_overlay(endpoint)
+    ms = overlay["ms-phase1"]
+    assert "prefill" not in ms
+    assert "decode" not in ms
