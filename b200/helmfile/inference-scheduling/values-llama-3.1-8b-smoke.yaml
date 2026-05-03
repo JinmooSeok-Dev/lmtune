@@ -27,9 +27,10 @@ decode:
       enabled: false
   containers:
     - name: "vllm"
-      # v0.7.0-rc.2 는 빌드 결함 (libcudart.so.12 부재). v0.6.0 으로 rollback.
+      # peer repo (agentic/llm-distributed-inference) 가 같은 NHN B200 위에서
+      # 검증한 정본. llm-d-cuda 라인은 우리 환경에서 gcc/ABI 결함 둘 다 만남.
       # base/values-b200-common.yaml 의 image.llmd.cuda 와 동기화.
-      image: ghcr.io/llm-d/llm-d-cuda:v0.6.0
+      image: vllm/vllm-openai:v0.17.1
       modelCommand: vllmServe
       args:
         # smoke 는 single-GPU 부팅 검증만이 목적. prefix-caching / block-size 같은
@@ -55,10 +56,6 @@ decode:
       env:
         - name: VLLM_LOGGING_LEVEL
           value: "INFO"
-        # base values 와 동일 — chart 가 common.env 를 적용 안 할 경우 대비 직접 박기.
-        # llm-d-cuda RHEL 이미지 + Debian multiarch libcuda inject 의 ld search path 보강.
-        - name: LIBRARY_PATH
-          value: "/usr/local/cuda/compat:/usr/lib/x86_64-linux-gnu:/usr/lib64"
         - name: HF_TOKEN
           valueFrom:
             secretKeyRef:

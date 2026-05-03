@@ -209,8 +209,7 @@ lmtune search start \
 
 | Risk | Phase | Mitigation |
 |:---|:---|:---|
-| **llm-d-cuda RHEL 이미지 + Debian multiarch libcuda inject** → Triton `cuda_utils.c` gcc compile 에서 `cannot find -l:libcuda.so.1` | B0 | base + smoke values 의 env 에 `LIBRARY_PATH=/usr/local/cuda/compat:/usr/lib/x86_64-linux-gnu:/usr/lib64` 추가. 이미지 자체의 잘 알려진 함정 — 모든 well-lit path 가 같은 image 를 쓰므로 base.common.env 적용 |
-| **llm-d-cuda v0.7.0-rc.2 빌드 결함 — cu13 base + cu12 vllm._C wheel ABI mismatch (`libcudart.so.12 not found`)** | B0 | v0.6.0 으로 rollback (`d8ddfa5`). v0.6.0 = cu129 + cu12 + torch cu129 일관, vllm 0.17.1 stable. upstream issue 보고 후보 (B8 `upstream_pr_candidates.md`) |
+| **llm-d-cuda 라인 (v0.6.0/v0.7.0-rc.2) 이 NHN B200 환경에서 break** — v0.7.0-rc.2 는 cu13/cu12 ABI mismatch (`libcudart.so.12 not found`), v0.6.0 은 RHEL 이미지 + Debian multiarch libcuda inject 로 Triton gcc `cannot find -l:libcuda.so.1` | B0 | **이미지를 `vllm/vllm-openai:v0.17.1` 로 swap** (peer repo `agentic/llm-distributed-inference` 가 같은 NHN B200 에서 검증한 정본). NIXL/LMCache 가 빠진 stripped image — B0/B1 inference-scheduling 에는 충분. P/D disaggregation 등 NIXL 필요 phase 에서 별도 image 검토 (B-IV 산출 `upstream_pr_candidates.md`) |
 | chart 가 `runtimeClassName` 미노출 | B0 | helm post-renderer 가 모든 Deployment 에 inject (`b200/helmfile/_postrender/postrender.sh`) |
 | `gateway.provider=istio` default → k3s Telemetry CRD 부재로 fail | B0 | helmfile 에 `provider: agentgateway` 명시 + `setup_gateway_provider.sh` 로 prereq 자동 |
 | B200 image 풀 대형 (수십 GB) | B0~B1 | image registry 캐시 (peer repo 빌드 결과 또는 in-cluster registry) |
