@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vllm-debug-v050
+  namespace: b200-infsch
+spec:
+  runtimeClassName: nvidia
+  restartPolicy: Never
+  containers:
+    - name: debug
+      image: ghcr.io/llm-d/llm-d-cuda:v0.5.0
+      command: ["sleep", "infinity"]
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          cpu: "2"
+          memory: 16Gi
+        limits:
+          nvidia.com/gpu: "1"
+          cpu: "4"
+          memory: 32Gi
+      securityContext:
+        capabilities:
+          add: ["IPC_LOCK"]
