@@ -1,0 +1,94 @@
+# Qwen2.5-1.5B-Instruct — minikube / single-GPU mini values (TEMPLATED)
+#
+# 본 파일은 helmfile values gotmpl. .StateValues 의 release-key dict 에서 vllmArgs 를
+# 읽어 vllm container args 로 직렬화한다. LLMDK8sAdapter.render_values_overlay() 와
+# 짝을 이루며 이 둘이 만나야 trial params 가 vLLM 에 진짜 적용됨.
+#
+# overlay 가 없을 때 (helmfile 단독 호출, lmtune 미경유) 는 default args 로 폴백.
+# 즉 manual `helmfile apply` 도 동작 + autotune cycle 도 동작.
+
+{{- $release := "ms-mini" -}}
+{{- $sv := index .StateValues $release | default dict -}}
+{{- $vllmArgs := index $sv "vllmArgs" | default dict -}}
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://Qwen/Qwen2.5-1.5B-Instruct"
+  size: 6Gi
+  name: "Qwen/Qwen2.5-1.5B-Instruct"
+  authSecretName: "huggingface-token"
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "minikube-mini"
+    llm-d.ai/hardware-variant: "any"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "Qwen2.5-1.5B"
+
+routing:
+  # peer repo phase1/ms-phase1/values-qwen3-30b.yaml 정본:
+  # P/D 가 아닌 single-path 에선 routing-proxy sidecar 비활성 필수.
+  proxy:
+    enabled: false
+    targetPort: 8000
+  servicePort: 8000
+
+decode:
+  parallelism:
+    tensor: 1
+  create: true
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+  containers:
+    - name: "vllm"
+      # peer repo (agentic/llm-distributed-inference) 와 b200 values-llama-3.1-8b-smoke.yaml
+      # 의 정본. llm-d-cuda 이미지는 NHN B200 에서 cuda_utils.c gcc link / wheel ABI 양쪽
+      # 으로 break, vllm-openai 가 더 작고 안정적. 본 mini 도 동일 이미지로 통일.
+      image: vllm/vllm-openai:v0.17.1
+      modelCommand: vllmServe
+      # args 는 .StateValues.{release}.vllmArgs 에서 동적 직렬화.
+      # 키는 kebab-case (LLMDK8sAdapter.render_values_overlay 가 그렇게 emit).
+      # bool true 는 flag 만, false 는 생략. 그 외는 "--key value" pair.
+      # overlay 미제공 시 default 로 폴백.
+      args:
+        # --- defaults (overlay 없을 때) ---
+        {{- $defaults := dict
+              "max-num-seqs" 32
+              "max-model-len" 4096
+              "gpu-memory-utilization" 0.85
+              "block-size" 16
+              "enforce-eager" true
+              "dtype" "bfloat16"
+        }}
+        {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
+        {{- range $k, $v := $merged }}
+        {{- if kindIs "bool" $v }}
+        {{- if $v }}
+        - "--{{ $k }}"
+        {{- end }}
+        {{- else }}
+        - "--{{ $k }}"
+        - {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          cpu: "2"
+          memory: 8Gi
+        limits:
+          nvidia.com/gpu: "1"
+          cpu: "8"
+          memory: 16Gi
+      env:
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-token
+              key: HF_TOKEN
+              optional: true
