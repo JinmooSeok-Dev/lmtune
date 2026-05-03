@@ -32,15 +32,15 @@ decode:
       image: ghcr.io/llm-d/llm-d-cuda:v0.6.0
       modelCommand: vllmServe
       args:
+        # smoke 는 single-GPU 부팅 검증만이 목적. prefix-caching / block-size 같은
+        # axis 는 search-space (b0_smoke.yaml, b2_vllm_engine.yaml) 의 노브로 빠짐.
+        # debug pod (v0.6.0 + 동일 minimal args) 에서 정상 부팅 확인된 set.
         - "--max-num-seqs"
         - "64"
         - "--max-model-len"
-        - "8192"
+        - "4096"
         - "--gpu-memory-utilization"
         - "0.85"
-        - "--block-size"
-        - "16"
-        - "--enable-prefix-caching"
         - "--dtype"
         - "bfloat16"
       resources:
