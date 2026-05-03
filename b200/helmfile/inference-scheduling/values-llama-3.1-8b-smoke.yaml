@@ -27,9 +27,9 @@ decode:
       enabled: false
   containers:
     - name: "vllm"
-      # v0.6.0 → v0.7.0-rc.2: B200 sm_100 native 지원이 들어간 첫 안정 빌드.
+      # v0.7.0-rc.2 는 빌드 결함 (libcudart.so.12 부재). v0.6.0 으로 rollback.
       # base/values-b200-common.yaml 의 image.llmd.cuda 와 동기화.
-      image: ghcr.io/llm-d/llm-d-cuda:v0.7.0-rc.2
+      image: ghcr.io/llm-d/llm-d-cuda:v0.6.0
       modelCommand: vllmServe
       args:
         - "--max-num-seqs"
