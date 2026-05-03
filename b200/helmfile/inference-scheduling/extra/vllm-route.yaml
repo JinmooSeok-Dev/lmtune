@@ -1,0 +1,48 @@
+# agentgateway provider 가 InferencePool 통한 routing 미지원 → 직접 svc + HTTPRoute 박음.
+# minikube S5f-3 단계의 함정과 동일. peer 는 lmtune run 1회만 검증해 우회 미적용,
+# 우리는 autotune cycle (svc 기반 port-forward 가 pod 변경 무관해야) 위해 정공.
+#
+# 사용:
+#   kubectl apply -f b200/helmfile/inference-scheduling/extra/vllm-route.yaml
+#
+# selector 의 label 은 modelservice chart 가 실제로 박는 것으로. 적용 전:
+#   kubectl -n b200-infsch get pod ms-infsch-llm-d-modelservice-decode-... --show-labels
+# 로 확인 후 selector 수정.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-decode
+  namespace: b200-infsch
+  labels:
+    app.kubernetes.io/component: vllm-decode-svc
+spec:
+  type: ClusterIP
+  selector:
+    # modelservice chart v0.4.12 가 decode pod 에 박는 label.
+    # 잘못된 label 시 selector empty → endpoints 0 → 503.
+    llm-d.ai/role: decode
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: vllm-route
+  namespace: b200-infsch
+spec:
+  parentRefs:
+    - name: infra-infsch-inference-gateway
+      kind: Gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: vllm-decode
+          port: 8000
+          weight: 1
