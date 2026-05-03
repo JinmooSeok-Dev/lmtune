@@ -119,7 +119,15 @@ def cmd_start(
         adapter_obj = LocalVLLMAdapter()
     elif adapter == "llmd-k8s":
         from lmtune.deploy import LLMDK8sAdapter
-        adapter_obj = LLMDK8sAdapter()
+        # endpoint YAML 의 deployment.helmfile_overrides 블록을 읽어 adapter 구성.
+        # bare ctor 는 (selector=name=ms-phase1, env=dev) 같은 peer-repo 디폴트라
+        # b200/helmfile/inference-scheduling/helmfile-mini.yaml.gotmpl 등 다른
+        # helmfile 을 가리키는 endpoint 에선 release-not-found 로 실패.
+        if endpoint is not None:
+            ep_data = yaml.safe_load(endpoint.read_text(encoding="utf-8"))
+            adapter_obj = LLMDK8sAdapter.from_endpoint(ep_data, dry_run=dry_run)
+        else:
+            adapter_obj = LLMDK8sAdapter()
     elif adapter != "none":
         raise typer.BadParameter(f"unknown --adapter: {adapter}")
 

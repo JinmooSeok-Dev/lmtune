@@ -37,7 +37,14 @@ def cmd_deploy(
         ad = LocalVLLMAdapter()
     elif adapter == "llmd-k8s":
         from lmtune.deploy import LLMDK8sAdapter
-        ad = LLMDK8sAdapter()
+        # endpoint YAML 의 deployment.helmfile_overrides 를 우선 사용 (cli_search 와 동일 패턴).
+        # bare ctor 의 (selector=name=ms-phase1, env=dev) 디폴트는 peer-repo phase1 만 매칭.
+        try:
+            import yaml as _yaml
+            ep_data = _yaml.safe_load(Path(endpoint).read_text(encoding="utf-8"))
+            ad = LLMDK8sAdapter.from_endpoint(ep_data)
+        except Exception:
+            ad = LLMDK8sAdapter()
     else:
         raise typer.BadParameter(f"unknown adapter: {adapter}")
 
