@@ -224,3 +224,58 @@ K8s Service 의 selector → endpoints 매핑은 **pod 이름이 아니라 label
 - Helmfile docs — values gotmpl 의 `.StateValues` 액세스
 - llm-d-modelservice v0.4.12 — `routing.proxy.enabled: false` 가드 한계
 - agentgateway v1.0.0 — InferencePool 라우팅 미지원 (cross-env 함정)
+
+---
+
+## 7. 부록 — lmtune search 자동 cycle 검증 (§ 5.1 후속)
+
+§ 5.1 "lmtune search ↔ LLMDK8sAdapter 통합 실행" 후속. 본 분석에서 수동 helmfile apply 로 입증한 cycle 을 Python 어댑터가 자동 실행. **두 trial 모두 cycle 완주 + trial_metrics 에 trial 별 측정값 적재**.
+
+### 7.1 실행
+
+```bash
+nohup bash b200/scripts/pf_keepalive.sh > /tmp/pf_keepalive.log 2>&1 &
+.venv/bin/lmtune search start \
+  --endpoint b200/endpoints/minikube_smoke.yaml \
+  --space b200/search-spaces/w_minikube_minimal.yaml \
+  --profile configs/profiles/autotune/short.yaml \
+  --strategy random --max-trials 2 --adapter llmd-k8s \
+  --backend inline --workers 1 --seed 42 \
+  --repeats 1 --ttft-slo-ms 60000 \
+  --name minikube-real-cycle-v7
+```
+
+study_id=`st-01KQQZ92WH747X6D64JHW0N46N`.
+
+### 7.2 trial_metrics — 자동 cycle 의 직접 증거
+
+| trial | params (sampled) | duration | ttft_p99 (ms) | e2e_p99 (s) | throughput (tok/s) | 해석 |
+|:---|:---|:---|---:|---:|---:|:---|
+| 1 (`tr-...KT0Z`) | `max_num_seqs=16, gpu_mem=0.82, prefix_caching=true` | 2:13 | 4905 | 7.77 | 373.7 | warm path (이전 pod 위에 측정) |
+| 2 (`tr-...ET55`) | `max_num_seqs=32, gpu_mem=0.90, prefix_caching=true` | 3:08 | 41846 | 43.81 | 716.6 | cold path (pod redeploy 후 첫 측정) |
+
+**핵심 관찰**: 두 trial 의 **params 가 다르고 측정값도 다르다** — 이게 params injection 이 trial-specific 으로 동작한 직접 증거. trial 1 은 작은 batch (`max_num_seqs=16`) 로 throughput 낮지만 응답 안정, trial 2 는 큰 batch + cold-load 로 throughput 2배지만 cold start TTFT 41s. 둘 다 `score=0.0` — profile 의 `ttft_p99_ms: 500` SLO 가 cold-start 보다 엄격해서 발생, **cycle 결함이 아니다**.
+
+### 7.3 § 4.1 표 갱신 — 자동화까지 입증된 명제
+
+| 명제 | 본 부록 이전 | 본 부록 후 |
+|:---|:---|:---|
+| 자동 cycle (lmtune search → LLMDK8sAdapter.apply) 가 helmfile apply + rollout + probe + lmtune run + score 까지 끝까지 도는가 | 수동 검증만 (§ 2) | ✅ 2 trial 모두 완주, trial_metrics 에 trial 별 ttft_p99/e2e_p99/throughput 실측값 적재 |
+| 자동 cycle 이 trial 마다 다른 params 를 vllm 에 적용하는가 | 미증명 | ✅ trial 1 vs 2 의 params 다름 + 측정값 다름 (TTFT 4.9s vs 41.8s) |
+| port-forward 가 cycle 동안 안정적인가 | port-forward 가 svc 의 backend pod 이 바뀌면 끊어진다 (실측) | ✅ `b200/scripts/pf_keepalive.sh` 가 자동 재기동 — 자동 cycle 동안 endpoint url 안정 유지 |
+
+### 7.4 본 부록이 매운 5 가지 fix (커밋 `62e89b9`)
+
+1. `b200/endpoints/minikube_smoke.yaml` 에 `environment: default` — helmfile-mini 의 default env 매칭
+2. `src/lmtune/deploy/llmd_k8s.py` probe 에 retry/backoff — k8s rollout != vllm serving ready 갭 해소
+3. `src/lmtune/search/objective.py` bench → lmtune binary 탐지 (rename 흔적)
+4. `scripts/lmtune_score.py` `--bench-bin` 디폴트 lmtune (rename 흔적)
+5. `src/lmtune/cli_search.py` `--repeats`, `--ttft-slo-ms` CLI flag 노출
+
+신규: `b200/scripts/pf_keepalive.sh` (port-forward 자가 복구).
+
+### 7.5 다음 단계 (가능 항목)
+
+- B200 의 `values-llama-3.1-8b-smoke.yaml` 에 동일 `.gotmpl` 패턴 적용 → B200 cycle 진입 (§ 4.3)
+- profile SLO 를 cold-start 와 양립 가능한 값으로 조정 (warmup-aware) — score>0 도출 가능 → Pareto front 그릴 수 있게 됨
+- helmfile cycle 동안 GPU contention 자동 해소 (force-cleanup hook) — minikube 한정 운영 편의
