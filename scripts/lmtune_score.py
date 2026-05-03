@@ -32,7 +32,10 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--cv-threshold", type=float, default=0.10)
     ap.add_argument("--ttft-slo-ms", type=float, default=500.0,
                     help="penalty denominator uses 2 * this value")
-    ap.add_argument("--bench-bin", default=os.environ.get("BENCH_BIN", "bench"))
+    ap.add_argument(
+        "--bench-bin",
+        default=os.environ.get("LMTUNE_BIN") or os.environ.get("BENCH_BIN") or "lmtune",
+    )
     ap.add_argument("--db", type=Path, default=None)
     return ap.parse_args()
 

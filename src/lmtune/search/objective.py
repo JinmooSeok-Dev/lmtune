@@ -94,15 +94,19 @@ class ScoreObjective:
         self.profile_paths = [Path(p) for p in profile_paths]
         self.repeats = int(repeats)
         self.ttft_slo_ms = float(ttft_slo_ms)
-        # Resolve bench CLI: explicit > BENCH_BIN env > venv(sys.executable) > PATH
+        # Resolve CLI: explicit > BENCH_BIN/LMTUNE_BIN env > venv(sys.executable) > PATH
+        # legacy name 'bench' 도 지원 (rename 흔적 — 외부 호출자 호환성).
         if bench_bin is None:
             import os as _os
-            env_bin = _os.environ.get("BENCH_BIN")
-            venv_bench = Path(sys.executable).parent / "bench"
+            env_bin = _os.environ.get("LMTUNE_BIN") or _os.environ.get("BENCH_BIN")
+            venv_dir = Path(sys.executable).parent
             if env_bin:
                 bench_bin = env_bin
-            elif venv_bench.exists():
-                bench_bin = str(venv_bench)
+            else:
+                for cand in ("lmtune", "bench"):
+                    if (venv_dir / cand).exists():
+                        bench_bin = str(venv_dir / cand)
+                        break
         self.bench_bin = bench_bin
         self.python_bin = python_bin or sys.executable or shutil.which("python") or "python3"
         self.script = Path(__file__).resolve().parents[3] / "scripts" / "lmtune_score.py"

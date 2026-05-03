@@ -23,6 +23,7 @@ deployment:
   helmfile_overrides:
     helmfile_root: /home/jinmoo/ml_ai/benchmark
     helmfile_file: b200/helmfile/inference-scheduling/helmfile-mini.yaml.gotmpl
+    environment: default
     selector: kind=inference-stack
     release_name: ms-mini
     namespace: mini-infsch

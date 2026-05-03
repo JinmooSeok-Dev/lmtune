@@ -88,6 +88,17 @@ def cmd_start(
                  "지정 시 NSGA-II/III 등 multi-obj 샘플러 권장.",
         ),
     ] = None,
+    repeats: Annotated[
+        int,
+        typer.Option("--repeats", help="trial 당 lmtune run 반복 횟수 (variance gate)"),
+    ] = 3,
+    ttft_slo_ms: Annotated[
+        float,
+        typer.Option(
+            "--ttft-slo-ms",
+            help="composite score 의 TTFT penalty denom (=2× 본 값). 클수록 SLO 완화.",
+        ),
+    ] = 500.0,
 ):
     sp = load_space(space)
     profile = profile or []
@@ -183,6 +194,8 @@ def cmd_start(
             endpoint_path=endpoint,
             profile_paths=[Path(p) for p in profile],
             adapter=adapter_obj,
+            repeats=repeats,
+            ttft_slo_ms=ttft_slo_ms,
         )
         if obj_keys:
             from lmtune.search.objective_pareto import ParetoObjective
