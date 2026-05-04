@@ -1,0 +1,46 @@
+apiVersion: lmtune/v1alpha1
+slug: autotune-multiturn-agent
+name: "Autotune — multi-turn agent (aiperf user_centric, 5-turn 코딩 에이전트 세션)"
+stage: 2
+description: |
+  aiperf 의 user_centric 모드로 진짜 multi-turn 대화를 재현. 단발 concurrency
+  측정 (short/medium/long) 와 달리 (a) prefix-cache 효과, (b) KV cache 누적
+  pressure, (c) 세션-내 latency variance 를 캡처.
+
+  코딩 에이전트 시나리오: 1 conversation = 평균 5 turn (read→propose→apply→
+  test→commit). 8 concurrent users 가 sessions 를 stream.
+
+references: [S-2, S-21]    # AgentTaxo, AGENTS.md Impact
+
+runner: aiperf
+mode: user_centric
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1024
+  output_tokens_mean: 512
+  num_users: 8                       # 동시 active user 수
+  user_centric_rate: 1.0             # user 당 session 시작 rate (sessions/s/user)
+  conversation_num: 30               # 총 conversation 수
+  conversation_turn_mean: 5          # 평균 turn 수
+  conversation_turn_stddev: 1
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 60000
+  e2e_p99_ms: 60000                  # multi-turn 이라 단발보다 여유
+  checks:
+    - metric: throughput_req
+      p: avg
+      op: ">="
+      value: 0.0
+      severity: warning
+      label: "대조 지표"
+    - metric: ttft
+      p: p50
+      op: "<="
+      value: 5000
+      severity: info
+      label: "multi-turn TTFT 중앙값"
+
+tags: [autotune, multiturn, agent, aiperf]
