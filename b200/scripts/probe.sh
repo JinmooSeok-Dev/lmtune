@@ -26,7 +26,10 @@ set -u
 JSON_MODE=false
 SKIP_FABRIC=false
 MODE=host
-PEER_REPO_DEFAULT="/home/jinmoo/ml_ai/agentic/llm-distributed-inference"
+# peer repo 경로. lmtune 자체엔 b200/helmfile/* 가 self-contained 이므로 이 검사는 informational.
+# default 는 $HOME 기준이지만 실제 clone 위치가 다르면 PEER_REPO 환경변수로 override.
+# 디렉토리가 없어도 probe 는 INFO 로 처리 (FAIL 로 쪽지 안 띄움).
+PEER_REPO_DEFAULT="${HOME}/ml_ai/agentic/llm-distributed-inference"
 PEER_REPO="${PEER_REPO:-$PEER_REPO_DEFAULT}"
 
 while [ $# -gt 0 ]; do

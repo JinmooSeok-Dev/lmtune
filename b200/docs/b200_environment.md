@@ -72,4 +72,4 @@
 - llm-d v0.5 release notes: <https://github.com/llm-d/llm-d/releases>
 - gateway-api-inference-extension: <https://github.com/kubernetes-sigs/gateway-api-inference-extension>
 - B200 spec: <https://www.nvidia.com/en-us/data-center/b200/>
-- 작업 흐름 정의: `/home/jinmoo/.claude/plans/async-cooking-cat.md` (Phase B 섹션)
+- 작업 흐름 정의: `(internal dev plan, not in repo)` (Phase B 섹션)

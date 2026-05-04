@@ -226,4 +226,4 @@
 - 시스템 스냅샷: `b200/studies/<id>/system_snapshot.json`
 - 직전 baseline study: `b200/studies/<prev_id>/`
 - 비교 reference: cfregly `expectations_b200.json`, llm-d v0.5 release notes
-- 관련 plan 섹션: `/home/jinmoo/.claude/plans/async-cooking-cat.md` Phase B-X
+- 관련 plan 섹션: `(internal dev plan, not in repo)` Phase B-X

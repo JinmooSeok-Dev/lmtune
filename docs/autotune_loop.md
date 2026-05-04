@@ -396,6 +396,6 @@ autoresearch agent (Claude)
 - `docker/Dockerfile.trial_runner` — Trial Pod 이미지
 
 및 외부 reference:
-- `/home/jinmoo/.claude/plans/async-cooking-cat.md` — 전체 plan
+- `(internal dev plan, not in repo)` — 전체 plan
 - `docs/search_tooling_2026-04.md` — 도구 선택 근거 (Optuna/SALib/BoTorch)
 - 유사 OSS 비교: plan 파일의 "참고 — 유사 / 비교 OSS 프로젝트" 섹션
