@@ -16,7 +16,7 @@ api_type: openai
 
 deployment:
   engine: vllm
-  version: "0.7.x"
+  version: "0.17.1"
   parallelism:
     tp: 1
     dp: 1
@@ -29,6 +29,20 @@ deployment:
     gpu_memory_utilization: 0.85
     kv_cache_dtype: auto
     dtype: bfloat16
+  # LLMDK8sAdapter 의 1st-class 매핑. minikube_smoke.yaml 와 동일 패턴.
+  # autotune cycle (lmtune search --adapter llmd-k8s) 가 매 trial 마다
+  #   helmfile -f <helmfile_file> --environment default --selector kind=inference-stack
+  #     --state-values-file <overlay> apply
+  # 로 release `ms-infsch` 만 갈아치우고 나머지 (infra-, gaie-) 는 그대로.
+  helmfile_overrides:
+    helmfile_root: /home/jinmoo/ml_ai/benchmark
+    helmfile_file: b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl
+    environment: default
+    selector: kind=inference-stack
+    release_name: ms-infsch
+    namespace: b200-infsch
+    deployment_name: ms-infsch-llm-d-modelservice-decode
+    rollout_timeout_s: 600
 
 notes: |
   B0 smoke endpoint. 단일 B200 GPU 위에서 가장 가벼운 모델로 bench 파이프라인 검증.
