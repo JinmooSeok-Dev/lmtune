@@ -47,7 +47,8 @@ bench_env::local_port_from_endpoint() {
 
 # RUNTIME 검증 — kubectl 가 닿는 클러스터, namespace 존재
 bench_env::cluster_check() {
-  local rn="$1" ns="b200-${rn}"
+  local rn="$1"
+  local ns="b200-${rn}"
   if ! kubectl version --request-timeout=5s >/dev/null 2>&1; then
     echo "[env] kubectl 가 클러스터에 닿지 않음 (kubeconfig?)" >&2
     return 2

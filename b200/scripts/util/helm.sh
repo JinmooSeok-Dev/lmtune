@@ -8,14 +8,16 @@
 # shellcheck shell=bash
 
 helmd::list() {
-  local rn="$1" ns="b200-${rn}"
+  local rn="$1"
+  local ns="b200-${rn}"
   helm -n "$ns" list 2>/dev/null
 }
 
 # 3종 release 가 모두 deployed 인지 0/N 으로 반환. 빠진 release 이름 stdout.
 # return 0 = 모두 OK, 1 = 일부 missing
 helmd::releases_check() {
-  local rn="$1" ns="b200-${rn}"
+  local rn="$1"
+  local ns="b200-${rn}"
   local missing=()
   for r in infra gaie ms; do
     if ! helm -n "$ns" list -q 2>/dev/null | grep -qE "^${r}-${rn}$"; then
@@ -58,7 +60,9 @@ helmd::apply() {
 
 # decode pod ready 대기 — gpt-oss-120b 같은 큰 모델은 weight 다운로드/로딩 5-15분
 helmd::wait_decode_ready() {
-  local rn="$1" ns="b200-${rn}" timeout="${2:-20m}"
+  local rn="$1"
+  local timeout="${2:-20m}"
+  local ns="b200-${rn}"
   echo "[helmd::wait] ns=${ns}  timeout=${timeout}"
   kubectl -n "$ns" wait --for=condition=Available deploy \
     -l llm-d.ai/role=decode --timeout="$timeout"
