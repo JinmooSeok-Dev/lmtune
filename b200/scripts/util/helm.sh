@@ -58,14 +58,40 @@ helmd::apply() {
   helmfile --environment default --selector kind=inference-stack -f "$file" apply
 }
 
-# decode pod ready 대기 — gpt-oss-120b 같은 큰 모델은 weight 다운로드/로딩 5-15분
+# decode pod ready 대기 — gpt-oss-120b 같은 큰 모델은 weight 다운로드/로딩 5-15분.
+#
+# 주의: llm-d-modelservice chart v0.4.12 는 Deployment metadata.labels 에
+# `llm-d.ai/role=decode` 를 안 붙임 (spec.selector.matchLabels 와 pod template
+# 에만 붙음). 따라서 `kubectl wait deploy -l llm-d.ai/role=decode` 는
+# "no matching resources found" 로 즉시 실패. 우회 = 이름 패턴 매칭으로
+# decode Deployment 들을 직접 찾아 `wait deploy/<name>`.
 helmd::wait_decode_ready() {
   local rn="$1"
   local timeout="${2:-20m}"
   local ns="b200-${rn}"
   echo "[helmd::wait] ns=${ns}  timeout=${timeout}"
-  kubectl -n "$ns" wait --for=condition=Available deploy \
-    -l llm-d.ai/role=decode --timeout="$timeout"
+
+  local deploys
+  deploys=$(kubectl -n "$ns" get deploy \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null \
+    | grep -E "llm-d-modelservice-decode$" || true)
+
+  if [[ -z "$deploys" ]]; then
+    echo "[helmd::wait] decode deployment not found in $ns" >&2
+    echo "  현재 namespace 의 deployment:" >&2
+    kubectl -n "$ns" get deploy >&2 || true
+    return 2
+  fi
+
+  while IFS= read -r dep; do
+    [[ -n "$dep" ]] || continue
+    echo "  → wait deploy/${dep} --for=condition=Available --timeout=${timeout}"
+    if ! kubectl -n "$ns" wait "deploy/$dep" \
+        --for=condition=Available --timeout="$timeout"; then
+      return 2
+    fi
+  done <<< "$deploys"
+  return 0
 }
 
 # release 모두 삭제 (cleanup) — 신중. 호출 전 확인 필요.
