@@ -132,6 +132,89 @@ os:
 
 ---
 
+## Layer 1 ↔ 2 결합 — Dependency Graph (직교 cartesian 회피)
+
+> **사용자 통찰 (2026-05-05)**: "input 이랑 environment 는 서로 의존관계 및 영향도가 꽤 크니, 단순히 매트릭스로 관리하면 낭비가 조금 심해질 수도 있을 것 같아!"
+>
+> 정확합니다. 70+ axis × 10 environment dim 을 cartesian 으로 sample 하면 **>95% combo 가 invalid**. 본 프로젝트는 그 dependency 를 **4-stage 압축**으로 처리하고 sampler 가 valid region 만 본다.
+
+### 4 Stage Reduction Pipeline
+
+```
+Stage 0 (raw)          : 70 axis × 10 env dim ≈ 5^70 × 5^10 ≈ 10^56 조합
+                                ↓
+Stage 1 (capability)   : env capability gate     — Layer 2 가 axis 자체를 끔
+                                ↓
+Stage 2 (model)        : model axis constraint   — Layer 1 model 이 values 부분집합만 허용
+                                ↓
+Stage 3 (active_if)    : conditional axis        — parent axis 가 child 활성화 결정
+                                ↓
+Stage 4 (cross-axis)   : feasibility_constraints — sample 후 expression 검증
+                                ↓
+Effective: ~12 axis    : sampler 가 보는 실제 차원 (모델·환경·path tuple 별로 다름)
+```
+
+각 stage 의 책임 + 위치 + 예시:
+
+| Stage | 입력 | 출력 | 책임 위치 | 예시 |
+|:---:|:---|:---|:---|:---|
+| **1** | `Environment` | active axis set | `feasibility.py::_capability_filter()` (TODO) | `nccl_nvls_enable` axis 자체가 사라짐 (env.intra_node ≠ nvlink-with-NVSwitch5 또는 NCCL < 2.23) |
+| **2** | `Model` (registry) | axis values 부분집합 | `models/registry.py::axis_constraints` (TODO) | gpt-oss-120b 의 `kv_cache_dtype` values 가 `[fp8, fp8_e4m3]` 로 자동 축소 |
+| **3** | parent axis 값 | child axis 비활성 | `space.py::active_if` (✅ 구현됨) | `prefix_caching_hash_algo` 가 `enable_prefix_caching=true` 일 때만 활성 |
+| **4** | sampled params dict | feasibility bool | `feasibility.py::evaluate()` (✅ 구현됨, hook 미장착) | `tp * pp * dp <= total_npus` |
+
+### Stage 1+2 가 미구현 (사용자 질문의 핵심)
+
+현재는 **Stage 3 + Stage 4 만** 동작:
+- Stage 3 (`active_if`) — search-space yaml 안에서만, env/model 모름
+- Stage 4 (`feasibility_constraints`) — 모듈 있지만 Study.ask() hook 미장착
+
+이게 reactive crash whack-a-mole 의 근원. Stage 1+2 를 추가하면:
+- 새 모델 추가 = registry yaml 1줄 (`axis_constraints` 필드)
+- 새 환경 = Environment 객체 1개 (`from_probe` 자동 빌드)
+- 새 axis 추가해도 호환 안 되는 모델·환경에선 자동으로 search-space 에서 제거
+
+### Dependency 표현 — 데이터 모델
+
+```yaml
+# src/lmtune/models/{gpt-oss-120b}.yaml (TODO Sprint 1 PR-B)
+model_id: openai/gpt-oss-120b
+quantization: mxfp4-native
+total_params_b: 120
+# ... existing simulator fields ...
+axis_constraints:
+  kv_cache_dtype: [fp8, fp8_e4m3]      # attention.py:408 hardcoded assert
+  cpu_offload_gb: [0]                  # vllm#18298 — V1 engine 비호환
+  dtype: [auto, bfloat16]              # MXFP4 native
+capability_requirements:                # Layer 2 dependency
+  fabric_min:
+    intra_node: nvlink                 # 단일 노드 TP=8 가능
+  vllm_min: "0.10.0"                   # MXFP4 지원 시점
+```
+
+```yaml
+# b200/search-spaces/b6_interconnect_tier1.yaml — capability gate 추가
+axes:
+  nccl_nvls_enable:
+    type: categorical
+    values: ["0", "1"]
+    capability_required:                # Stage 1 — env 가 강제로 활성/비활성
+      intra_node: nvlink-nvswitch5
+      nccl_min: "2.23"
+```
+
+→ Sampler 는 axis 의 active set 만 본다. 매번 새 (model, env, path) tuple 진입 시 4 stage 가 재계산 → effective axis ~12.
+
+### 효과 정량
+
+| 측정 | Stage 1+2 미적용 (현재) | Stage 1+2 적용 (Sprint 1 후) | 압축 |
+|:---|:---:|:---:|:---:|
+| 30 trial 중 infeasible 비율 | ~67% (gpt-oss-120b sweep 기준) | ~5% (cross-axis constraint 만) | 13× |
+| sampler 가 학습할 dim | 70+ flat | (model, env) 별 12-15 | 5× 압축 |
+| TPE 수렴 속도 | 30 trial → mediocre | 30 trial → near-optimal | ~3× |
+
+---
+
 ## Layer 3 — Measurement (관측·저장·분석·시각화)
 
 ### 책임
@@ -238,6 +321,99 @@ trial*     — trial_id, study_id, params, status, score (S1+)
 - ❌ **Pre-flight validation gate** — `lmtune search start` 진입 시 (search-space × endpoint × model × env) 충돌 검증 미구현
 - ❌ **outcome → search-space 자동 rewrite** — INFEASIBLE 누적되면 `axis values` 에서 자동 제거 (반자동 with `--apply`)
 
+### Pluggability — Controller 갈아끼우기 (사용자 질문 2026-05-05)
+
+> "Controller 부분은 꼭 내 구현을 쓰지 않더라도, 다른 LLM API 를 부른다거나 AI agent API 를 부를 수도 있었으면 좋겠어!"
+
+**현재 상태 솔직 평가**:
+- ❌ **In-process plug-in 불가** — `Study` 가 `optuna.create_study()` 직접 호출, sampler 는 Optuna `BaseSampler` 만 받음
+- ✅ **CLI seam 유일 가능** — `lmtune search ask/tell` (S6, autoresearch.sh 가 활용)
+- ⚠️ 외부 controller (LLM/agent) 가 in-process 통합 불가 — 별도 프로세스로 CLI 호출만
+
+**제안 — Controller ABC 도입 (Sprint 1 후속 PR)**:
+
+```python
+# src/lmtune/search/controller.py (TODO)
+class Controller(ABC):
+    """단일 책임: (active_axes, history) → next params dict.
+
+    Study 는 persistence + breaker + profile_binder 를 담당하고,
+    'next params' 결정만 Controller 에 위임 — Optuna 에 락인 해제.
+    """
+    @abstractmethod
+    def ask(self, active_axes: list[Axis], history: list[Trial]) -> dict[str, Any]: ...
+
+    @abstractmethod
+    def tell(self, params: dict, score: float | None,
+             status: str, metadata: dict | None = None) -> None: ...
+
+    @property
+    def name(self) -> str: ...
+```
+
+**3 reference 구현으로 진짜 pluggability 입증**:
+
+| 구현체 | 위치 | 용도 |
+|:---|:---|:---|
+| `OptunaController` | `controller/optuna.py` | 현재 sampler 8종 (TPE/CMA-ES/NSGA-II/...) 그대로 wrap. 기본값 |
+| `RandomController` | `controller/random.py` | Optuna 의존성 0, pure Python. 검증/baseline 용 |
+| `HTTPController` | `controller/http.py` | URL 에 POST, **외부 LLM/agent API 통합 base** |
+
+**HTTPController 가 가능하게 하는 시나리오**:
+
+```bash
+# 시나리오 A: 외부 Anthropic Claude controller
+$ python my_claude_controller.py --listen :8080 &
+$ lmtune search start ... --controller http --controller-url http://localhost:8080
+# my_claude_controller.py 가 Anthropic SDK 로 axis 추론, 우리는 측정만
+
+# 시나리오 B: 외부 OpenAI/Gemini/local LLM controller
+$ python my_gpt_controller.py ... &
+$ lmtune search start ... --controller http --controller-url ...
+
+# 시나리오 C: 자체 RL/MAB agent
+$ python my_rl_controller.py ... &  # 내부 state 자체 관리
+$ lmtune search start ... --controller http ...
+
+# 시나리오 D: autoresearch (현재 S6 CLI seam 유지) + in-process LLM controller (신규)
+$ lmtune search start ... --controller http --controller-url $AUTORESEARCH_URL
+```
+
+**HTTP API 계약** (controller 서비스 작성자용):
+
+```http
+POST /ask
+Content-Type: application/json
+{
+  "study_id": "st-...",
+  "active_axes": [{"name": "max_num_seqs", "kind": "categorical", "values": [...]}],
+  "history": [{"params": {...}, "score": 142.5, "status": "completed"}, ...]
+}
+→ 200 OK
+{"params": {"max_num_seqs": 64, ...}}
+
+POST /tell
+{
+  "study_id": "st-...",
+  "params": {...}, "score": 142.5, "status": "completed",
+  "metadata": {"duration_s": 1340, "trial_id": "tr-..."}
+}
+→ 204 No Content
+```
+
+이 계약만 충족하면 어떤 언어·프레임워크의 controller 도 plug-in 됨 — Python (Anthropic SDK), TypeScript (LangGraph), Go (자체 RL), Rust 등.
+
+### Layer 4 Pluggability Roadmap
+
+| PR | 책임 | 분량 |
+|:---:|:---|:---:|
+| 1 | `Controller` ABC + `OptunaController` (기존 로직 wrap) — 기본 동작 동일 | 1일 |
+| 2 | `RandomController` + tests — 진짜 plug-in 작동 입증 | 0.5일 |
+| 3 | `HTTPController` + 계약 문서 + `examples/controllers/` reference 구현 | 1일 |
+| 4 | CLI flag `--controller {optuna,random,http} --controller-url` | 0.5일 |
+
+→ 3일 안에 user 의 "다른 LLM/agent API 부르기" 시나리오 충족.
+
 ---
 
 ## Layer 5 — Launcher (적용·실행)
@@ -329,6 +505,15 @@ TritonAdapter*         ✓               ✓                 ← B7 미래
 | **#G** | `EngineBackend` ABC | `runners/base.py` 에 추가, vLLM 첫 구현체 |
 | **#H** | SGLangAdapter (drop-in) | `deploy/sglang.py` (LLMDK8sAdapter 패턴 포팅) |
 | **#I** | Image digest pinning | LLMDK8sAdapter 의 values overlay 가 study 시작 시점의 digest 박음 |
+
+### Sprint 4 — Layer 4 Controller Pluggability (사용자 요청)
+
+| PR | 책임 | 산출 |
+|:---:|:---|:---|
+| **#J** | `Controller` ABC + `OptunaController` | `src/lmtune/search/controller/{base,optuna}.py` — Study 가 ABC 에 위임 |
+| **#K** | `RandomController` (Optuna-free baseline) | plug-in 작동 입증, 단위 테스트 |
+| **#L** | `HTTPController` + 계약 문서 + reference controller | 외부 LLM/agent API 통합 base — `examples/controllers/{claude,random}.py` |
+| **#M** | CLI flag `--controller {optuna,random,http} --controller-url` | UX |
 
 ---
 
