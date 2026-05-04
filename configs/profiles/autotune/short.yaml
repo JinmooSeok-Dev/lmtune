@@ -5,7 +5,7 @@ stage: 1
 description: "짧은 입력/출력. TTFT-민감 워크로드. autoresearch 루프가 3 워크로드 중 1개로 순회."
 references: []
 
-runner: guidellm
+runner: aiperf
 mode: concurrency
 
 workload:
