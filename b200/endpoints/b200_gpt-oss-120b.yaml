@@ -10,16 +10,17 @@ deployment:
   engine: vllm
   version: "0.17.1"
   parallelism:
-    tp: 1
-    dp: 1
+    tp: 8
+    dp: 2
     ep: false
   engine_args:
     enable_prefix_caching: true
-    max_num_seqs: 32
+    max_num_seqs: 128
     max_model_len: 8192
     gpu_memory_utilization: 0.90
     kv_cache_dtype: auto
     dtype: bfloat16
+    tensor_parallel_size: 8
   helmfile_overrides:
     helmfile_file: b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl
     environment: default
@@ -31,10 +32,15 @@ deployment:
 
 notes: |
   gpt-oss-120b — 117B MoE / 5.1B active / 128 experts top-4 / MXFP4.
-  단일 B200 (~180GB HBM3e) 에 ~63GB weight + KV cache 충분.
-  16-GPU 활용: TP=2 × DP=8 또는 wide-EP (DP=8 × EP=8) — b3_parallelism axis 참조.
+  default = TP=8 × DP=2 = 16 GPU 전부 활용 (노드별 1 replica, NVLink/NVSwitch).
+  P/D disaggregation 비활성 (NIXL 미정상). prefill.create: false 명시.
+  TopologySpreadConstraint 로 노드별 1 replica 강제 (cross-node RDMA 회피).
+
+  16-GPU axis sweep (b3_parallelism.yaml):
+    - TP=2 × DP=8, TP=4 × DP=4 (replicas 우위)
+    - wide-EP (DP=8 × EP=8) — wide-ep-lws path 별도
 
   helmfile redeploy 전:
     export B200_MODEL_VALUES=values-gpt-oss-120b.yaml.gotmpl
 
-tags: [b200, gpt-oss, moe, mxfp4, large]
+tags: [b200, gpt-oss, moe, mxfp4, large, 16gpu]
