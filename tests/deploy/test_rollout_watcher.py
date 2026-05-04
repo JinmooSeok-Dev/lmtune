@@ -74,6 +74,18 @@ def test_classify_infeasible_kv_cache_dtype_assert_only():
     assert classify_crash(logs) == "infeasible"
 
 
+def test_classify_infeasible_cpu_weight_offload():
+    """cpu_offload_gb > 0 + V1 engine + input batch re-init → vllm#18298."""
+    logs = "RuntimeError: Worker failed with error 'Cannot re-initialize the input batch when CPU weight offloading is enabled. See https://github.com/vllm-project/vllm/pull/18298'"
+    assert classify_crash(logs) == "infeasible"
+
+
+def test_classify_infeasible_cpu_weight_offload_short():
+    """짧은 fragment 도 매치."""
+    logs = "CPU weight offloading is enabled"
+    assert classify_crash(logs) == "infeasible"
+
+
 def test_classify_infeasible_mxfp4_dtype_multiline_regression():
     """PR #13 회귀 — ValidationError 와 'not supported for quantization' 사이에
     줄바꿈/들여쓰기 가 끼어도 매치되어야 한다."""

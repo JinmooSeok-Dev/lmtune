@@ -41,6 +41,11 @@ CRASH_PATTERNS: dict[str, list[str]] = {
         r"Data-dependent assertion failed",
         r"cannot compile partial graph",
         r"assert self\.kv_cache_dtype in",
+        # vllm V1 engine 의 CPU weight offload 미지원 조합 (vllm-project/vllm#18298):
+        # cpu_offload_gb > 0 + multiproc_executor + input batch re-init 시 RuntimeError.
+        # axis 조합이 invalid 임을 알리는 explicit message → infeasible.
+        r"Cannot re-initialize the input batch when CPU weight offloading",
+        r"CPU weight offloading is enabled",
     ],
     "oom": [
         r"OutOfMemoryError",

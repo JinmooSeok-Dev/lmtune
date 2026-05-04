@@ -55,7 +55,12 @@ axes:
 
   cpu_offload_gb:
     type: categorical
-    values: [0, 16, 64]
+    values: [0]
+    # vllm 0.17.1 + V1 engine + multiproc_executor 조합에서 cpu_offload_gb > 0 이면
+    # `Cannot re-initialize the input batch when CPU weight offloading is enabled`
+    # crash (vllm-project/vllm#18298). PR 머지 전까지 freeze. B200 ~3 TB HBM3e
+    # 환경에선 단일 노드 모델 (gpt-oss-120b 등) weight offload 불필요 — 의미 손실 X.
+    # 멀티노드/대형 MoE 에서 필요 시 별도 search-space 에서 vllm patch 버전 사용.
 
   # ─────────── Prefix Cache ───────────
   enable_prefix_caching:
