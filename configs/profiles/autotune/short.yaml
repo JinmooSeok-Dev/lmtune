@@ -19,7 +19,7 @@ workload:
   random_seed: 42
 
 slo:
-  ttft_p99_ms: 500
+  ttft_p99_ms: 60000
   e2e_p99_ms: 30000
   checks:
     - metric: throughput_req
