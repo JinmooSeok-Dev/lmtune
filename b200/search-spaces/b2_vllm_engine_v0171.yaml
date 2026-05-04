@@ -20,6 +20,11 @@ axes:
     type: categorical
     values: [2048, 4096, 8192, 16384]
 
+  # gpt-oss-120b native 131072. baseline 32768. KV cache 압박 측정용.
+  max_model_len:
+    type: categorical
+    values: [8192, 16384, 32768, 65536]
+
   enable_chunked_prefill:
     type: bool
 
