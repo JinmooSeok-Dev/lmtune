@@ -61,7 +61,7 @@ releases:
       - {{ printf "gaie-%s" $rn | quote }}
     values:
       - ../base/values-b200-common.yaml.gotmpl
-      - values-qwen25-1.5b-mini.yaml
+      - values-qwen25-1.5b-mini.yaml.gotmpl
     set:
       - name: "decode.monitoring.podmonitor.enabled"
         value: false

@@ -1,0 +1,45 @@
+apiVersion: lmtune/v1alpha1
+slug: minikube-smoke
+name: minikube + llm-d Qwen2.5-1.5B (cycle validation)
+url: http://127.0.0.1:9100/v1
+model: Qwen/Qwen2.5-1.5B-Instruct
+tokenizer: Qwen/Qwen2.5-1.5B-Instruct
+api_type: openai
+deployment:
+  engine: vllm
+  version: 0.17.1
+  parallelism:
+    tp: 1
+    dp: 1
+    ep: false
+  engine_args:
+    max_num_seqs: 32
+    max_model_len: 4096
+    gpu_memory_utilization: 0.8969909852161995
+    block_size: 16
+    enforce_eager: true
+    dtype: bfloat16
+    enable_prefix_caching: true
+  helmfile_overrides:
+    helmfile_root: /home/jinmoo/ml_ai/benchmark
+    helmfile_file: b200/helmfile/inference-scheduling/helmfile-mini.yaml.gotmpl
+    environment: default
+    selector: kind=inference-stack
+    release_name: ms-mini
+    namespace: mini-infsch
+    deployment_name: ms-mini-llm-d-modelservice-decode
+    rollout_timeout_s: 300
+  replicas: {}
+notes: "\uBCF8 endpoint \uB294 minikube cycle \uAC80\uC99D\uC6A9.\nhelmfile_overrides\
+  \ \uAC00 LLMDK8sAdapter \uC5D0\uAC8C \uC2E4\uC81C helmfile \uC704\uCE58\uB97C \uC54C\
+  \uB824\uC8FC\uB294 1st-class.\nport-forward \uB294 svc \uAE30\uBC18\uC774\uB77C\
+  \ helmfile redeploy \uD6C4\uC5D0\uB3C4 \uAC19\uC740 url \uADF8\uB300\uB85C.\n\n\
+  cycle \uAC80\uC99D (b200/studies/minikube_2026-05-04_cycle_validation/ANALYSIS.md)\
+  \ \uC5D0\uC11C\n\uC218\uB3D9 helmfile apply \uB85C \uAC80\uC99D\uD55C \uAC83\uACFC\
+  \ \uAC19\uC740 \uD750\uB984\uC744 LLMDK8sAdapter \uAC00 \uC790\uB3D9 \uC218\uD589\
+  \uD574\uC57C \uC815\uC0C1.\n"
+tags:
+- llmd
+- minikube
+- qwen25-1.5b
+- cycle-validation

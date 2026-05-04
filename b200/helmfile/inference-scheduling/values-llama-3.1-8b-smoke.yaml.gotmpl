@@ -1,0 +1,99 @@
+# Llama-3.1-8B Instruct — B200 smoke (single GPU, TEMPLATED)
+#
+# 본 파일은 helmfile values gotmpl. .StateValues 의 release-key dict 에서 vllmArgs 를
+# 읽어 vllm container args 로 직렬화한다. LLMDK8sAdapter.render_values_overlay() 와
+# 짝을 이루며 이 둘이 만나야 trial params 가 vLLM 에 진짜 적용됨.
+#
+# overlay 가 없을 때 (helmfile 단독 호출, lmtune 미경유) 는 default args 로 폴백.
+# 즉 manual `helmfile apply` 도 동작 + autotune cycle 도 동작.
+#
+# minikube mini variant (values-qwen25-1.5b-mini.yaml.gotmpl) 와 1:1 패턴.
+
+{{- $release := "ms-infsch" -}}
+{{- $sv := index .StateValues $release | default dict -}}
+{{- $vllmArgs := index $sv "vllmArgs" | default dict -}}
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://meta-llama/Llama-3.1-8B-Instruct"
+  size: 32Gi
+  name: "meta-llama/Llama-3.1-8B-Instruct"
+  authSecretName: "huggingface-token"      # gated 모델: kubectl create secret generic huggingface-token --from-literal=HF_TOKEN=...
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "b200-smoke"
+    llm-d.ai/hardware-variant: "b200"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "Llama-3.1-8B"
+
+routing:
+  # peer repo phase1/ms-phase1/values-qwen3-30b.yaml 정본:
+  # P/D 시나리오 가 아닌 single-path inference-scheduling 에선 routing-proxy
+  # sidecar 가 vllm:8200 (decoder URL) 로 forward 시도하다 connection refused
+  # 로 외부 요청이 routing-proxy 에서 멈춤. proxy 비활성 + service 직접
+  # vllm:8000 으로 routing.
+  proxy:
+    enabled: false
+    targetPort: 8000
+  servicePort: 8000
+
+decode:
+  parallelism:
+    tensor: 1
+  create: true
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+  containers:
+    - name: "vllm"
+      # peer repo (agentic/llm-distributed-inference) 가 같은 NHN B200 위에서
+      # 검증한 정본. llm-d-cuda 라인은 우리 환경에서 gcc/ABI 결함 둘 다 만남.
+      # base/values-b200-common.yaml 의 image.llmd.cuda 와 동기화.
+      image: vllm/vllm-openai:v0.17.1
+      modelCommand: vllmServe
+      # args 는 .StateValues.{release}.vllmArgs 에서 동적 직렬화.
+      # 키는 kebab-case (LLMDK8sAdapter.render_values_overlay 가 그렇게 emit).
+      # bool true 는 flag 만, false 는 생략. 그 외는 "--key value" pair.
+      # overlay 미제공 시 default 로 폴백.
+      args:
+        # --- defaults (overlay 없을 때, 기존 정적 yaml 의 set 그대로) ---
+        {{- $defaults := dict
+              "max-num-seqs" 64
+              "max-model-len" 4096
+              "gpu-memory-utilization" 0.85
+              "dtype" "bfloat16"
+        }}
+        {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
+        {{- range $k, $v := $merged }}
+        {{- if kindIs "bool" $v }}
+        {{- if $v }}
+        - "--{{ $k }}"
+        {{- end }}
+        {{- else }}
+        - "--{{ $k }}"
+        - {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          cpu: "4"
+          memory: 32Gi
+        limits:
+          nvidia.com/gpu: "1"
+          cpu: "16"
+          memory: 64Gi
+      env:
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-token
+              key: HF_TOKEN
+              optional: true
+
+# topology: smoke 단계는 토폴로지 강제 없음 (어느 노드든 OK)

@@ -71,7 +71,7 @@ releases:
       - {{ printf "gaie-%s" $rn | quote }}
     values:
       - ../base/values-b200-common.yaml.gotmpl
-      - values-llama-3.1-8b-smoke.yaml
+      - values-llama-3.1-8b-smoke.yaml.gotmpl
     set:
       # smoke: 모니터링 비활성 (B0 단계)
       - name: "decode.monitoring.podmonitor.enabled"

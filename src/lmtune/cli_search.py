@@ -88,6 +88,17 @@ def cmd_start(
                  "지정 시 NSGA-II/III 등 multi-obj 샘플러 권장.",
         ),
     ] = None,
+    repeats: Annotated[
+        int,
+        typer.Option("--repeats", help="trial 당 lmtune run 반복 횟수 (variance gate)"),
+    ] = 3,
+    ttft_slo_ms: Annotated[
+        float,
+        typer.Option(
+            "--ttft-slo-ms",
+            help="composite score 의 TTFT penalty denom (=2× 본 값). 클수록 SLO 완화.",
+        ),
+    ] = 500.0,
 ):
     sp = load_space(space)
     profile = profile or []
@@ -119,7 +130,15 @@ def cmd_start(
         adapter_obj = LocalVLLMAdapter()
     elif adapter == "llmd-k8s":
         from lmtune.deploy import LLMDK8sAdapter
-        adapter_obj = LLMDK8sAdapter()
+        # endpoint YAML 의 deployment.helmfile_overrides 블록을 읽어 adapter 구성.
+        # bare ctor 는 (selector=name=ms-phase1, env=dev) 같은 peer-repo 디폴트라
+        # b200/helmfile/inference-scheduling/helmfile-mini.yaml.gotmpl 등 다른
+        # helmfile 을 가리키는 endpoint 에선 release-not-found 로 실패.
+        if endpoint is not None:
+            ep_data = yaml.safe_load(endpoint.read_text(encoding="utf-8"))
+            adapter_obj = LLMDK8sAdapter.from_endpoint(ep_data, dry_run=dry_run)
+        else:
+            adapter_obj = LLMDK8sAdapter()
     elif adapter != "none":
         raise typer.BadParameter(f"unknown --adapter: {adapter}")
 
@@ -175,6 +194,8 @@ def cmd_start(
             endpoint_path=endpoint,
             profile_paths=[Path(p) for p in profile],
             adapter=adapter_obj,
+            repeats=repeats,
+            ttft_slo_ms=ttft_slo_ms,
         )
         if obj_keys:
             from lmtune.search.objective_pareto import ParetoObjective

@@ -18,6 +18,14 @@ modelArtifacts:
     llm-d.ai/model: "Qwen2.5-1.5B"
 
 routing:
+  # peer repo phase1/ms-phase1/values-qwen3-30b.yaml 정본:
+  # P/D 시나리오 가 아닌 single-path inference-scheduling 에선 routing-proxy
+  # sidecar 가 vllm:8200 (decoder URL) 로 forward 시도하다 connection refused
+  # 로 외부 요청이 routing-proxy 에서 멈춘다. proxy 비활성 + service 직접
+  # vllm:8000 으로 routing. 본 fix 는 minikube + B200 양쪽에 동일하게 필요.
+  proxy:
+    enabled: false
+    targetPort: 8000
   servicePort: 8000
 
 decode:

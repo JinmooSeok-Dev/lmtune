@@ -1,0 +1,52 @@
+# minikube mini variant 용 (b200/helmfile/inference-scheduling/extra/vllm-route.yaml 의 namespace 변형).
+#
+# 같은 이슈 cross-env 재발 방지: 단일-path inference-scheduling + agentgateway 조합에서는
+# 다음 두 chart 한계가 누적된다.
+#   1. proxy.enabled=false 면 chart 가 decode pod 의 stable Service 를 안 만듦
+#   2. agentgateway provider 는 InferencePool kind 를 backendRef 로 라우팅 못 함
+# 결과: 외부 클라이언트가 vllm 까지 도달할 경로가 없음.
+#
+# 본 manifest 가 두 한계를 동시 우회 — Service (selector llm-d.ai/role=decode) + HTTPRoute
+# (vllm-decode svc 로 직 백엔드).
+#
+# 적용:
+#   kubectl apply -f b200/helmfile/inference-scheduling/extra/vllm-route-mini.yaml
+#
+# 향후 수정 방향: chart values 에 inline 옵션이 생기거나, 우리가 helmfile-mini 의
+# releases[]에 별도 release 로 박아 helmfile apply 한 번에 같이 만들어지게 정공.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-decode
+  namespace: mini-infsch
+  labels:
+    app.kubernetes.io/component: vllm-decode-svc
+spec:
+  type: ClusterIP
+  selector:
+    llm-d.ai/role: decode
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: vllm-route
+  namespace: mini-infsch
+spec:
+  parentRefs:
+    - name: infra-mini-inference-gateway
+      kind: Gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: vllm-decode
+          port: 8000
+          weight: 1

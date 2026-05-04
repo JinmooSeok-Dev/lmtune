@@ -311,12 +311,37 @@ class LLMDK8sAdapter(DeploymentAdapter):
                 )
 
         # 3. probe + warmup
+        # k8s rollout status 가 Ready 라고 해도 vllm 컨테이너 안에서 모델 로딩이
+        # 60~120s 더 걸린다. /v1/models 가 떠야 진짜 serving 가능. probe 단발은
+        # RemoteDisconnected 로 깨지므로 budget 내 retry/backoff.
         url = (data.get("url") or "").strip()
-        health = probe_openai_models(url) if url else HealthReport(ready=False, detail="no url")
-        if health.ready:
-            warmup_one_token(url, data.get("model", ""))
+        if not url:
+            return ApplyResult(
+                ok=False,
+                health=HealthReport(ready=False, detail="no url"),
+                endpoint_path=ep, adapter=self.adapter_label,
+            )
+        import time as _time
+        probe_budget_s = max(60, self._rollout_timeout_s)
+        deadline = _time.time() + probe_budget_s
+        health = HealthReport(ready=False, detail="probe not started")
+        attempt = 0
+        while _time.time() < deadline:
+            attempt += 1
+            health = probe_openai_models(url)
+            if health.ready:
+                break
+            _time.sleep(min(5.0, max(1.0, 0.5 * attempt)))
+        if not health.ready:
+            return ApplyResult(
+                ok=False,
+                health=health,
+                endpoint_path=ep, adapter=self.adapter_label,
+                notes=f"probe failed after {attempt} attempts within {probe_budget_s}s",
+            )
+        warmup_one_token(url, data.get("model", ""))
         return ApplyResult(
-            ok=bool(health.ready),
+            ok=True,
             health=health, endpoint_path=ep, adapter=self.adapter_label,
         )
 
