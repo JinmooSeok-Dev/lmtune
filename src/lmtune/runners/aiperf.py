@@ -10,16 +10,24 @@ from lmtune.profiles import ProfileSpec
 from lmtune.runners.base import RequestRow, Runner, RunnerError
 
 _METRIC_KEY_MAP = {
+    # aiperf 0.6.x 와 0.7.0 의 metric key 양립.
+    # 0.7.0 는 streaming 시 'time_to_first_output_token', e2e 는 'http_req_duration' 으로 명명.
     "time_to_first_token": "ttft",
+    "time_to_first_output_token": "ttft",
     "inter_token_latency": "itl",
     "request_latency": "e2e",
+    "http_req_duration": "e2e",
     "time_per_output_token": "tpot",
     "request_throughput": "throughput_req",
     "output_token_throughput": "throughput_tok",
     "output_token_throughput_per_user": "throughput_tok_per_user",
 }
 
-_PERCENTILE_KEYS = {"p50", "p75", "p90", "p95", "p99", "p999", "avg", "min", "max"}
+# 0.7.0 는 percentile 셋이 확장됨 (p1/p5/p10/p25/std 추가, p999 삭제).
+_PERCENTILE_KEYS = {
+    "p1", "p5", "p10", "p25", "p50", "p75", "p90", "p95", "p99", "p999",
+    "avg", "min", "max", "std",
+}
 
 
 class AIPerfRunner(Runner):
@@ -86,8 +94,12 @@ class AIPerfRunner(Runner):
 
     def parse(self, raw_dir: Path) -> tuple[dict[str, dict[str, float]], list[RequestRow]]:
         artifact_dir = raw_dir / "aiperf"
-        json_files = list(artifact_dir.rglob("*genai_perf*.json")) + list(
-            artifact_dir.rglob("profile_export.json")
+        # 0.6.x: profile_export.json / *genai_perf*.json
+        # 0.7.0: profile_export_aiperf.json (이름 변경)
+        json_files = (
+            list(artifact_dir.rglob("profile_export_aiperf.json"))
+            + list(artifact_dir.rglob("*genai_perf*.json"))
+            + list(artifact_dir.rglob("profile_export.json"))
         )
         if not json_files:
             return {}, []
