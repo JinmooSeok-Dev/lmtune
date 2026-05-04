@@ -1,9 +1,19 @@
-# gpt-oss-120b — B200 single-GPU baseline (TEMPLATED)
+# gpt-oss-120b — B200 16-GPU baseline (TEMPLATED, TP=8 × DP=2, monolithic)
 #
 # OpenAI gpt-oss-120b (2025-08 공개): 117B MoE (128 experts × top-4, 5.1B active),
-# MXFP4 native weight (~63GB). B200 단일 GPU (~180GB HBM3e) 에 충분.
-# 16-GPU 활용 시: TP=2 × DP=8 또는 wide-EP (DP=8 × EP=8).
-# ungated.
+# MXFP4 native weight (~63GB). ungated.
+#
+# Default: TP=8 × DP=2 = 16 GPU 전부 사용.
+#   - 노드별 1 replica (8 GPU 통째 NVLink/NVSwitch)
+#   - cross-node RDMA 안 거침 (각 replica self-contained)
+#   - P/D disaggregation 비활성 (현재 NIXL 미정상)
+#
+# 후속 study 에서 b3_parallelism axis 로 sweep:
+#   - TP=2 × DP=8, TP=4 × DP=4 (replicas 우위)
+#   - wide-EP (DP=8 × EP=8) — wide-ep-lws path 별도 helmfile
+#
+# search space (b3_parallelism.yaml) 가 tp/dp/ep 를 sample 하면 LLMDK8sAdapter 가
+# .StateValues.ms-infsch.parallelism / .replicas 로 inject → trial 마다 chart redeploy.
 
 {{- $release := "ms-infsch" -}}
 {{- $sv := index .StateValues $release | default dict -}}
@@ -29,25 +39,40 @@ routing:
     targetPort: 8000
   servicePort: 8000
 
+# P/D disaggregation 비활성 — 현재 NIXL 미정상 + monolithic 이 단순.
+# chart default 가 prefill.create=true 라 명시 false 필요.
+prefill:
+  create: false
+
 decode:
   parallelism:
-    tensor: 1
+    tensor: 8     # TP=8: pod 1개가 단일 노드 8 GPU 통째 NVLink
   create: true
-  replicas: 1
+  replicas: 2     # DP=2: 2 노드 × 1 replica = 16 GPU 전부 활용
   monitoring:
     podmonitor:
       enabled: false
+  # 노드별 1 replica 강제 — 두 replica 가 같은 노드에 몰리면 NVLink 경합
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          llm-d.ai/role: decode
+          llm-d.ai/model: gpt-oss-120b
   containers:
     - name: "vllm"
       image: vllm/vllm-openai:v0.17.1
       modelCommand: vllmServe
       args:
         {{- $defaults := dict
-              "max-num-seqs" 32
+              "max-num-seqs" 128
               "max-model-len" 8192
               "gpu-memory-utilization" 0.90
               "dtype" "bfloat16"
               "kv-cache-dtype" "auto"
+              "tensor-parallel-size" 8
         }}
         {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
         {{- range $k, $v := $merged }}
@@ -62,13 +87,18 @@ decode:
         {{- end }}
       resources:
         requests:
-          nvidia.com/gpu: "1"
-          cpu: "8"
-          memory: 96Gi
-        limits:
-          nvidia.com/gpu: "1"
+          nvidia.com/gpu: "8"   # TP=8 단일 pod
           cpu: "32"
-          memory: 160Gi
+          memory: 384Gi
+        limits:
+          nvidia.com/gpu: "8"
+          cpu: "64"
+          memory: 512Gi
       env:
         - name: VLLM_LOGGING_LEVEL
           value: "INFO"
+        # NCCL: 8-GPU NVLink/NVSwitch 활용 (NVLS in-network reduction)
+        - name: NCCL_NVLS_ENABLE
+          value: "1"
+        - name: NCCL_DEBUG
+          value: "WARN"
