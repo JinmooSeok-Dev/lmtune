@@ -197,6 +197,8 @@ SearchSpace YAML                       endpoint YAML (adapter 만 다름)
 
 핵심 출처: vllm-config-puzzle simulator (TP/PP/DP/EP-std/EP-wide/PCP/DCP/SP, MoE/MLA 모델 조건, 10 validation 제약, performance formulas) 가 본 plan 의 Python port reference. autotune loop 의 4 관점 sequence diagram 은 [`docs/autotune_loop.md`](docs/autotune_loop.md) 참조.
 
+> **상세 architecture 도식 (5 layer × extension points × gap)** = [`docs/architecture.md`](docs/architecture.md). 새 모델·기능·도구 추가 시 어느 layer 의 어느 plug-in 에 1줄 넣으면 되는지 1:1 매핑.
+
 ## External 자산 참조
 
 | 외부 repo | 정체 | 결합 패턴 | 본 프로젝트의 어디 |
