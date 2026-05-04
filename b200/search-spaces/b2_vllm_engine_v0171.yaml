@@ -65,8 +65,11 @@ axes:
   # ─────────── dtype / Quantization ───────────
   dtype:
     type: categorical
-    values: [auto, bfloat16, float16]
-    # gpt-oss-120b MXFP4 native — auto 가 안전. half/float16 은 sanity check.
+    values: [auto, bfloat16]
+    # MXFP4 native 모델 (gpt-oss-*, K2 일부 quant) 은 float16 미지원 →
+    # vllm 의 pydantic VllmConfig validation 단에서 reject. bf16/auto 만 안전.
+    # 비-MXFP4 모델 (DSV3, Qwen, Llama dense) 에선 추후 별도 search-space 에서
+    # float16 활성화 가능.
 
   # ─────────── Compute ───────────
   enforce_eager:
