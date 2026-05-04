@@ -270,7 +270,7 @@ def cmd_status(
         return
     table = Table(title=f"Top-{top} trials ({metric_name})")
     table.add_column("seq", justify="right")
-    table.add_column("trial_id")
+    table.add_column("trial_id", no_wrap=True, overflow="fold")
     table.add_column("score", justify="right")
     table.add_column("params", overflow="fold")
     for trial_id, seq, params_json, score, _st in rows:
@@ -733,15 +733,38 @@ def cmd_export(
 
 
 @app.command("ls")
-def cmd_ls(limit: Annotated[int, typer.Option("--limit")] = 20):
+def cmd_ls(
+    limit: Annotated[int, typer.Option("--limit")] = 20,
+    plain: Annotated[
+        bool,
+        typer.Option("--plain", help="copy-paste 친화 plain text (rich table 비활성)"),
+    ] = False,
+    ids_only: Annotated[
+        bool,
+        typer.Option("--ids", help="study_id 만 줄별 출력 (스크립트용)"),
+    ] = False,
+):
     store = DuckDBStore(_default_db_path())
     rows = store.list_studies(limit=limit)
     if not rows:
         console.print("[yellow]no studies[/]")
         return
+    if ids_only:
+        for r in rows:
+            print(r[0])
+        return
+    if plain:
+        # tab-separated, no truncation — copy-paste 친화
+        cols = ["study_id", "name", "strategy", "endpoint", "status", "created_at", "finished_at"]
+        print("\t".join(cols))
+        for r in rows:
+            print("\t".join(str(x) if x is not None else "-" for x in r))
+        return
     table = Table(title="studies")
-    for c in ["study_id", "name", "strategy", "endpoint", "status", "created_at", "finished_at"]:
-        table.add_column(c)
+    # study_id 는 truncate 금지 — 사용자가 copy 할 수 있어야 함
+    table.add_column("study_id", no_wrap=True, overflow="fold")
+    for c in ["name", "strategy", "endpoint", "status", "created_at", "finished_at"]:
+        table.add_column(c, overflow="fold")
     for r in rows:
         table.add_row(*[str(x) if x is not None else "-" for x in r])
     console.print(table)

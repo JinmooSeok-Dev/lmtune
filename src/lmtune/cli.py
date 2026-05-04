@@ -205,10 +205,31 @@ def cmd_ls(
     profile_slug: Annotated[str | None, typer.Option("--profile", help="profile slug")] = None,
     last: Annotated[int, typer.Option("--last", "-n", help="최근 N건")] = 20,
     db: Annotated[Path, typer.Option("--db")] = None,
+    plain: Annotated[
+        bool, typer.Option("--plain", help="copy-paste 친화 tab-separated (rich table 비활성)"),
+    ] = False,
+    ids_only: Annotated[
+        bool, typer.Option("--ids", help="run_id 만 줄별 출력 (스크립트용)"),
+    ] = False,
 ):
     store = DuckDBStore(db or _default_db_path())
     rows = store.list_runs(endpoint_slug=endpoint_slug, profile_slug=profile_slug, limit=last)
-    table = Table("run_id", "profile", "endpoint", "started_at", "status", "runner")
+    if ids_only:
+        for r in rows:
+            print(r[0])
+        store.close()
+        return
+    if plain:
+        cols = ["run_id", "profile", "endpoint", "started_at", "status", "runner"]
+        print("\t".join(cols))
+        for r in rows:
+            print("\t".join(str(x) if x is not None else "-" for x in r))
+        store.close()
+        return
+    table = Table()
+    table.add_column("run_id", no_wrap=True, overflow="fold")
+    for c in ["profile", "endpoint", "started_at", "status", "runner"]:
+        table.add_column(c, overflow="fold")
     for r in rows:
         table.add_row(*[str(x) if x is not None else "—" for x in r])
     console.print(table)
