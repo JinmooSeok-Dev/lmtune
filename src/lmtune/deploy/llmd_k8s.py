@@ -34,6 +34,7 @@ from lmtune.deploy.base import (
     merge_params_into_endpoint,
 )
 from lmtune.deploy.health import probe_openai_models, warmup_one_token
+from lmtune.deploy.rollout_watcher import wait_rollout_smart
 
 log = logging.getLogger(__name__)
 
@@ -299,20 +300,35 @@ class LLMDK8sAdapter(DeploymentAdapter):
                 notes=f"helmfile apply rc={proc.returncode}",
             )
 
-        # 2. rollout status — for every deployment in the release set
+        # 2. rollout — smart waiter (fast-fail on pod crash with classification).
+        # `kubectl rollout status` 가 CrashLoopBackOff pod 를 deadline 까지 대기하던 문제 해결:
+        # 직접 pod status polling + container log 분석으로 crash 즉시 감지 후 분류
+        # (infeasible / oom / transient / hard / startup_timeout). 5분 → 60-120초.
+        crash_threshold = min(120, self._rollout_timeout_s)
         for dep in self._deployment_names:
-            rollout = subprocess.run(
-                ["kubectl", "-n", self._target.namespace, "rollout", "status",
-                 f"deployment/{dep}",
-                 f"--timeout={self._rollout_timeout_s}s"],
-                capture_output=True, text=True,
+            rr = wait_rollout_smart(
+                deployment_name=dep,
+                namespace=self._target.namespace,
+                container_name="vllm",
+                total_timeout_s=self._rollout_timeout_s,
+                crash_threshold_s=crash_threshold,
             )
-            if rollout.returncode != 0:
+            if not rr.ok:
+                # crash classification 을 notes 에 packaging.
+                # logs_tail 은 truncate 해서 DuckDB notes 컬럼 폭주 방지.
+                notes = (
+                    f"rollout {rr.crash_class}: {rr.detail}"
+                    + (f" | logs: ...{rr.logs_tail[-400:]}" if rr.logs_tail else "")
+                )
                 return ApplyResult(
                     ok=False,
-                    health=HealthReport(ready=False, detail=f"{dep}: " + rollout.stderr.strip()[-400:]),
-                    endpoint_path=ep, adapter=self.adapter_label,
-                    notes=f"rollout failed for {dep}",
+                    health=HealthReport(
+                        ready=False,
+                        detail=f"{dep}: {rr.detail}",
+                    ),
+                    endpoint_path=ep,
+                    adapter=self.adapter_label,
+                    notes=notes,
                 )
 
         # 3. probe + warmup
