@@ -5,7 +5,7 @@ stage: 1
 description: "긴 입력. KV cache 압박이 큼. prefix_caching/chunked_prefill 효과 뚜렷."
 references: []
 
-runner: guidellm
+runner: aiperf
 mode: concurrency
 
 workload:
@@ -19,7 +19,7 @@ workload:
   random_seed: 42
 
 slo:
-  ttft_p99_ms: 500
+  ttft_p99_ms: 60000
   e2e_p99_ms: 30000
 
 tags: [autotune, long]

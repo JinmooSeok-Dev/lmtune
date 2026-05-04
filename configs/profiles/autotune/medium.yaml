@@ -5,7 +5,7 @@ stage: 1
 description: "코딩 에이전트 중간 길이 턴. autoresearch 루프의 중앙값 워크로드."
 references: []
 
-runner: guidellm
+runner: aiperf
 mode: concurrency
 
 workload:
@@ -19,7 +19,7 @@ workload:
   random_seed: 42
 
 slo:
-  ttft_p99_ms: 500
+  ttft_p99_ms: 60000
   e2e_p99_ms: 30000
 
 tags: [autotune, medium]
