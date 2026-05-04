@@ -80,6 +80,30 @@ Error: k8s-job backend 은 Phase S4 에서 활성화됩니다
 - Code: `src/lmtune/cli_search.py` — error 메시지에 의도 명시
 - Doc: 본 catalog + README § Operations 의 lmtune 명령 예시
 
+## R7 — pf::probe budget 5분이 큰 MoE 모델 weight 로딩에 부족
+
+**증상**
+사용자가 `bash b200/scripts/ops/launch.sh b200/endpoints/b200_gpt-oss-120b.yaml infsch` 실행 → step 7 의 `/v1/models polling` 에서 hang 처럼 보임. 실제로는 vLLM 이 117B MXFP4 weight 다운로드+로딩 (10–25분) 중.
+
+```
+── [launch:infsch] 7. /v1/models 200 polling
+[pf::probe] http://127.0.0.1:8011/v1/models
+                               ← 5분 후 fail 또는 사용자 Ctrl+C 까지 hang 으로 오해
+```
+
+**진단**
+- `pf::probe` 의 default budget = 60 attempts × 5s = **5분**
+- gpt-oss-120b 117B MoE MXFP4 weight 다운로드 + GPU 로딩 = **10–25분**
+- endpoint YAML 의 `rollout_timeout_s: 1500` (= 25분) 와도 정렬 안 됨
+- 진행 표시 없어서 사용자에게 hang 처럼 보임 (실은 정상 polling)
+
+**영속화 위치**
+- Code: `b200/scripts/util/pf.sh::pf::probe` — default budget 60→360 (5분→30분), 60초마다 진행 표시 stderr 로 출력
+- Test: `b200/scripts/tests/test_pf_util.sh` — probe 가 빠른 응답 시 즉시 break (긴 budget 도 OK)
+
+**관련**
+사용자가 launch.sh 에서 hang 이라고 판단해 Ctrl+C 후 lmtune 직접 실행하는 우회를 발견 — `LLMDK8sAdapter.apply()` 의 probe budget = `rollout_timeout_s` (25분) 가 충분히 길어 lmtune 쪽은 정상 처리. 즉 lmtune 본체 흐름엔 결함 없음, **launch.sh 의 시간 정렬만 결함**.
+
 ## R5 — endpoint url=127.0.0.1:8011 ↔ port-forward / 모델 / strict ordering
 
 **증상**

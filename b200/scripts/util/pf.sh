@@ -80,14 +80,25 @@ pf::start() {
 }
 
 pf::probe() {
-  local local_port="$1" path="${2:-/v1/models}" max_attempts="${3:-60}" sleep_s="${4:-5}"
+  # max_attempts default 360 × 5s = 30분 — gpt-oss-120b 117B MXFP4 같은 큰 MoE 모델의
+  # weight 다운로드+로딩 (10-25분) 을 견딜 수 있어야 한다. endpoint YAML 의
+  # rollout_timeout_s (default 25분) 와 정렬. 작은 모델이면 일찍 200 받고 break.
+  # 진행 표시를 60s 마다 stderr 로 출력 (사용자가 hang 으로 오해 금지).
+  local local_port="$1" path="${2:-/v1/models}" max_attempts="${3:-360}" sleep_s="${4:-5}"
   local url="http://127.0.0.1:${local_port}${path}"
-  echo "[pf::probe] ${url}"
+  echo "[pf::probe] ${url}  budget=$((max_attempts * sleep_s))s"
+  local started_at
+  started_at=$(date +%s)
   for i in $(seq 1 "$max_attempts"); do
     if curl -s --max-time 3 "$url" 2>/dev/null | grep -q '"data"\|"object"'; then
       echo "[pf::probe] OK (${i}×${sleep_s}s)"
       curl -s --max-time 3 "$url" | head -c 400; echo
       return 0
+    fi
+    # 60초마다 진행 표시 (default sleep_s=5 이면 i % 12 == 0)
+    if (( i > 0 && i % 12 == 0 )); then
+      local elapsed=$(( $(date +%s) - started_at ))
+      echo "  [pf::probe] still polling... ${elapsed}s elapsed (vLLM weight 로딩 중일 수 있음)" >&2
     fi
     sleep "$sleep_s"
   done
