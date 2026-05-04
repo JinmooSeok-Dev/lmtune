@@ -21,7 +21,7 @@ deployment:
     dtype: bfloat16
     enable_prefix_caching: true
   helmfile_overrides:
-    helmfile_root: /home/jinmoo/ml_ai/benchmark
+    # helmfile_root 는 명시하지 않으면 lmtune repo root 자동 탐지.
     helmfile_file: b200/helmfile/inference-scheduling/helmfile-mini.yaml.gotmpl
     environment: default
     selector: kind=inference-stack
