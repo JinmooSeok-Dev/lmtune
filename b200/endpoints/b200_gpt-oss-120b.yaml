@@ -1,0 +1,40 @@
+apiVersion: lmtune/v1alpha1
+slug: b200-gpt-oss-120b
+name: "B200 single-GPU — gpt-oss-120b (MoE, MXFP4)"
+url: http://infra-infsch-inference-gateway.b200-infsch.svc.cluster.local/v1
+model: openai/gpt-oss-120b
+tokenizer: openai/gpt-oss-120b
+api_type: openai
+
+deployment:
+  engine: vllm
+  version: "0.17.1"
+  parallelism:
+    tp: 1
+    dp: 1
+    ep: false
+  engine_args:
+    enable_prefix_caching: true
+    max_num_seqs: 32
+    max_model_len: 8192
+    gpu_memory_utilization: 0.90
+    kv_cache_dtype: auto
+    dtype: bfloat16
+  helmfile_overrides:
+    helmfile_file: b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl
+    environment: default
+    selector: kind=inference-stack
+    release_name: ms-infsch
+    namespace: b200-infsch
+    deployment_name: ms-infsch-llm-d-modelservice-decode
+    rollout_timeout_s: 1500   # 117B MXFP4 weight 다운로드/로딩 길어질 수 있음
+
+notes: |
+  gpt-oss-120b — 117B MoE / 5.1B active / 128 experts top-4 / MXFP4.
+  단일 B200 (~180GB HBM3e) 에 ~63GB weight + KV cache 충분.
+  16-GPU 활용: TP=2 × DP=8 또는 wide-EP (DP=8 × EP=8) — b3_parallelism axis 참조.
+
+  helmfile redeploy 전:
+    export B200_MODEL_VALUES=values-gpt-oss-120b.yaml.gotmpl
+
+tags: [b200, gpt-oss, moe, mxfp4, large]

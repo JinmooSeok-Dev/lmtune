@@ -191,6 +191,21 @@ DEEPSEEK_V3 = normalize_model_spec(
     moe=MoESpec(num_experts=256, active_experts=8, shared_experts=1),
     mla=MLASpec(kv_latent_dim=512, rope_head_dim=64),
 )
+# OpenAI gpt-oss (2025-08 공개, open-weight, MXFP4 native).
+# spec [추정] — public model card 기반 best-effort. feasibility/active_if 가 model.is_moe
+# 분기 정도만 사용하므로 정밀치는 critical 하지 않음. 정확치 확인 시 갱신.
+GPT_OSS_20B = normalize_model_spec(
+    name="gpt-oss-20b", total_params_b=20.0, active_params_b=3.6,
+    num_layers=24, hidden_size=2880, num_attention_heads=64, num_kv_heads=8,
+    intermediate_size=2880, context_length=131072, vocab_size=201088,
+    moe=MoESpec(num_experts=32, active_experts=4, shared_experts=0),
+)
+GPT_OSS_120B = normalize_model_spec(
+    name="gpt-oss-120b", total_params_b=117.0, active_params_b=5.1,
+    num_layers=36, hidden_size=2880, num_attention_heads=64, num_kv_heads=8,
+    intermediate_size=2880, context_length=131072, vocab_size=201088,
+    moe=MoESpec(num_experts=128, active_experts=4, shared_experts=0),
+)
 
 
 MODELS: list[ModelSpec] = [
@@ -205,6 +220,8 @@ MODELS: list[ModelSpec] = [
     DBRX,
     QWEN3_235B_A22B,
     DEEPSEEK_V3,
+    GPT_OSS_20B,
+    GPT_OSS_120B,
 ]
 
 
