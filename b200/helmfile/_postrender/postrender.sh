@@ -45,6 +45,18 @@ patches:
       - op: add
         path: /spec/template/spec/runtimeClassName
         value: nvidia
+  # GPU deadlock 차단 — chart default RollingUpdate (maxSurge=25%) 가
+  # 16 GPU 클러스터에서 8-GPU pod 를 redeploy 시 deadlock (Insufficient
+  # nvidia.com/gpu) 을 일으킴. Recreate 가 LLM 서빙의 정합 strategy:
+  # 기존 pod 모두 삭제 후 새 pod 띄움. surge 가 의미 없는 영역이라 손실 없음.
+  # 자세한 진단/재현은 b200/docs/regressions.md 의 R3 참조.
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: replace
+        path: /spec/strategy
+        value:
+          type: Recreate
 EOF
 
 exec kubectl kustomize "${TMP}"

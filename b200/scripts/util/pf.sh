@@ -28,7 +28,10 @@ pf::list() {
     pgrep -af "_pf_loop_"
     found=1
   fi
-  [[ "$found" -eq 0 ]] && echo "[pf::list] (none)"
+  if [[ "$found" -eq 0 ]]; then
+    echo "[pf::list] (none)"
+  fi
+  return 0
 }
 
 pf::stop_all() {
@@ -90,6 +93,19 @@ pf::probe() {
   done
   echo "[pf::probe] WARN: no 200 within $((max_attempts * sleep_s))s" >&2
   return 1
+}
+
+# /v1/models 응답에서 첫 번째 model id 추출.
+# 호출 전 pf::probe 가 200 받았어야 함.
+pf::current_model() {
+  local local_port="${1:-8011}"
+  curl -s --max-time 3 "http://127.0.0.1:${local_port}/v1/models" 2>/dev/null \
+    | python3 -c 'import sys,json
+try:
+    d=json.load(sys.stdin)
+    print(d["data"][0]["id"])
+except Exception:
+    sys.exit(1)' 2>/dev/null
 }
 
 pf::status() {
