@@ -2,7 +2,123 @@
 
 vLLM / llm-d / SGLang / TensorRT-LLM 으로 서빙되는 LLM 엔드포인트를 **자기 인프라에서** 자동 튜닝(autotune)하고, 결과를 자기 인프라에 다시 적용 가능한 **self-contained recipe** 로 산출합니다. autoresearch 통합으로 LLM 가이드 모드를 옵션 제공하나, 모든 핵심 경로는 **LLM 콜 0회로 동작**하는 것이 1st-class.
 
+> 처음이라면 [§ 핵심 개념 — Study / Trial / Run](#핵심-개념--study--trial--run) 부터 읽으세요. 본 프로젝트의 작업 단위·실행 순서·자주 쓰는 명령이 거기 있습니다.
+
 > **Phase W (Walkthrough MVP)** — 5분 안에 자기 환경에서 한 사이클(start → mid → visualize → final → cross-compare) 을 돌려보세요. 자세한 단계는 [§ Walkthrough](#walkthrough-5-steps).
+
+## 핵심 개념 — Study / Trial / Run
+
+본 프로젝트는 3 단계 hierarchy 로 작업을 조직합니다. 처음 사용자가 가장 헷갈리는 부분이라 먼저 박아둡니다.
+
+```
+Study (autotune 세션)            ← 사용자 1회 호출 = 1 study
+  │  └ study_id = st-XXXX
+  │  └ 산출: best params + Pareto + ANALYSIS.md + dashboard
+  │
+  └─ Trial (params 후보 1개)     ← sampler 가 결정한 1 config 시도
+       │  └ trial_id = tr-XXXX
+       │  └ 1 trial = 1 helmfile redeploy + N runs (재현성 게이트)
+       │
+       └─ Run (bench 도구 1회 측정)   ← aiperf/guidellm/vllm-bench 단발 실행
+            └ run_id = ULID
+            └ raw artifact = data/raw/<run_id>/
+```
+
+| 개념 | 정의 | 식별자 | 단위 시간 (B200 gpt-oss-120b 기준) |
+|:---|:---|:---|:---:|
+| **Study** | autotune 세션 1회 — `lmtune search start` 가 시작 | `st-` prefix | ~수 시간 (max-trials × trial 시간) |
+| **Trial** | sampler 가 결정한 params 1조합의 시도 | `tr-` prefix | ~22.5 분 (helmfile + 측정) |
+| **Run** | 단일 bench 도구 실행 — 1 (workload, repeat) | ULID | ~3-5 분 |
+
+**1 trial = N runs** 인 이유: 재현성 게이트 (`bench_score.py` 가 N=3, CV ≥ 0.10 시 N=5 로 확장). 같은 (config, workload) 를 여러 번 측정해서 noise 격리.
+
+### 실행 순서 — `lmtune search start` 호출 시
+
+```
+[t=0] 사용자: lmtune search start --strategy tpe --max-trials 30 ...
+       │
+       ▼
+[t=0+ε]
+   1. SearchSpace YAML + Endpoint YAML + Profile YAML × 3 + Model registry 로딩
+   2. studies 테이블에 study row 1개 INSERT (study_id 발급)
+   3. Optuna sampler (TPE) + DuckDB writer queue + GPU lease 초기화
+   4. (옵션) Phase S6 외부 LLM controller 사용 시 — HTTP controller 와 handshake
+       │
+       ▼
+[loop: trial = 1, 2, 3, ...]
+   5. Controller.ask(active_axes) → params dict (예: max_num_seqs=128, ...)
+   6. trials 테이블에 trial row INSERT (status='pending')
+   7. (Sprint 1 후) is_feasible(params, env, model) 검증 → 실패 시 PRUNED + 다음 trial
+       │
+       ▼ (feasible 이면)
+   8. DeploymentAdapter.apply(endpoint_path, params)
+       ├─ LocalVLLMAdapter: scripts/vllm_restart.sh 로 vllm 재기동
+       └─ LLMDK8sAdapter: helmfile values overlay 생성 → helmfile apply → wait_rollout_smart
+            ↓ (rollout crash 시 — fast-fail 60-120s)
+            classify_crash → tell(infeasible/oom/transient/...) → 다음 trial
+       │
+       ▼ (rollout 성공)
+   9. probe(/v1/models) + warmup 1-token
+       │
+       ▼
+   10. 3 workloads × N repeats:
+        for workload in [short, medium, long]:
+          for r in 1..N:
+            Runner (aiperf/guidellm/vllm-bench).run(profile, endpoint)
+              → runs row INSERT, raw artifact 저장
+              → metrics 적재 (ttft.p50, e2e.p99, throughput.avg, ...)
+        → CV 계산, ≥ 0.10 이면 N=5 확장 재측정
+       │
+       ▼
+   11. composite score = throughput × penalty(ttft_p99)  (SLO 통과 시에만 > 0)
+   12. trial row UPDATE (status='completed', score=X)
+   13. Controller.tell(params, score, status)        ← sampler 학습
+   14. CircuitBreaker.record(outcome) — 5 연속 infra 실패 시 study halt
+       │
+       ▼
+[loop end: trial == max_trials 또는 budget-hours 도달 또는 halt]
+   15. studies row UPDATE (status='completed' 또는 'halted', finished_at=NOW())
+   16. (옵션) lmtune dashboard build → 정적 HTML 갱신
+   17. (옵션) lmtune search export <study_id> --winner top-1 → winner/apply.sh 생성
+```
+
+### 자주 쓰는 명령
+
+| 명령 | 무엇을 보여주나 |
+|:---|:---|
+| `lmtune ls` | **runs** (개별 측정) 목록 |
+| `lmtune search ls` | **studies** (autotune 세션) 목록 — `study_id` 여기서 확인 |
+| `lmtune search status <study_id>` | study 진행률 + top-K trial + (있으면) Pareto |
+| `lmtune search trace <study_id>` | score over trial sequence — sampler 학습 곡선 |
+| `lmtune search prune <study_id>` | ANOVA + RandomForest importance + bound-tighten 권고 |
+| `lmtune search export <study_id> --winner top-1` | winner config + apply.sh 생성 |
+| `lmtune search ask <study_id>` | (Phase S6) 외부 LLM agent 가 next params 받기 |
+| `lmtune search tell <study_id> --trial X --metrics-json ...` | (Phase S6) 외부 agent 가 측정 결과 보고 |
+| `lmtune dashboard build` | 정적 HTML 대시보드 갱신 (model × HW × engine 매트릭스 + Pareto) |
+| `lmtune compare <run_id> <run_id>` | 2-way **run** 비교 (개별 측정) |
+| `lmtune nway <run_ids...>` | N-way **run** 비교 |
+| `lmtune variance <profile_slug>` | 같은 profile 의 N 회 반복 측정 분산 (CV/IQR/MAD) |
+
+### Sample (raw 측정) ≠ Run
+
+- **Sample** = 1 request 의 metric (ttft, e2e, …) — `requests` 테이블 row 1개
+- **Run** = 1 bench 도구 실행 — 수십~수백 sample 의 집합 (`runs` 테이블 row 1개)
+- 분석 도구는 sample 단위 percentile/CDF/histogram 까지 내려간다 (`lmtune analysis distributions`)
+
+### 어디에 뭐가 저장되는가
+
+| 데이터 | 위치 | 누가 씀 |
+|:---|:---|:---|
+| Study/Trial/Run/Metric meta | `data/db/lmtune.duckdb` | DuckDBWriterQueue (single-writer) |
+| Raw bench artifact (aiperf JSON 등) | `data/raw/<run_id>/` | Runner |
+| Trial parquet export | `b200/studies/<study_id>/{trials,metrics}.parquet` | `lmtune search export` |
+| Winner config recipe | `b200/results/<study_id>/winner/{params.json, apply.sh, values-overlay.yaml, README.md}` | `lmtune search export --winner top-1` |
+| Plot 아티팩트 | `b200/studies/<study_id>/plots/` | visualization |
+| 정적 HTML dashboard | `b200/dashboards/{index,study/<id>,compare}.html` + `data/*.json` | `lmtune dashboard build` |
+| Fabric baseline | `b200/studies/fabric_baselines/<ts>/fabric_baseline.json` | `b200/scripts/fabric_probe.sh` |
+| ANALYSIS.md | `b200/studies/<study_id>/ANALYSIS.md` | 사람 + auto-mode |
+
+용어 / 흐름 더 깊은 도식 = [`docs/architecture.md`](docs/architecture.md) (5-layer breakdown), [`docs/autotune_loop.md`](docs/autotune_loop.md) (4관점 sequence diagram).
 
 ## 두 트랙 — autotuner 입장에서는 같은 코드 경로
 
