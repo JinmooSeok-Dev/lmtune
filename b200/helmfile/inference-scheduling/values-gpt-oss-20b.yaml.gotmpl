@@ -1,0 +1,78 @@
+# gpt-oss-20b — B200 single-GPU baseline (TEMPLATED)
+#
+# OpenAI gpt-oss-20b (2025-08 공개): 20B MoE (32 experts × top-4, 3.6B active),
+# MXFP4 native weight. B200 sm_100 + vllm 0.17.1 의 native fp4 path 와 정합.
+# ungated 라 HF auth 불필요.
+#
+# values-llama-3.1-8b-smoke.yaml.gotmpl 와 1:1 패턴. .StateValues.{release}.vllmArgs
+# 에서 trial params 를 읽어 vllm container args 로 직렬화.
+
+{{- $release := "ms-infsch" -}}
+{{- $sv := index .StateValues $release | default dict -}}
+{{- $vllmArgs := index $sv "vllmArgs" | default dict -}}
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://openai/gpt-oss-20b"
+  size: 16Gi
+  name: "openai/gpt-oss-20b"
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "b200-gpt-oss-20b"
+    llm-d.ai/hardware-variant: "b200"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "gpt-oss-20b"
+
+routing:
+  proxy:
+    enabled: false
+    targetPort: 8000
+  servicePort: 8000
+
+decode:
+  parallelism:
+    tensor: 1
+  create: true
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+  containers:
+    - name: "vllm"
+      image: vllm/vllm-openai:v0.17.1
+      modelCommand: vllmServe
+      args:
+        # default: gpt-oss-20b 의 MoE 특성에 맞춘 안전한 시작점.
+        # MXFP4 weight 라 quantization=mxfp4 자동 감지되지만 명시 안전.
+        {{- $defaults := dict
+              "max-num-seqs" 64
+              "max-model-len" 8192
+              "gpu-memory-utilization" 0.85
+              "dtype" "bfloat16"
+              "kv-cache-dtype" "auto"
+        }}
+        {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
+        {{- range $k, $v := $merged }}
+        {{- if kindIs "bool" $v }}
+        {{- if $v }}
+        - "--{{ $k }}"
+        {{- end }}
+        {{- else }}
+        - "--{{ $k }}"
+        - {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          cpu: "4"
+          memory: 32Gi
+        limits:
+          nvidia.com/gpu: "1"
+          cpu: "16"
+          memory: 64Gi
+      env:
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"

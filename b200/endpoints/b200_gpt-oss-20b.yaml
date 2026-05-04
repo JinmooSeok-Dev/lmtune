@@ -1,0 +1,53 @@
+apiVersion: lmtune/v1alpha1
+slug: b200-gpt-oss-20b
+name: "B200 single-GPU — gpt-oss-20b (MoE, MXFP4)"
+# url 의 두 모드:
+#   (A) K8sJobBackend (자동 cycle, default) — cluster-internal Service URL
+#       url 예: http://infra-infsch-inference-gateway.b200-infsch.svc.cluster.local/v1
+#   (B) host inline (mac/Linux) — kubectl port-forward svc/<decode> 8011:8000 후 localhost
+url: http://infra-infsch-inference-gateway.b200-infsch.svc.cluster.local/v1
+model: openai/gpt-oss-20b
+tokenizer: openai/gpt-oss-20b
+api_type: openai
+
+deployment:
+  engine: vllm
+  version: "0.17.1"
+  parallelism:
+    tp: 1
+    dp: 1
+    ep: false
+  engine_args:
+    enable_prefix_caching: true
+    max_num_seqs: 64
+    max_model_len: 8192
+    gpu_memory_utilization: 0.85
+    kv_cache_dtype: auto
+    dtype: bfloat16
+  helmfile_overrides:
+    helmfile_file: b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl
+    environment: default
+    selector: kind=inference-stack
+    release_name: ms-infsch
+    namespace: b200-infsch
+    deployment_name: ms-infsch-llm-d-modelservice-decode
+    rollout_timeout_s: 900
+    # 모델 전환: helmfile 의 ms- release values 가 env 분기 (B200_MODEL_VALUES).
+    # subprocess 가 부모 env 상속하므로 사용자 쉘에서 export 필요:
+    #   export B200_MODEL_VALUES=values-gpt-oss-20b.yaml.gotmpl
+    # 또는 lmtune search start 호출 시 prefix.
+
+notes: |
+  gpt-oss-20b — OpenAI 가 2025-08 공개한 open-weight MoE.
+  20B 총 / 3.6B active / 32 experts top-4 / MXFP4 native weight.
+  B200 sm_100 의 fp4 path 와 정합. ungated 라 HF auth 불필요.
+
+  helmfile redeploy 전 한 번만:
+    export B200_MODEL_VALUES=values-gpt-oss-20b.yaml.gotmpl
+
+  port-forward (host inline 모드):
+    SVC=$(kubectl -n b200-infsch get svc -l llm-d.ai/role=decode \
+            -o jsonpath='{.items[0].metadata.name}')
+    kubectl -n b200-infsch port-forward svc/$SVC 8011:8000 &
+
+tags: [b200, gpt-oss, moe, mxfp4]

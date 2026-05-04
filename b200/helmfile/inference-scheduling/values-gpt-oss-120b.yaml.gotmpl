@@ -1,0 +1,74 @@
+# gpt-oss-120b — B200 single-GPU baseline (TEMPLATED)
+#
+# OpenAI gpt-oss-120b (2025-08 공개): 117B MoE (128 experts × top-4, 5.1B active),
+# MXFP4 native weight (~63GB). B200 단일 GPU (~180GB HBM3e) 에 충분.
+# 16-GPU 활용 시: TP=2 × DP=8 또는 wide-EP (DP=8 × EP=8).
+# ungated.
+
+{{- $release := "ms-infsch" -}}
+{{- $sv := index .StateValues $release | default dict -}}
+{{- $vllmArgs := index $sv "vllmArgs" | default dict -}}
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://openai/gpt-oss-120b"
+  size: 80Gi
+  name: "openai/gpt-oss-120b"
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "b200-gpt-oss-120b"
+    llm-d.ai/hardware-variant: "b200"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "gpt-oss-120b"
+
+routing:
+  proxy:
+    enabled: false
+    targetPort: 8000
+  servicePort: 8000
+
+decode:
+  parallelism:
+    tensor: 1
+  create: true
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+  containers:
+    - name: "vllm"
+      image: vllm/vllm-openai:v0.17.1
+      modelCommand: vllmServe
+      args:
+        {{- $defaults := dict
+              "max-num-seqs" 32
+              "max-model-len" 8192
+              "gpu-memory-utilization" 0.90
+              "dtype" "bfloat16"
+              "kv-cache-dtype" "auto"
+        }}
+        {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
+        {{- range $k, $v := $merged }}
+        {{- if kindIs "bool" $v }}
+        {{- if $v }}
+        - "--{{ $k }}"
+        {{- end }}
+        {{- else }}
+        - "--{{ $k }}"
+        - {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          cpu: "8"
+          memory: 96Gi
+        limits:
+          nvidia.com/gpu: "1"
+          cpu: "32"
+          memory: 160Gi
+      env:
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"

@@ -8,6 +8,12 @@
 #   --selector role=smoke   → values-llama-3.1-8b-smoke.yaml (B0)
 #   --selector role=base    → values-qwen3-235b-tp2-dp4.yaml (B1)
 #
+# 모델 전환:
+#   B200_MODEL_VALUES=values-gpt-oss-20b.yaml.gotmpl \
+#     helmfile -f b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl apply
+#   미설정 시 default = values-llama-3.1-8b-smoke.yaml.gotmpl. 새 모델 추가는
+#   values-<model>.yaml.gotmpl 1개 + endpoint YAML 1개로 끝 (helmfile 본체 무수정).
+#
 # Self-contained: peer repo 참조 없이 OCI chart 직접 사용.
 
 environments:
@@ -71,7 +77,7 @@ releases:
       - {{ printf "gaie-%s" $rn | quote }}
     values:
       - ../base/values-b200-common.yaml.gotmpl
-      - values-llama-3.1-8b-smoke.yaml.gotmpl
+      - {{ env "B200_MODEL_VALUES" | default "values-llama-3.1-8b-smoke.yaml.gotmpl" }}
     set:
       # smoke: 모니터링 비활성 (B0 단계)
       - name: "decode.monitoring.podmonitor.enabled"
