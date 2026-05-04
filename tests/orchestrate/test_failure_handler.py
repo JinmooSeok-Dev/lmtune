@@ -77,6 +77,15 @@ def test_breaker_pruned_counts_as_success_for_stability():
     assert halt is False
 
 
+def test_breaker_infeasible_counts_as_success_for_stability():
+    """구성 invalid 는 인프라 실패가 아니라 sampler 학습 신호 — stability 에서 제외."""
+    b = CircuitBreaker(cfg=CircuitBreakerConfig(max_consecutive_failures=3))
+    for _ in range(10):
+        b.record(FailureClass.INFEASIBLE)
+    halt, _ = b.should_halt()
+    assert halt is False
+
+
 def test_breaker_consecutive_failures_trigger_halt():
     b = CircuitBreaker(cfg=CircuitBreakerConfig(max_consecutive_failures=3))
     b.record(FailureClass.OOM)

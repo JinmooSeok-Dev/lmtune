@@ -25,12 +25,22 @@ log = logging.getLogger(__name__)
 
 CRASH_PATTERNS: dict[str, list[str]] = {
     "infeasible": [
-        r"ValidationError:.*not supported for quantization",
+        # vllm pydantic VllmConfig 검증 — multiline 메시지 (e.g., mxfp4 × float16) 도
+        # 매치하도록 [\s\S] 사용. re.DOTALL 안 쓰는 이유: 다른 패턴이 . 의 newline
+        # non-match 에 의존할 수 있어 영향 범위 격리.
+        r"ValidationError:[\s\S]{0,300}?not supported for quantization",
         r"unrecognized arguments",
         r"argparse.*invalid",
         r"required argument.*missing",
         r"is not a valid value",
         r"Found duplicate keys",
+        # torch.compile / Dynamo 가 모델 코드의 hardcoded assertion 을 못 트레이스해서
+        # partial graph 컴파일 거부 — 모델이 특정 axis 조합을 거부하는 신호 (구성 무효).
+        # 예: gpt-oss-120b 의 attention.py:408 `assert self.kv_cache_dtype in {"fp8", ...}`
+        # → kv_cache_dtype=auto/fp8_e5m2 선택 시 trip.
+        r"Data-dependent assertion failed",
+        r"cannot compile partial graph",
+        r"assert self\.kv_cache_dtype in",
     ],
     "oom": [
         r"OutOfMemoryError",

@@ -56,6 +56,35 @@ def test_classify_hard_empty():
     assert classify_crash("") == "hard"
 
 
+def test_classify_infeasible_dynamo_data_dependent_assert():
+    """gpt-oss-120b 의 attention.py 에 hardcoded `assert kv_cache_dtype in {fp8, fp8_e4m3}`
+    가 torch.compile 의 graph break 못 함 → kv_cache_dtype=auto/fp8_e5m2 선택 시 trip."""
+    logs = """
+    RuntimeError: Worker failed with error 'Data-dependent assertion failed (cannot compile partial graph)
+      Explanation: Dynamo has determined when encountering a data-dependent assert failure ...
+    File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/attention/attention.py", line 408, in forward
+        assert self.kv_cache_dtype in {"fp8", "fp8_e4m3"}
+    """
+    assert classify_crash(logs) == "infeasible"
+
+
+def test_classify_infeasible_kv_cache_dtype_assert_only():
+    """assertion line 단독으로도 infeasible 분류 가능."""
+    logs = "assert self.kv_cache_dtype in {\"fp8\", \"fp8_e4m3\"}"
+    assert classify_crash(logs) == "infeasible"
+
+
+def test_classify_infeasible_mxfp4_dtype_multiline_regression():
+    """PR #13 회귀 — ValidationError 와 'not supported for quantization' 사이에
+    줄바꿈/들여쓰기 가 끼어도 매치되어야 한다."""
+    logs = """
+    pydantic_core._pydantic_core.ValidationError: 1 validation error for VllmConfig
+      Value error, torch.float16 is not supported for quantization method mxfp4.
+      Supported dtypes: [torch.bfloat16]
+    """
+    assert classify_crash(logs) == "infeasible"
+
+
 def test_classify_priority_infeasible_over_transient():
     """ValidationError 우선 — connection refused 메시지가 같이 있어도 infeasible 분류."""
     logs = """
