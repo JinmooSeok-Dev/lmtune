@@ -35,7 +35,8 @@ deployment:
   #     --state-values-file <overlay> apply
   # 로 release `ms-infsch` 만 갈아치우고 나머지 (infra-, gaie-) 는 그대로.
   helmfile_overrides:
-    helmfile_root: /home/jinmoo/ml_ai/benchmark
+    # helmfile_root 는 명시하지 않으면 lmtune repo root 자동 탐지.
+    # 다른 위치의 helmfile 을 쓰려면 절대경로 또는 LMTUNE_HELMFILE_ROOT env.
     helmfile_file: b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl
     environment: default
     selector: kind=inference-stack

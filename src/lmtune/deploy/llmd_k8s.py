@@ -38,13 +38,18 @@ from lmtune.deploy.health import probe_openai_models, warmup_one_token
 log = logging.getLogger(__name__)
 
 
-# Peer repo with the llm-d helmfile templates; override via env if needed.
-DEFAULT_HELMFILE_ROOT = Path("/home/jinmoo/ml_ai/agentic/llm-distributed-inference")
-
-# Bench repo root — auto-detected from this file's location (src/bench/deploy/).
-# Override via env LMTUNE_REPO_ROOT if needed (e.g. in CI worktrees).
+# lmtune repo root — auto-detected from this file's location (src/lmtune/deploy/).
+# 우선순위: LMTUNE_REPO_ROOT env > __file__ 상대 (이게 거의 모든 정상 설치/CI/worktree 에서 동작).
+# 호스트 무관 — 이전엔 절대경로 hardcode 였음 (회귀 방지: 어떤 endpoint YAML 도 absolute path 박지 말 것).
 DEFAULT_LMTUNE_REPO_ROOT = Path(
     _os.environ.get("LMTUNE_REPO_ROOT") or Path(__file__).resolve().parents[3]
+)
+
+# helmfile templates root — b200/helmfile/* 가 lmtune repo 안에 self-contained 이므로
+# 디폴트는 lmtune repo root. peer-repo (llm-distributed-inference) 가 필요한 경우만 override.
+# 우선순위: 명시 인자 > endpoint YAML helmfile_overrides.helmfile_root > LMTUNE_HELMFILE_ROOT env > 자동
+DEFAULT_HELMFILE_ROOT = Path(
+    _os.environ.get("LMTUNE_HELMFILE_ROOT") or DEFAULT_LMTUNE_REPO_ROOT
 )
 
 
