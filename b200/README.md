@@ -60,6 +60,49 @@ lmtune search start \
 # (이후 phase 별 명령어는 각 phase doc 참조)
 ```
 
+## Operations — 다음 실험을 위한 환경 정비
+
+> **lmtune search start 직전 단계** 를 4 단어 명령으로 끝낸다. 매번 `kubectl port-forward`, helmfile, env 를 손으로 조립할 필요 없음. 각 명령은 idempotent — 여러 번 실행해도 안전.
+
+### 진입점 (ops/)
+
+```bash
+# 1) 현재 상태 한 화면 (releases + pods + svc + port-forward + env)
+bash b200/scripts/ops/status.sh infsch
+
+# 2) 다음 실험 사전 조건 자동 정비
+#    - cluster/ns 검증
+#    - helm release 3종 deployed 검증
+#    - decode Deployment Available 대기
+#    - 기존 stale port-forward 정리
+#    - infra gateway port-forward 데몬 (재시도 wrapper) 띄움
+#    - /v1/models 200 검증
+bash b200/scripts/ops/prepare.sh infsch
+#    release 가 빠져 있으면 자동 install 까지:
+bash b200/scripts/ops/prepare.sh infsch --apply
+
+# 3) 잔재 정리 (수준별)
+bash b200/scripts/ops/reset.sh                  # soft: port-forward 만 정리
+bash b200/scripts/ops/reset.sh infsch --pods    # decode pod rolling restart (release 유지)
+bash b200/scripts/ops/reset.sh infsch --hard    # helmfile destroy (확인 prompt)
+```
+
+`<rn>` 은 well-lit-path 식별자: `infsch` (inference-scheduling) / `pd` (pd-disaggregation) / `wideep` (wide-ep-lws).
+
+### Why gateway, not decode
+
+lmtune endpoint YAML 의 `url: http://127.0.0.1:8011/v1` 은 **`infra-<rn>-inference-gateway` Service 의 :80** 으로 port-forward 됨. **decode service 직접 forward 는 우리 시나리오에 없다** — gateway 우회 시 llm-d 의 InferencePool/EPP smart routing 이 측정에서 빠져 autotune 결과가 운영 환경과 어긋난다 (이러면 llm-d 를 쓸 이유가 없다).
+
+### Helper utilities (다른 스크립트에서 source 해서 사용)
+
+```bash
+source b200/scripts/util/pf.sh    # pf::list, pf::stop_all, pf::stop_local, pf::start, pf::probe, pf::status
+source b200/scripts/util/helm.sh  # helmd::list, helmd::releases_check, helmd::diff, helmd::apply, helmd::wait_decode_ready, helmd::destroy
+source b200/scripts/util/env.sh   # bench_env::require_model_values, bench_env::cluster_check, ...
+```
+
+상세 (path 별 release 매핑, 트러블슈팅, helmfile rolling 시 끊김 처리 원리): [`docs/port_forward_runbook.md`](docs/port_forward_runbook.md).
+
 ## 디렉토리 구조
 
 ```
@@ -144,6 +187,7 @@ b200/
 
 ## 참고 문서
 
+- **Endpoint 노출 (gateway port-forward 운영 가이드)**: [`docs/port_forward_runbook.md`](docs/port_forward_runbook.md) ← lmtune 실행 직전 필수 단계
 - **실험 계획 (phase 별 모델·workload·axis·합격 기준 카탈로그)**: [`docs/experiment_plan.md`](docs/experiment_plan.md) ← B0 통과 후 다음 결정 시 참조
 - 전체 plan: `(internal dev plan, not in repo)` (Phase B 섹션)
 - 도구 스택 (Optuna 4.8 / SALib 1.5 / BoTorch 0.9.5): `docs/search_tooling_2026-04.md`

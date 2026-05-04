@@ -113,23 +113,24 @@ kubectl get pods -n b200-infsch -w
 kubectl apply -f httproute.yaml
 ```
 
-agentgateway 인 경우는 InferencePool 미지원이라 직접 port-forward 사용 (S5f-3 함정 메모 참조).
+agentgateway 도 InferencePool 라우팅을 지원하므로 (llm-d 0.4+) 본 setup 의 default `provider: agentgateway` 가 그대로 동작한다.
 
-## 7. Endpoint 노출
+## 7. Endpoint 노출 — gateway port-forward (단일 경로)
+
+본 프로젝트의 **유일한** endpoint 노출 방식은 `infra-<rn>-inference-gateway` Service 로의 port-forward 다. decode service / pod 로의 직접 forward 는 InferencePool/EPP smart routing 을 우회해 autotune 결과를 무의미하게 만들기 때문에 **사용하지 않는다** (llm-d 를 쓰는 이유 자체가 사라짐).
+
+상세 절차·재시도 wrapper·트러블슈팅: [`docs/port_forward_runbook.md`](port_forward_runbook.md).
+
+요약:
 
 ```bash
-# 옵션 A: HTTPRoute + LoadBalancer / nodePort (kgateway)
-GW_IP=$(kubectl get gateway -n b200-infsch infra-infsch-inference-gateway -o jsonpath='{.status.addresses[0].value}')
-echo "endpoint: http://$GW_IP"
-
-# 옵션 B: decode pod 직접 port-forward (agentgateway / smoke)
-DECODE_POD=$(kubectl get pods -n b200-infsch -l llm-d.ai/role=decode -o jsonpath='{.items[0].metadata.name}')
-kubectl port-forward -n b200-infsch pod/$DECODE_POD 8011:8000 &
-
-curl -s --max-time 10 http://127.0.0.1:8011/v1/models | head -50
+RN=infsch; NS=b200-${RN}
+nohup /tmp/pf_loop.sh "${NS}" "infra-${RN}-inference-gateway" 8011 80 \
+  >/tmp/pf_gateway_8011.log 2>&1 &
+curl -s --max-time 5 http://127.0.0.1:8011/v1/models | head -50
 ```
 
-`b200/endpoints/b200_smoke.yaml` 의 `url` 을 실측치로 갱신 (예: `http://<GW_IP>/v1` 또는 `http://127.0.0.1:8011/v1`).
+`b200/endpoints/b200_smoke.yaml` 의 `url` 은 항상 `http://127.0.0.1:8011/v1` 로 고정 (gateway port-forward 전제).
 
 ## 8. lmtune run smoke
 
