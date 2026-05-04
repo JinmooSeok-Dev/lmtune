@@ -171,12 +171,22 @@ def cmd_start(
 
     # Warm-start
     if warmstart_db:
-        seeds = warmstart_from_archive(
-            warmstart_db, sp,
-            endpoint_slug=cfg.endpoint_slug,
-            profile_slugs=profile_slugs or None,
-            top_k=warmstart_top_k,
-        )
+        # warmstart_db 가 active DB 와 같은 파일이면 DuckDB 가 동시 open 거부
+        # ("Can't open a connection to same database file with a different
+        # configuration"). active store 를 일시 중단 후 read-only 로 재오픈.
+        same_file = Path(warmstart_db).resolve() == Path(db_path).resolve()
+        if same_file:
+            store.suspend()
+        try:
+            seeds = warmstart_from_archive(
+                warmstart_db, sp,
+                endpoint_slug=cfg.endpoint_slug,
+                profile_slugs=profile_slugs or None,
+                top_k=warmstart_top_k,
+            )
+        finally:
+            if same_file:
+                store.resume()
         if seeds:
             console.print(f"[green]warmstart[/]: seeded {len(seeds)} trial(s) from archive")
             study.enqueue_warmstart(seeds)
