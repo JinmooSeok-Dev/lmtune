@@ -1,6 +1,6 @@
 # Phase B — 2× B200 (16-GPU) llm-d Autotuning Platform
 
-> 본 디렉토리는 NVIDIA B200 16-GPU k3s 클러스터 위에서 llm-d 기반 autotuning 플랫폼을 운용하기 위한 모든 자산을 담는다. core 코드(`src/bench/**`) 는 거의 건드리지 않고 phase 별로 자산을 누적한다. 전체 plan 은 `/home/jinmoo/.claude/plans/async-cooking-cat.md` 의 "Phase B" 섹션 참조.
+> 본 디렉토리는 NVIDIA B200 16-GPU k3s 클러스터 위에서 llm-d 기반 autotuning 플랫폼을 운용하기 위한 모든 자산을 담는다. core 코드(`src/bench/**`) 는 거의 건드리지 않고 phase 별로 자산을 누적한다. 전체 plan 은 `(internal dev plan, not in repo)` 의 "Phase B" 섹션 참조.
 
 ## 환경 가정
 
@@ -12,7 +12,7 @@
 | 인터노드 fabric | RDMA (InfiniBand 또는 RoCE) | `B0` probe 가 검증 |
 | K8s | k3s | nvidia-device-plugin + Multus(또는 SR-IOV CNI) 필요 |
 | 컨테이너 런타임 | containerd 권장 | cri-dockerd 도 가능 |
-| peer repo | `/home/jinmoo/ml_ai/agentic/llm-distributed-inference` (default) | B0 에서 경로 확인·수정 가능 |
+| peer repo | `$HOME/ml_ai/agentic/llm-distributed-inference` (override via `PEER_REPO` env) (default) | B0 에서 경로 확인·수정 가능 |
 
 > **사용자 환경 보정**: 위와 다른 부분은 `docs/b200_environment.md` 의 실측치로 갱신하면 모든 helmfile / search-space / endpoint 가 그 값을 참조한다.
 
@@ -141,7 +141,7 @@ b200/
 ## 참고 문서
 
 - **실험 계획 (phase 별 모델·workload·axis·합격 기준 카탈로그)**: [`docs/experiment_plan.md`](docs/experiment_plan.md) ← B0 통과 후 다음 결정 시 참조
-- 전체 plan: `/home/jinmoo/.claude/plans/async-cooking-cat.md` (Phase B 섹션)
+- 전체 plan: `(internal dev plan, not in repo)` (Phase B 섹션)
 - 도구 스택 (Optuna 4.8 / SALib 1.5 / BoTorch 0.9.5): `docs/search_tooling_2026-04.md`
 - llm-d well-lit paths: <https://github.com/llm-d/llm-d/tree/main/guides>
-- peer helmfile templates: `/home/jinmoo/ml_ai/agentic/llm-distributed-inference`
+- peer helmfile templates: `$HOME/ml_ai/agentic/llm-distributed-inference` (override via `PEER_REPO` env)

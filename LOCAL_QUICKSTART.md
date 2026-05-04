@@ -255,4 +255,4 @@ helmfile -f b200/helmfile/inference-scheduling/helmfile-mini.yaml.gotmpl destroy
 
 - **B200 16-GPU**: [`b200/QUICKSTART.md`](b200/QUICKSTART.md) — 3 well-lit-paths 동일 흐름
 - **본격 NSGA-II**: B200 QUICKSTART §8 — 40 trial multi-obj Pareto + budget-hours
-- **계획 전체**: `/home/jinmoo/.claude/plans/async-cooking-cat.md` Phase B 섹션
+- **계획 전체**: `(internal dev plan, not in repo)` Phase B 섹션

@@ -40,7 +40,7 @@ pip install -e ".[dev,search,distributed,runners]"
 | `kubectl` 가 cluster 를 가리킴 | `kubectl get nodes` 가 Ready 노드 반환 |
 | GPU device plugin (nvidia / cdi) | `kubectl get nodes -o jsonpath='{..allocatable.nvidia\.com/gpu}'` 가 0 보다 큰 값 |
 | Gateway API CRD | `kubectl get crd \| grep gateway.networking.k8s.io` 가 `gateways`, `httproutes` 포함 |
-| llm-d helmfile peer repo | 기본 `/home/jinmoo/ml_ai/agentic/llm-distributed-inference` (env `HELMFILE_ROOT` 로 override) |
+| llm-d helmfile peer repo | 기본 `$HOME/ml_ai/agentic/llm-distributed-inference` (override via `PEER_REPO` env) (env `HELMFILE_ROOT` 로 override) |
 | llm-d 배포 | peer repo 에서 `helmfile -f phase1/helmfile.yaml.gotmpl apply` 1회 (트랙 신규 진입 시) |
 | (옵션) SR-IOV / RDMA — B200·B-track | Multus + `SriovNetworkNodePolicy` 등록 + `rdma/hca` resource 노출 |
 | (옵션) OpenShift | `restricted-v2` SCC 호환 helmfile. peer repo 의 `phase1` 은 OCP 호환 작성 |
@@ -251,7 +251,7 @@ lmtune dashboard   정적 HTML 대시보드 (build/serve)
 
 ## 상태
 
-Phase W (Walkthrough MVP) 코드 진입 완료. B0~B8 (B200 16-GPU) 진입 대기. 전체 로드맵은 `/home/jinmoo/.claude/plans/async-cooking-cat.md` 참조.
+Phase W (Walkthrough MVP) 코드 진입 완료. B0~B8 (B200 16-GPU) 진입 대기. 전체 로드맵은 `(internal dev plan, not in repo)` 참조.
 
 ## Acknowledgements
 

@@ -293,7 +293,7 @@ lmtune search start \
 
 3 path quickstart 가 끝나면:
 
-- **wider 탐색**: B-track plan (`/home/jinmoo/.claude/plans/async-cooking-cat.md` § Phase B) 의 B1~B6
+- **wider 탐색**: B-track plan (`(internal dev plan, not in repo)` § Phase B) 의 B1~B6
 - **path 조합**: 현재 미구현. 4 layer 분해 (topology / routing / cache / autoscale) 는 plan 의 후속 phase
 - **다른 모델**: `b200/helmfile/<path>/values-<model>.yaml` 추가 + `--endpoint` 의 url/model 만 바꾸면 같은 helmfile 위에서 동작
 - **외부 공개**: B-IV (B7/B8) — multi-engine + RECIPES.md + 블로그 초고

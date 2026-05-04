@@ -2,7 +2,7 @@
 
 > **본 문서의 위치**: B200 클러스터에서 **무엇을 / 어떤 모델로 / 어떤 axis 로 / 어떤 합격 기준으로** 실험할지의 phase 별 카탈로그.
 > Quickstart 명령은 [`b200/QUICKSTART.md`](../QUICKSTART.md), B0 진단 절차는 [`B0_runbook.md`](B0_runbook.md), axis 카탈로그는 [`vllm_axis_catalog.md`](vllm_axis_catalog.md) / [`lowlevel_axis_catalog.md`](lowlevel_axis_catalog.md) 를 참조.
-> 전체 plan 은 `/home/jinmoo/.claude/plans/async-cooking-cat.md` § Phase B.
+> 전체 plan 은 `(internal dev plan, not in repo)` § Phase B.
 >
 > **소유자**: jinmoo · **최종 검토**: 2026-05-04 · **검토 주기**: phase 종료 시마다
 
@@ -237,8 +237,8 @@ lmtune search start \
 ## 9. 외부 Reference
 
 - llm-d well-lit paths: <https://github.com/llm-d/llm-d/tree/main/guides>
-- vllm-config-puzzle simulator (B3 정본): `/home/jinmoo/new-idea/vllm-config-puzzle/src/engine/llm-dist-sim/`
-- peer helmfile templates: `/home/jinmoo/ml_ai/agentic/llm-distributed-inference`
+- vllm-config-puzzle simulator (B3 정본): see [vllm-config-puzzle](https://github.com/vllm-project/vllm-config-puzzle)
+- peer helmfile templates: `$HOME/ml_ai/agentic/llm-distributed-inference` (override via `PEER_REPO` env)
 - InferenceX (B5/B8 dashboard schema reference): <https://inferencex.com>, <https://github.com/SemiAnalysisAI/InferenceX>
 - ariadne (B6 system topology, [lowlevel] extra): topology 수집·시뮬
 - MLPerf Inference v5.x B200 submissions: <https://github.com/mlcommons/inference>

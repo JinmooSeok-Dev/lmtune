@@ -1,5 +1,5 @@
 <!--
-PR 작성 지침은 plan (`/home/jinmoo/.claude/plans/async-cooking-cat.md`) 의
+PR 작성 지침은 plan (`(internal dev plan, not in repo)`) 의
 "산출물 표준" 절을 따른다. PR 1개 = 1 study 또는 1 phase 단위.
 -->
 

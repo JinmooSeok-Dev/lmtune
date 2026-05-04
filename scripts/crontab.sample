@@ -1,12 +1,12 @@
 # /etc/cron.d/bench-nightly 또는 `crontab -e` 에 복사.
 # 매일 03:00 에 llm-d endpoint 에 대해 전체 profile sweep.
 #
-# 환경변수는 각 cron 라인 앞에 지정하거나 systemd-timer 로 관리 권장.
+# 사용 전 BENCH_HOME, LLMD_API_KEY, USER 를 환경에 맞게 채우세요.
 
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-BENCH_HOME=/home/jinmoo/ml_ai/benchmark
+BENCH_HOME=/path/to/your/lmtune-clone   # e.g. /home/$USER/ml_ai/benchmark
 LLMD_API_KEY=replace-me
 
-0 3 * * * jinmoo cd $BENCH_HOME && ENDPOINT=configs/endpoints/llmd_k8s.yaml \
+0 3 * * * YOUR_USERNAME cd $BENCH_HOME && ENDPOINT=configs/endpoints/llmd_k8s.yaml \
     ./scripts/nightly_sweep.sh >> $BENCH_HOME/data/reports/cron.log 2>&1
