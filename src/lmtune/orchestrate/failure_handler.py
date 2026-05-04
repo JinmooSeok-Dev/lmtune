@@ -98,9 +98,16 @@ class CircuitBreaker:
     halt_reason: str = ""
 
     def record(self, outcome: FailureClass) -> None:
-        # SUCCESS, PRUNED 는 "정상 측정 완료" 로 본다.
-        # PRUNED 는 SLO 미달이지만 측정 자체는 valid → 안정성 평가에서 제외.
-        is_failure = outcome not in (FailureClass.SUCCESS, FailureClass.PRUNED)
+        # 안정성 실패에서 제외:
+        #   SUCCESS — 정상 측정 완료
+        #   PRUNED  — SLO 미달이지만 측정 자체는 valid
+        #   INFEASIBLE — 구성 자체 invalid (axis 조합이 모델/HW 와 비호환). 인프라
+        #     실패가 아니라 sampler 가 학습할 invalid region. helmfile redeploy 는
+        #     성공했고 vllm 이 자기 의지로 거부한 것이므로 "안정성 신호" 가 아님.
+        # 나머지 (OOM, TRANSIENT, STARTUP_TIMEOUT, MEASURE_FAILED, HARD) 만 stability
+        # failure 로 카운트 → circuit breaker 가 진짜 인프라 문제만 감지.
+        stable = (FailureClass.SUCCESS, FailureClass.PRUNED, FailureClass.INFEASIBLE)
+        is_failure = outcome not in stable
         self.total += 1
         if is_failure:
             self.consecutive_failures += 1

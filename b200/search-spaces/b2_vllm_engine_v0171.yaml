@@ -31,8 +31,12 @@ axes:
   # ─────────── KV Cache ───────────
   kv_cache_dtype:
     type: categorical
-    values: [auto, fp8, fp8_e4m3, fp8_e5m2]
-    # nvfp4 는 모델·HW 호환성 사전 검증 후 별도 study 에서만 (B200 sm_100).
+    values: [fp8, fp8_e4m3]
+    # gpt-oss-120b 의 attention 커널이 hardcoded `assert kv_cache_dtype in
+    # {"fp8", "fp8_e4m3"}` (vllm 0.17.1 model_executor/.../attention.py:408) →
+    # auto / fp8_e5m2 선택 시 torch.compile 단에서 partial graph 컴파일 거부 crash.
+    # 비-gpt-oss 모델 (Llama, Qwen 등) 으로 search 할 때는 별도 search-space 에서
+    # auto / fp8_e5m2 활성 가능. nvfp4 는 모델·HW 호환성 사전 검증 후 별도 study.
 
   gpu_memory_utilization:
     type: float
