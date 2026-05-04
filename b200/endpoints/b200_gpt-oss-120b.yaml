@@ -1,7 +1,7 @@
 apiVersion: lmtune/v1alpha1
 slug: b200-gpt-oss-120b
 name: "B200 single-GPU — gpt-oss-120b (MoE, MXFP4)"
-url: http://infra-infsch-inference-gateway.b200-infsch.svc.cluster.local/v1
+url: http://127.0.0.1:8011/v1
 model: openai/gpt-oss-120b
 tokenizer: openai/gpt-oss-120b
 api_type: openai
@@ -9,10 +9,9 @@ api_type: openai
 deployment:
   engine: vllm
   version: "0.17.1"
-  parallelism:
-    tp: 8
-    dp: 2
-    ep: false
+  # parallelism 은 chart values (decode.parallelism.tensor=8 + decode.replicas=2)
+  # 가 단일 source. endpoint 에 또 두면 adapter 가 vllmArgs 로 inject → 중복.
+  # 16-GPU 토폴로지 (TP=8 × DP=2) 는 values-gpt-oss-120b.yaml.gotmpl 참조.
   engine_args:
     enable_prefix_caching: true
     max_num_seqs: 128
@@ -20,7 +19,8 @@ deployment:
     gpu_memory_utilization: 0.90
     kv_cache_dtype: auto
     dtype: bfloat16
-    tensor_parallel_size: 8
+    # tensor_parallel_size 는 deployment.parallelism.tp 또는 chart 의
+    # decode.parallelism.tensor 에서만 설정. engine_args 에서 또 주면 중복 emit.
   helmfile_overrides:
     helmfile_file: b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl
     environment: default

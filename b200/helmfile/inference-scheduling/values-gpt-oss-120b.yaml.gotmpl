@@ -66,13 +66,14 @@ decode:
       image: vllm/vllm-openai:v0.17.1
       modelCommand: vllmServe
       args:
+        {{- /* tensor-parallel-size 는 chart 가 decode.parallelism.tensor 에서 자동 inject.
+              여기서 또 emit 하면 --tensor-parallel-size 가 두 번 들어가 vllm 이 reject. */}}
         {{- $defaults := dict
               "max-num-seqs" 128
               "max-model-len" 8192
               "gpu-memory-utilization" 0.90
               "dtype" "bfloat16"
               "kv-cache-dtype" "auto"
-              "tensor-parallel-size" 8
         }}
         {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
         {{- range $k, $v := $merged }}
