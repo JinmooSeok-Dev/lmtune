@@ -2,6 +2,10 @@
 
 > 본 디렉토리는 NVIDIA B200 16-GPU k3s 클러스터 위에서 llm-d 기반 autotuning 플랫폼을 운용하기 위한 모든 자산을 담는다. core 코드(`src/bench/**`) 는 거의 건드리지 않고 phase 별로 자산을 누적한다. 전체 plan 은 `(internal dev plan, not in repo)` 의 "Phase B" 섹션 참조.
 
+> **북극성 — 사용 시나리오 (project north star)**: [`docs/usage_scenarios.md`](docs/usage_scenarios.md). 모든 코드/문서/도구는 본 시나리오를 만족시키는 형태로만 추가된다. 9 시나리오 (S1 setup / S2 cold launch / S3 reset / S4 re-launch / S5 model swap / S6 path change / S7 halt resume / S8 analyze / S9 governance) 와 진입점 매핑은 그 문서가 정본.
+
+> **결함 catalog**: [`docs/regressions.md`](docs/regressions.md) — 사용자 시간을 한 번이라도 빼앗은 결함은 `R<n>` entry 로 영속화 (PR 게이트 의무, CLAUDE.md 의 § PR 게이트 참조).
+
 ## 환경 가정
 
 | 항목 | 기본값 | 비고 |
@@ -62,32 +66,62 @@ lmtune search start \
 
 ## Operations — 다음 실험을 위한 환경 정비
 
-> **lmtune search start 직전 단계** 를 4 단어 명령으로 끝낸다. 매번 `kubectl port-forward`, helmfile, env 를 손으로 조립할 필요 없음. 각 명령은 idempotent — 여러 번 실행해도 안전.
+> **vLLM 의 본성**: 거의 모든 axis (`max_num_seqs`, `kv_cache_dtype`, `enable_prefix_caching`, `gpu_memory_utilization`, parallelism) 가 engine 재시작을 강제. 즉 **"처음 시작"과 "설정 변경 후 재실행"은 본질적으로 같은 비용** (config change = pod restart = weight reload). 우리 운영 도구는 두 시나리오를 같은 진입점으로 통합한다.
 
-### 진입점 (ops/)
+### 1st-class 진입점 — `ops/launch.sh`
+
+endpoint YAML 한 줄을 받아서 처음/재실행/모델 swap 무관하게 동일하게 동작 (idempotent):
 
 ```bash
-# 1) 현재 상태 한 화면 (releases + pods + svc + port-forward + env)
-bash b200/scripts/ops/status.sh infsch
+bash b200/scripts/ops/launch.sh b200/endpoints/b200_gpt-oss-120b.yaml
+# 또는 well-lit-path 명시:
+bash b200/scripts/ops/launch.sh b200/endpoints/b200_gpt-oss-120b.yaml infsch
+```
 
-# 2) 다음 실험 사전 조건 자동 정비
-#    - cluster/ns 검증
-#    - helm release 3종 deployed 검증
-#    - decode Deployment Available 대기
-#    - 기존 stale port-forward 정리
-#    - infra gateway port-forward 데몬 (재시도 wrapper) 띄움
-#    - /v1/models 200 검증
+`launch.sh` 가 자동으로 처리:
+
+| step | 역할 |
+|:---|:---|
+| 1 | endpoint YAML 파싱 → 의도한 model 추출 |
+| 2 | model → values 파일 매핑 → `B200_MODEL_VALUES` 자동 export |
+| 3 | cluster + namespace 검증 |
+| 4 | helm release 3종 검증 + 현 vLLM 의 model id 와 endpoint 일치 비교 → 불일치 시 helmfile apply 자동 |
+| 5 | decode Deployment Available 대기 |
+| 6 | stale port-forward 정리 + 재시도 wrapper 데몬 |
+| 7 | `/v1/models` 200 polling |
+| 8 | 응답 model id 와 endpoint 의 model 최종 일치 검증 |
+
+종료 코드 0 = launcher (`lmtune search start`) 진입 가능. 사용자 손작업 0.
+
+### 보조 진입점
+
+```bash
+bash b200/scripts/ops/status.sh  infsch              # 현재 상태 한 화면
+bash b200/scripts/ops/reset.sh                        # soft: port-forward 정리
+bash b200/scripts/ops/reset.sh   infsch --pods        # decode pod rolling restart
+bash b200/scripts/ops/reset.sh   infsch --hard        # helmfile destroy (prompt)
+
+# launch.sh 의 step 3-7 만 (모델 검증 없이) — 이미 떠있는 환경 보전 시
 bash b200/scripts/ops/prepare.sh infsch
-#    release 가 빠져 있으면 자동 install 까지:
-bash b200/scripts/ops/prepare.sh infsch --apply
-
-# 3) 잔재 정리 (수준별)
-bash b200/scripts/ops/reset.sh                  # soft: port-forward 만 정리
-bash b200/scripts/ops/reset.sh infsch --pods    # decode pod rolling restart (release 유지)
-bash b200/scripts/ops/reset.sh infsch --hard    # helmfile destroy (확인 prompt)
+bash b200/scripts/ops/prepare.sh infsch --apply       # release 미설치 시 helmfile apply
 ```
 
 `<rn>` 은 well-lit-path 식별자: `infsch` (inference-scheduling) / `pd` (pd-disaggregation) / `wideep` (wide-ep-lws).
+
+### 새 모델 추가 — values 매핑 한 줄
+
+`b200/scripts/util/env.sh::values_for_model` 의 case 에 한 줄 추가:
+
+```bash
+case "$model" in
+  openai/gpt-oss-120b)            echo "values-gpt-oss-120b.yaml.gotmpl" ;;
+  meta-llama/Llama-3.1-8B*)       echo "values-llama-3.1-8b-smoke.yaml.gotmpl" ;;
+  Qwen/Qwen3-235B*)               echo "values-qwen3-235b-tp2-dp4.yaml.gotmpl" ;;
+  # ↑ 새 모델 추가
+esac
+```
+
+`b200/helmfile/inference-scheduling/values-<...>.yaml.gotmpl` 에 그 모델용 chart values 가 있다면 endpoint YAML 의 `model:` 만 바꾸면 launch.sh 가 알아서 swap.
 
 ### Why gateway, not decode
 

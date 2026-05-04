@@ -45,6 +45,31 @@ bench_env::local_port_from_endpoint() {
   echo "${port:-8011}"
 }
 
+# endpoint YAML 의 model 필드 추출 — "openai/gpt-oss-120b"
+bench_env::model_from_endpoint() {
+  local endpoint_yaml="$1"
+  awk '/^model:/ {print $2; exit}' "$endpoint_yaml" | tr -d '"'"'"''
+}
+
+# model id (e.g. openai/gpt-oss-120b) → b200/helmfile/<path>/values-*.yaml.gotmpl
+# 매핑 카탈로그. 신규 모델 추가 시 이 함수 한 줄 추가.
+#
+# 첫 번째 인자: model id, 두 번째: well-lit-path key (옵션, default infsch)
+# stdout: values 파일 basename (예: values-gpt-oss-120b.yaml.gotmpl)
+bench_env::values_for_model() {
+  local model="$1"
+  case "$model" in
+    openai/gpt-oss-120b)            echo "values-gpt-oss-120b.yaml.gotmpl" ;;
+    openai/gpt-oss-20b)             echo "values-gpt-oss-20b.yaml.gotmpl" ;;
+    meta-llama/Llama-3.1-8B*)       echo "values-llama-3.1-8b-smoke.yaml.gotmpl" ;;
+    Qwen/Qwen3-235B*)               echo "values-qwen3-235b-tp2-dp4.yaml.gotmpl" ;;
+    *)
+      echo "[env] no values mapping for model='${model}' (b200/scripts/util/env.sh::values_for_model 에 추가 필요)" >&2
+      return 2
+      ;;
+  esac
+}
+
 # RUNTIME 검증 — kubectl 가 닿는 클러스터, namespace 존재
 bench_env::cluster_check() {
   local rn="$1"
