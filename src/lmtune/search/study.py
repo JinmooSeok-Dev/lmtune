@@ -23,6 +23,11 @@ from typing import Any
 import optuna
 from ulid import ULID
 
+from lmtune.orchestrate.failure_handler import (
+    CircuitBreaker,
+    CircuitBreakerConfig,
+    classify_outcome,
+)
 from lmtune.search.objective import Objective, ObjectiveResult
 from lmtune.search.samplers import make_sampler, suggest_from_axis
 from lmtune.search.space import SearchSpace
@@ -51,6 +56,7 @@ class StudyConfig:
     study_id: str | None = None
     notes: str | None = None
     pruner: str | None = None          # none | sh | hyperband
+    breaker: CircuitBreakerConfig | None = None  # None → use defaults; pass disabled-config to opt out
 
 
 class Study:
@@ -87,6 +93,10 @@ class Study:
         self._seq = 0
         self._active_axes = config.space.active_axes(config.context)
         self._exhausted = False
+        # Circuit breaker — halts the loop on persistent failure (helmfile redeploy +
+        # EPP/InferencePool churn 으로 study 가 silently 망가지는 것을 방지).
+        self.breaker = CircuitBreaker(cfg=config.breaker or CircuitBreakerConfig())
+        self._halt_reason: str | None = None
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -235,7 +245,21 @@ class Study:
                 on_trial(trial, result)
             out.append(trial)
 
-        self.storage.set_study_status(self.study_id, "completed", finished=True)
+            outcome = classify_outcome(
+                trial.status.value, error=trial.error, notes=trial.error,
+            )
+            self.breaker.record(outcome)
+            halt, reason = self.breaker.should_halt()
+            if halt:
+                self._halt_reason = reason
+                log.error(
+                    "study %s: HALTED at seq=%d — %s; breaker=%s",
+                    self.study_id, trial.seq, reason, self.breaker.summary(),
+                )
+                break
+
+        final_status = "halted" if self._halt_reason else "completed"
+        self.storage.set_study_status(self.study_id, final_status, finished=True)
         return out
 
 

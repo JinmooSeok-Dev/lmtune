@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 from lmtune.orchestrate.backend import TrialBackend, TrialHandle, TrialPayload, TrialResult
+from lmtune.orchestrate.failure_handler import classify_outcome
 from lmtune.search.objective import ObjectiveResult
 from lmtune.search.study import Study
 from lmtune.search.trial import Trial
@@ -57,11 +58,15 @@ def run_distributed(
     completed: list[Trial] = []
     asked = 0
     started_at = time.time()
+    halt_reason: str | None = None
 
     workers = int(getattr(backend, "_workers", 1))
 
     def _deadline_hit() -> bool:
         return budget_seconds is not None and (time.time() - started_at) >= budget_seconds
+
+    def _halt_hit() -> bool:
+        return halt_reason is not None
 
     def _write(fn_name: str, *args, **kwargs):
         study.storage.resume()
@@ -77,6 +82,7 @@ def run_distributed(
             and asked < max_trials
             and not study._exhausted
             and not _deadline_hit()
+            and not _halt_hit()
         ):
             # ask() mutates Optuna state only (no DB); writes happen below.
             try:
@@ -125,8 +131,26 @@ def run_distributed(
                 )
                 completed.append(trial)
                 finished.append(tid)
+
+                outcome = classify_outcome(
+                    trial.status.value, error=trial.error, notes=trial.error,
+                )
+                study.breaker.record(outcome)
+                halt, reason = study.breaker.should_halt()
+                if halt and halt_reason is None:
+                    halt_reason = reason
+                    log.error(
+                        "study %s: HALTED at seq=%d — %s; breaker=%s",
+                        study.study_id, trial.seq, reason, study.breaker.summary(),
+                    )
             for tid in finished:
                 inflight.pop(tid, None)
+            if _halt_hit():
+                # 추가 ask 차단. 이미 in-flight 인 trial 들은 결과 수확까지 대기 (취소 X).
+                if not inflight:
+                    break
+                time.sleep(poll_interval_s)
+                continue
             _fill_slots()
             if not inflight:
                 break
@@ -139,5 +163,6 @@ def run_distributed(
         backend.shutdown()
         study.storage.resume()
 
-    study.storage.set_study_status(study.study_id, "completed", finished=True)
+    final_status = "halted" if halt_reason else "completed"
+    study.storage.set_study_status(study.study_id, final_status, finished=True)
     return completed
