@@ -67,6 +67,9 @@ b200/
 ├── README.md                          ← 이 파일
 ├── scripts/
 │   ├── probe.sh                       ← 클러스터·fabric·이미지 캐시 진단 (B0)
+│   ├── fabric_probe.sh                ← NVLink + IB baseline 통합 측정 (B6.2 매 study 직전)
+│   ├── rdma_bench.sh                  ← host-level RDMA Perftest (B6.2 raw fabric)
+│   ├── system_snapshot.sh             ← trial 직전 PCIe/IOMMU/NUMA capture (B6.1)
 │   ├── loop.sh                        ← continuous autotuning loop (B5)
 │   └── regression_check.py            ← baseline 회귀 알림 (B5)
 ├── endpoints/                         ← well-lit path × 모델 별 endpoint YAML
@@ -89,7 +92,8 @@ b200/
 │   ├── b3_parallelism.yaml            ← TP/PP/DP/EP + topology axis (B3)
 │   ├── b4_welllit_paths.yaml          ← well-lit path 자체를 axis 로 (B4)
 │   ├── b5_combined_pareto.yaml        ← 통합 Pareto search (B5)
-│   ├── b6_lowlevel.yaml               ← PCIe/IOMMU/NUMA/NCCL/RDMA axis (B6)
+│   ├── b6_lowlevel.yaml               ← PCIe/IOMMU/NUMA host-level axis (B6.1)
+│   ├── b6_interconnect_tier1.yaml     ← NVLink + IB env axis 1차 5종 (B6.2)
 │   └── b7_multistack.yaml             ← engine × serving stack axis (B7)
 ├── profiles/                          ← B200 워크로드 preset
 │   ├── ultra_long.yaml                ← 32K context (대모델)

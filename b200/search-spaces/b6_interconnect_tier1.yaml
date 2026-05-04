@@ -1,0 +1,71 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b6-interconnect-tier1
+
+# Phase B6.2 — NVLink + InfiniBand Interconnect 1차 axis 카탈로그 (좁게 시작).
+#
+# 본 파일은 plan 의 § B6.2 (Interconnect axis) 70+ 후보 중 **5 axis** 만 우선 노출.
+# 이유: 한 번에 70개를 sweep 하면 (a) 30 trial × 22.5 분 = 11h 안에 의미 있는
+# coverage 불가, (b) cross-node TP/EP collective 에 1차 영향 큰 5개부터 ANOVA
+# importance 측정 → 다음 tier 에 전체 추가가 효율적.
+#
+# 1차 5 axis 선정 근거 (NCCL docs + B200 Blackwell + plan § B6.2 의 "주요 env" 기준):
+#   - nccl_algo: collective 알고리즘 — Tree (small) vs Ring (large) vs NVLS (NVSwitch SHARP)
+#   - nccl_proto: data 인코딩 — Simple (large) vs LL128 (low latency)
+#   - nccl_buffsize: 송수신 버퍼 — 큰 메시지 throughput 직접 영향
+#   - nccl_nvls_enable: NVSwitch in-network reduction (B200 NVLink5 + NVSwitch5 의 핵심 강점)
+#   - nccl_net_gdr_read: GPUDirect RDMA read 활성 (cross-node 의 zero-copy)
+#
+# 사용:
+#   lmtune search start --strategy tpe \
+#     --space b200/search-spaces/b6_interconnect_tier1.yaml \
+#     --endpoint b200/endpoints/b200_<model>.yaml \
+#     -p configs/profiles/autotune/{short,medium,long}.yaml \
+#     --backend k8s-job --workers 1 --max-trials 20 \
+#     --name B6-interconnect-tier1
+#
+# 사전 조건 (study 시작 직전):
+#   bash b200/scripts/fabric_probe.sh
+#   → fabric_baseline.json 의 nccl_crossnode_busbw_gbps 가 NHN B200 reference
+#     (~280 GB/s NVLS) 의 80% 이상 시 sweep 진입. 그 이하면 fabric 자체 점검 우선.
+#
+# 후속 (B6.2 tier-2 에 합류 예정):
+#   ib_traffic_class, ib_sl, sharp_enable, nccl_p2p_level, nccl_buffsize 세분화,
+#   nccl_min_nchannels, nccl_cross_nic, nccl_ib_timeout, nccl_graph_register
+
+axes:
+  # ─────────── NCCL collective 알고리즘 ───────────
+  nccl_algo:
+    type: categorical
+    values: [Tree, Ring, NVLS]
+    # NVLS = NVSwitch in-network reduction (B200 NVLink5/NVSwitch5 강점). NCCL 2.23+.
+    # Tree 는 small message latency 우위, Ring 은 large message throughput 우위.
+    # 본 axis 는 cross-node TP collective 의 wall-clock 에 직접 영향.
+
+  nccl_proto:
+    type: categorical
+    values: [Simple, LL128]
+    # Simple = large message throughput 우선, LL128 = small message latency 우선.
+    # MoE all-to-all + dense all-reduce 가 섞이면 어느 쪽이 win 인지 측정 필요.
+
+  # ─────────── NCCL buffer / chunking ───────────
+  nccl_buffsize:
+    type: categorical
+    values: ["4194304", "8388608", "16777216"]
+    # 4M / 8M / 16M bytes. NCCL 기본 4M. cross-node large message 시 8-16M 이
+    # peer 별 batch 효율 ↑ 가능. NCCL_BUFFSIZE env (string 으로 전달).
+
+  # ─────────── NVSwitch SHARP (in-network reduction) ───────────
+  nccl_nvls_enable:
+    type: categorical
+    values: ["0", "1"]
+    # NVLink SHARP = NVSwitch5 안에서 reduction 수행. all-reduce 트래픽 ~50% ↓.
+    # 단 NCCL_ALGO=NVLS 또는 자동 선택일 때만 의미 있음.
+
+  # ─────────── GPUDirect RDMA — read 활성 ───────────
+  nccl_net_gdr_read:
+    type: categorical
+    values: ["0", "1"]
+    # 0 = NIC → host RAM → GPU (CPU staging), 1 = NIC → GPU mem 직접 (GDR read).
+    # 1 이 latency ↓ 인데 일부 driver/firmware 조합에서 instability — 측정으로 결정.
+    # 사전 조건: nv_peer_mem 또는 nvidia_peermem 모듈 로드 (fabric_probe.sh 가 캡처).
