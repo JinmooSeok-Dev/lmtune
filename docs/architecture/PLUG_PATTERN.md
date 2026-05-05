@@ -5,15 +5,16 @@
 > 영속화한다. 이미 두 axis (Storage backend, Tuner sampler) 에서 시연됐으며 본
 > 문서는 그 형식을 재현 가능한 recipe 로 코드화.
 
-## 두 PLUG axis 의 현황 (2026-05-06 기준)
+## 세 PLUG axis 의 현황 (2026-05-06 기준)
 
-| 추상 (ABC) | 위치 | 첫 빌트인 | 두 번째 빌트인 | 세 번째 (Native) | PLUG stub | extras |
+| 추상 (ABC) | 위치 | 첫 빌트인 | 두 번째 빌트인 | 세 번째 (Native) | PLUG stub / 자리 | extras |
 |:---|:---|:---|:---|:---|:---|:---|
 | `ArtifactStore` | `lmtune.storage.store.base` | `DuckDBArtifactStore` | `LocalArtifactStore` | `InMemoryArtifactStore` | `PostgresArtifactStore` (#58) | `[postgres]` |
 | `Sampler` | `lmtune.tuner.base` | `OptunaSamplerAdapter` (TPE/NSGA-II/CMA-ES 6종) | `Native{Random,LHC,TPE}` | — | `LLMOracleSampler` (#59) | `[agent]` |
+| `Pruner` | `lmtune.tuner.base` | `OptunaPrunerAdapter` (SuccessiveHalving / Hyperband) | — | — | `_OPTUNA_PRUNER_KINDS` whitelist + `tuner.factory.make_pruner` dispatch (#70/#71) — Native ASHA / MedianPruner 자리 | (없음 — 빌트인) |
 
-다른 layer 의 ABC (`Pruner`, `TrialBackend`, `DeploymentAdapter`, `Runner`) 도
-같은 패턴을 따른다 — 본 문서의 5단계가 그대로 적용.
+다른 layer 의 ABC (`TrialBackend`, `DeploymentAdapter`, `Runner`) 도 같은
+패턴을 따른다 — 본 문서의 5단계가 그대로 적용.
 
 ## 5단계 (대표: 새 ArtifactStore backend 추가)
 
@@ -130,6 +131,26 @@ def test_foo_in_cli_backends_list():
 
 `LLMOracleSampler` (#59) 가 reference impl — 그 파일 + 테스트를 그대로 복제하면 1 시간 안에 새 sampler PLUG 가능.
 
+## Pruner 의 경우 (Sampler 와 거의 동일)
+
+Pruner 도 Sampler 와 같은 ABC + factory dispatch 패턴 (#70/#71).
+
+| 단계 | Sampler | Pruner |
+|:---|:---|:---|
+| 1 | `lmtune/tuner/<name>.py` (`Sampler` 구현) | `lmtune/tuner/pruners/<name>.py` (`Pruner` 구현) |
+| 2 | (필수 X) | (필수 X — factory 가 직접 import) |
+| 3 | pyproject extra (필요 시) | pyproject extra (필요 시) |
+| 4 | `tuner.factory._LLM_STRATEGIES` + `_make_llm` | `tuner.factory._OPTUNA_PRUNER_KINDS` 또는 신규 `_NATIVE_PRUNER_KINDS` + `make_pruner` 분기 |
+| 5 | `tests/tuner/test_<name>_stub.py` | `tests/tuner/test_<name>_pruner.py` (drift 가드 포함) |
+
+현재 `_OPTUNA_PRUNER_KINDS = {"sh", "successive_halving", "hyperband"}` 만 존재.
+Native ASHA / MedianPruner 추가 시 새 set `_NATIVE_PRUNER_KINDS` 를 신설하고
+`make_pruner` 의 분기 1줄 + drift 테스트 갱신만으로 합류.
+
+`OptunaPrunerAdapter` 가 reference impl (`src/lmtune/tuner/optuna_adapter.py`).
+Optuna 의 `BasePruner.should_prune()` 을 `Pruner.should_prune(trial_id, step,
+value)` 로 노출 — 외부에서 trial 객체 들지 않아도 됨.
+
 ## 머지 가능한 stub 의 acceptance bar
 
 stub 단계 (실제 구현 없이) 머지 가능:
@@ -170,11 +191,12 @@ PLUG 의 본질은 "한 번 틀어지면 install 자체가 깨지는" 형식의 
 - [ ] `docs/architecture/REFACTOR-PLAN.md` CHANGELOG entry
 - [ ] (옵션) README 의 PLUG 표에 row 추가
 
-## 참고 — 두 reference impl
+## 참고 — 세 reference impl
 
 - **PostgresArtifactStore** (#58): `src/lmtune/storage/store/postgres.py` + `tests/storage/test_postgres_store_stub.py`
 - **LLMOracleSampler** (#59): `src/lmtune/tuner/llm_oracle.py` + `tests/tuner/test_llm_oracle_stub.py`
+- **`tuner.factory.make_pruner`** (#70/#71): `src/lmtune/tuner/factory.py::make_pruner` + `tests/tuner/test_factory_pruner.py` — Pruner ABC dispatch 입구 + `_OPTUNA_PRUNER_KINDS` drift 가드
 
-위 두 PR 의 코드 + 테스트가 본 문서 5단계의 살아있는 1:1 reference. 새 PLUG
-추가 시 둘 중 가까운 axis 를 그대로 복사 + 이름 / SDK 만 바꾸는 게 가장 빠른
+위 세 PR 의 코드 + 테스트가 본 문서 5단계의 살아있는 1:1 reference. 새 PLUG
+추가 시 가장 가까운 axis 를 그대로 복사 + 이름 / SDK 만 바꾸는 게 가장 빠른
 경로.
