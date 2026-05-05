@@ -37,6 +37,7 @@ class Objective(Protocol):
 
 # ---------------------------------------------------------------------------
 
+
 class CallableObjective:
     """Wrap a plain Python function (params → float | tuple[float, dict])."""
 
@@ -65,6 +66,7 @@ class CallableObjective:
 
 
 # ---------------------------------------------------------------------------
+
 
 class ScoreObjective:
     """Call `scripts/lmtune_score.py` once per workload profile; sum scores.
@@ -98,6 +100,7 @@ class ScoreObjective:
         # legacy name 'bench' 도 지원 (rename 흔적 — 외부 호출자 호환성).
         if bench_bin is None:
             import os as _os
+
             env_bin = _os.environ.get("LMTUNE_BIN") or _os.environ.get("BENCH_BIN")
             venv_dir = Path(sys.executable).parent
             if env_bin:
@@ -115,12 +118,18 @@ class ScoreObjective:
 
     def _run_one(self, profile: Path) -> dict:
         import os as _os
+
         cmd = [
-            self.python_bin, str(self.script),
-            "-p", str(profile),
-            "-e", str(self.endpoint_path),
-            "-n", str(self.repeats),
-            "--ttft-slo-ms", str(self.ttft_slo_ms),
+            self.python_bin,
+            str(self.script),
+            "-p",
+            str(profile),
+            "-e",
+            str(self.endpoint_path),
+            "-n",
+            str(self.repeats),
+            "--ttft-slo-ms",
+            str(self.ttft_slo_ms),
         ]
         if self.bench_bin:
             cmd += ["--bench-bin", self.bench_bin]
@@ -143,6 +152,7 @@ class ScoreObjective:
 
     def __call__(self, params: dict[str, Any]) -> ObjectiveResult:
         import logging
+
         _log = logging.getLogger(__name__)
 
         # S4: apply params via adapter before measuring. Pre-S4, params are
@@ -152,12 +162,14 @@ class ScoreObjective:
                 result = self.adapter.apply(self.endpoint_path, params)
             except Exception as e:  # noqa: BLE001
                 return ObjectiveResult(
-                    score=0.0, accepted=False,
+                    score=0.0,
+                    accepted=False,
                     error=f"adapter.apply failed: {e}",
                 )
             if not result.ok:
                 return ObjectiveResult(
-                    score=0.0, accepted=False,
+                    score=0.0,
+                    accepted=False,
                     error=f"adapter.apply not ok: {result.notes} {result.health.detail}",
                 )
 

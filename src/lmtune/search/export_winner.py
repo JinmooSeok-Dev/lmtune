@@ -9,6 +9,7 @@
 이 디렉토리는 self-contained: 외부 사용자가 git pull 후 `bash apply.sh --dry-run`
 으로 plan 을 검토하고 `bash apply.sh --apply` 한 줄로 자기 클러스터에 재배포 가능.
 """
+
 from __future__ import annotations
 
 import json
@@ -65,8 +66,20 @@ def export_winner(
     hdr = store.get_study(study_id)
     if not hdr:
         raise ValueError(f"study not found: {study_id}")
-    (_, study_name, strategy, space_yaml_text, ep_slug, prof_slugs_json,
-     metric_name, direction, status, created_at, finished_at, _notes) = hdr
+    (
+        _,
+        study_name,
+        strategy,
+        space_yaml_text,
+        ep_slug,
+        prof_slugs_json,
+        metric_name,
+        direction,
+        status,
+        created_at,
+        finished_at,
+        _notes,
+    ) = hdr
 
     rows = store.top_trials(study_id, direction=direction, k=rank)
     if not rows or len(rows) < rank:
@@ -104,10 +117,7 @@ def export_winner(
         merged = dict(ep_data)
         deployment = dict(merged.get("deployment") or {})
         engine_args = dict(deployment.get("engine_args") or {})
-        engine_args.update({
-            k: v for k, v in params.items()
-            if k not in ("tp", "pp", "dp", "ep")
-        })
+        engine_args.update({k: v for k, v in params.items() if k not in ("tp", "pp", "dp", "ep")})
         deployment["engine_args"] = engine_args
         merged["deployment"] = deployment
         helmfile_overrides = dict(deployment.get("helmfile_overrides") or {})
@@ -171,11 +181,13 @@ def export_winner(
         metrics_dict = store.get_trial_metrics(trial_id)
         for metric, by_wl in sorted(metrics_dict.items()):
             for wl, val in sorted(by_wl.items(), key=lambda x: str(x[0])):
-                metrics_summary.append({
-                    "metric": metric,
-                    "workload": wl or "-",
-                    "value": f"{val:.2f}" if isinstance(val, (int, float)) else str(val),
-                })
+                metrics_summary.append(
+                    {
+                        "metric": metric,
+                        "workload": wl or "-",
+                        "value": f"{val:.2f}" if isinstance(val, (int, float)) else str(val),
+                    }
+                )
     readme_ctx = {
         **apply_ctx,
         "finished_at": finished_at,

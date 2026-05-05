@@ -40,8 +40,22 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 VENV_PY="${VENV_PY:-$REPO_ROOT/.venv/bin/python}"
 VENV_VLLM="${VENV_VLLM:-$REPO_ROOT/.venv/bin/vllm}"
 
+# Fallback to PATH python if no project venv (CI environments where dependencies
+# are installed system-wide). PyYAML must still be available for YAML parsing.
 if [ ! -x "$VENV_PY" ]; then
-  echo "python not found at $VENV_PY (set VENV_PY or activate venv first)" >&2
+  if command -v python3 >/dev/null 2>&1; then
+    VENV_PY="$(command -v python3)"
+  elif command -v python >/dev/null 2>&1; then
+    VENV_PY="$(command -v python)"
+  else
+    echo "python not found (no .venv, no system python)" >&2
+    exit 66
+  fi
+fi
+
+# vllm binary only required for actual launch (not dry-run). Defer validation.
+if [ "$DRY_RUN" != "1" ] && [ ! -x "$VENV_VLLM" ]; then
+  echo "vllm not found at $VENV_VLLM (set VENV_VLLM or activate venv first)" >&2
   exit 66
 fi
 

@@ -13,6 +13,7 @@ llm-d 가 K8s 인프라 + 앱 경계가 모호한 솔루션이고, 매 trial 마
 본 모듈은 study/driver loop 에 hook 으로 들어간다 — tell() 직후 record(),
 다음 ask() 전 should_halt() 체크.
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,14 +27,14 @@ log = logging.getLogger(__name__)
 
 
 class FailureClass(StrEnum):
-    SUCCESS = "success"               # 정상 종료
-    PRUNED = "pruned"                 # SLO 위반 — 측정은 됐고 sampler 가 학습. 실패 아님.
-    INFEASIBLE = "infeasible"         # 구성 자체 invalid (mxfp4×float16, unrecognized args)
-    OOM = "oom"                       # OutOfMemory, 더 작은 batch 로 retry 가능
-    TRANSIENT = "transient"           # NCCL/Connection refused, 1회 retry 시도
+    SUCCESS = "success"  # 정상 종료
+    PRUNED = "pruned"  # SLO 위반 — 측정은 됐고 sampler 가 학습. 실패 아님.
+    INFEASIBLE = "infeasible"  # 구성 자체 invalid (mxfp4×float16, unrecognized args)
+    OOM = "oom"  # OutOfMemory, 더 작은 batch 로 retry 가능
+    TRANSIENT = "transient"  # NCCL/Connection refused, 1회 retry 시도
     STARTUP_TIMEOUT = "startup_timeout"  # rollout deadline 초과 (crash 는 아님)
     MEASURE_FAILED = "measure_failed"  # aiperf parse 실패 / metrics 빈 결과
-    HARD = "hard"                     # 분류 불가, score=0 처리
+    HARD = "hard"  # 분류 불가, score=0 처리
 
 
 # llmd_k8s.py::apply 가 ApplyResult.notes 에 packaging 하는 형식:
@@ -73,6 +74,7 @@ def classify_outcome(
     # 2) fallback: rollout_watcher.classify_crash 의 raw log 패턴 사용
     try:
         from lmtune.deploy.rollout_watcher import classify_crash
+
         cls = classify_crash(text)
         return FailureClass(cls)
     except (ImportError, ValueError):
@@ -81,9 +83,9 @@ def classify_outcome(
 
 @dataclass(slots=True)
 class CircuitBreakerConfig:
-    max_consecutive_failures: int = 5     # 연속 실패 N+ 회 → halt
-    max_failure_rate: float = 0.7         # 최근 window 의 fail rate ≥ 이값 → halt
-    window: int = 10                      # rolling window 크기
+    max_consecutive_failures: int = 5  # 연속 실패 N+ 회 → halt
+    max_failure_rate: float = 0.7  # 최근 window 의 fail rate ≥ 이값 → halt
+    window: int = 10  # rolling window 크기
     min_trials_before_rate_check: int = 5  # rate 검사 시작 전 최소 trial
 
 
@@ -143,9 +145,7 @@ class CircuitBreaker:
         return False, ""
 
     def summary(self) -> str:
-        rate = (
-            sum(self.history) / len(self.history) if self.history else 0.0
-        )
+        rate = sum(self.history) / len(self.history) if self.history else 0.0
         return (
             f"total={self.total} fails={self.failure_count} "
             f"consecutive={self.consecutive_failures} "
@@ -153,9 +153,7 @@ class CircuitBreaker:
         )
 
 
-def suggest_recovery(
-    outcome: FailureClass, params: dict[str, Any]
-) -> dict[str, Any] | None:
+def suggest_recovery(outcome: FailureClass, params: dict[str, Any]) -> dict[str, Any] | None:
     """Param mutation suggestion for retry. None = no retry.
 
     Caller (driver) 가 enqueue_trial / 직접 재submit 으로 활용 가능. 본 함수는

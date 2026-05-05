@@ -30,9 +30,15 @@ from typing import Any
 import yaml
 
 _ENGINE_ARG_KEYS: set[str] = {
-    "max_num_seqs", "enable_prefix_caching", "enable_chunked_prefill",
-    "gpu_memory_utilization", "max_model_len", "kv_cache_dtype",
-    "block_size", "enforce_eager", "async_scheduling",
+    "max_num_seqs",
+    "enable_prefix_caching",
+    "enable_chunked_prefill",
+    "gpu_memory_utilization",
+    "max_model_len",
+    "kv_cache_dtype",
+    "block_size",
+    "enforce_eager",
+    "async_scheduling",
 }
 _PARALLELISM_KEYS: set[str] = {"tp", "pp", "dp", "ep", "rsd"}
 # P/D disaggregation 의 release-level replica axis. helmfile values 의 prefill/decode
@@ -57,7 +63,9 @@ class ApplyResult:
     adapter: str = ""
 
 
-def merge_params_into_endpoint(endpoint_path: str | Path, params: Mapping[str, Any]) -> dict[str, Any]:
+def merge_params_into_endpoint(
+    endpoint_path: str | Path, params: Mapping[str, Any]
+) -> dict[str, Any]:
     """Merge trial params into endpoint YAML; write in place; return the merged dict.
 
     Keys in `_ENGINE_ARG_KEYS` land under `deployment.engine_args`.

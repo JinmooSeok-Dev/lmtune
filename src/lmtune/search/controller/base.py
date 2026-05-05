@@ -3,6 +3,7 @@
 Study 는 이 ABC 에 ask/tell 만 위임한다. 구현체는 Optuna 일 수도, pure
 random 일 수도, 외부 LLM API HTTP 호출일 수도 있다.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -29,7 +30,7 @@ class Controller(ABC):
         params: dict[str, Any],
         *,
         value: float | list[float] | None,
-        status: str,                        # 'completed' | 'pruned' | 'crash'
+        status: str,  # 'completed' | 'pruned' | 'crash'
         metadata: dict | None = None,
     ) -> None:
         """trial 결과로 내부 상태 업데이트.

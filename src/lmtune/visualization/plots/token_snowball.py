@@ -15,7 +15,8 @@ from lmtune.visualization.plots import register_plot
 
 @register_plot("token_snowball")
 def plot_token_snowball(
-    rows: Iterable[RequestRow], out_path: str | Path,
+    rows: Iterable[RequestRow],
+    out_path: str | Path,
     **opts,
 ) -> Path:
     """턴별 누적 입력 토큰(Snowball Effect) + 선형 fit.
@@ -45,10 +46,10 @@ def plot_token_snowball(
     # 선형 fit
     if len(mean_turns) >= 2:
         import numpy as np
+
         coef = np.polyfit(mean_turns, mean_toks, 1)
         xs = np.array(mean_turns)
-        ax.plot(xs, coef[0] * xs + coef[1], "k--", alpha=0.6,
-                label=f"fit: {coef[0]:.0f} tok/turn")
+        ax.plot(xs, coef[0] * xs + coef[1], "k--", alpha=0.6, label=f"fit: {coef[0]:.0f} tok/turn")
         ax.legend()
     ax.set_xlabel("turn index")
     ax.set_ylabel("cumulative input tokens")

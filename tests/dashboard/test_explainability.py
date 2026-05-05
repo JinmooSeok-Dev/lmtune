@@ -3,6 +3,7 @@
 Pure-function tests on `_annotate_trial`, `_compute_axis_diff`, and the
 `_StudyView.to_dict()` augmentation. No DB / no Jinja required.
 """
+
 from __future__ import annotations
 
 from lmtune.visualization.dashboard.build import (
@@ -24,7 +25,9 @@ def _pt(seq: int, score: float | None, params: dict | None = None, tid: str | No
 
 def test_annotate_first_trial_is_first():
     p = _pt(1, score=10.0)
-    out = _annotate_trial(p, running_best=None, direction="maximize", strategy="random", n_startup=0)
+    out = _annotate_trial(
+        p, running_best=None, direction="maximize", strategy="random", n_startup=0
+    )
     assert out["outcome"] == "first"
     assert out["delta_pct_vs_best"] == 0.0
     assert out["phase"] == "random"
@@ -50,7 +53,9 @@ def test_annotate_worse_minimize():
 
 def test_annotate_no_score():
     p = _pt(3, score=None)
-    out = _annotate_trial(p, running_best=10.0, direction="maximize", strategy="random", n_startup=0)
+    out = _annotate_trial(
+        p, running_best=10.0, direction="maximize", strategy="random", n_startup=0
+    )
     assert out["outcome"] == "no score"
     assert out["delta_pct_vs_best"] is None
 

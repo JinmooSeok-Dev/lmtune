@@ -64,7 +64,9 @@ class DatasetLoader:
     def iter_samples(self, limit: int | None = None) -> Iterable[DatasetSample]:
         raw = load_hf_dataset(self.dataset_id, self.subset, self.split)
         for count, row in enumerate(raw, start=1):
-            prompt = row.get(self.prompt_field) or row.get("instruction") or row.get("problem") or ""
+            prompt = (
+                row.get(self.prompt_field) or row.get("instruction") or row.get("problem") or ""
+            )
             if not isinstance(prompt, str):
                 prompt = str(prompt)
             response = row.get(self.response_field) if self.response_field else None
@@ -73,7 +75,11 @@ class DatasetLoader:
                 prompt=prompt,
                 response=response if isinstance(response, (str, type(None))) else str(response),
                 task_id=str(task_id) if task_id is not None else None,
-                extra={k: v for k, v in row.items() if k not in {self.prompt_field, self.response_field, self.task_id_field}},
+                extra={
+                    k: v
+                    for k, v in row.items()
+                    if k not in {self.prompt_field, self.response_field, self.task_id_field}
+                },
             )
             if limit is not None and count >= limit:
                 break

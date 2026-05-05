@@ -3,6 +3,7 @@
 기존 Study 의 _optuna_study 직접 호출 로직을 그대로 가져와 이 클래스 안에
 캡슐화. Study 입장에선 Controller ABC 만 본다.
 """
+
 from __future__ import annotations
 
 import logging
@@ -57,18 +58,27 @@ class OptunaController(Controller):
     ) -> OptunaController:
         """기존 Study.__init__ 의 sampler/pruner/study 빌드 로직을 그대로."""
         sampler, prefetch = make_sampler(
-            strategy, space, seed=seed, context=context, n_samples=n_samples,
+            strategy,
+            space,
+            seed=seed,
+            context=context,
+            n_samples=n_samples,
         )
         from lmtune.search.pruners import make_pruner
+
         prn = make_pruner(pruner) if pruner else None
         if directions:
             ostudy = optuna.create_study(
-                directions=list(directions), sampler=sampler, pruner=prn,
+                directions=list(directions),
+                sampler=sampler,
+                pruner=prn,
                 study_name=study_name,
             )
         else:
             ostudy = optuna.create_study(
-                direction=direction, sampler=sampler, pruner=prn,
+                direction=direction,
+                sampler=sampler,
+                pruner=prn,
                 study_name=study_name,
             )
         return cls(ostudy, space, prefetch=prefetch, strategy_label=f"optuna:{strategy}")

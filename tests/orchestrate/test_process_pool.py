@@ -50,8 +50,11 @@ def test_run_trial_locally_happy_path():
 
 def test_run_trial_locally_returns_crash_on_exception():
     class _Boom:
-        def __init__(self, *a, **kw): pass
-        def __call__(self, p): raise RuntimeError("boom")
+        def __init__(self, *a, **kw):
+            pass
+
+        def __call__(self, p):
+            raise RuntimeError("boom")
 
     with patch("lmtune.orchestrate.trial_runner.ScoreObjective", _Boom):
         r = run_trial_locally(_payload({"x": 1}))
@@ -71,8 +74,13 @@ def test_pool_runs_two_trials_concurrently(tmp_path):
     handles = []
     for x in [2, 5]:
         p = TrialPayload(
-            trial_id=f"tr-{x}", study_id="st", seq=x, params={"x": x},
-            endpoint_path="x", profile_paths=["x"], repeats=1,
+            trial_id=f"tr-{x}",
+            study_id="st",
+            seq=x,
+            params={"x": x},
+            endpoint_path="x",
+            profile_paths=["x"],
+            repeats=1,
         )
         handles.append(pool._pool.submit(run_mock_trial, p))
 

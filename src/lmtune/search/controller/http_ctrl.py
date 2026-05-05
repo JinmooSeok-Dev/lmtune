@@ -15,6 +15,7 @@ Go/Rust/...). Anthropic Claude SDK / OpenAI / 자체 RL agent / LangGraph
 
 reference 구현은 `examples/controllers/`.
 """
+
 from __future__ import annotations
 
 import logging
@@ -67,10 +68,9 @@ class HTTPController(Controller):
     def name(self) -> str:
         return f"http({self._url})"
 
-    def ask(
-        self, active_axes: list[Axis], *, context: dict | None = None
-    ) -> dict[str, Any]:
+    def ask(self, active_axes: list[Axis], *, context: dict | None = None) -> dict[str, Any]:
         import httpx
+
         body = {
             "study_id": self._study_id,
             "active_axes": [_axis_to_dict(a) for a in active_axes],
@@ -81,7 +81,9 @@ class HTTPController(Controller):
         for attempt in range(self._max_retries + 1):
             try:
                 r = httpx.post(
-                    f"{self._url}/ask", json=body, timeout=self._timeout_s,
+                    f"{self._url}/ask",
+                    json=body,
+                    timeout=self._timeout_s,
                 )
                 r.raise_for_status()
                 data = r.json()
@@ -92,12 +94,12 @@ class HTTPController(Controller):
                 last_exc = e
                 log.warning(
                     "HTTPController ask failed (attempt %d/%d): %s",
-                    attempt + 1, self._max_retries + 1, e,
+                    attempt + 1,
+                    self._max_retries + 1,
+                    e,
                 )
         # 재시도 모두 실패 → 호출자에게 raise (Study 가 어떻게 처리할지 결정)
-        raise RuntimeError(
-            f"HTTPController.ask exhausted retries to {self._url}: {last_exc}"
-        )
+        raise RuntimeError(f"HTTPController.ask exhausted retries to {self._url}: {last_exc}")
 
     def tell(
         self,
@@ -108,6 +110,7 @@ class HTTPController(Controller):
         metadata: dict | None = None,
     ) -> None:
         import httpx
+
         body = {
             "study_id": self._study_id,
             "params": dict(params),
@@ -117,14 +120,22 @@ class HTTPController(Controller):
         }
         try:
             r = httpx.post(
-                f"{self._url}/tell", json=body, timeout=self._timeout_s,
+                f"{self._url}/tell",
+                json=body,
+                timeout=self._timeout_s,
             )
             # 204 / 200 모두 ok. 학습 실패는 controller 의 내부 문제 — 우리 loop 는 진행.
             if r.status_code >= 500:
-                log.warning("HTTPController.tell got %d; controller may have lost state", r.status_code)
+                log.warning(
+                    "HTTPController.tell got %d; controller may have lost state", r.status_code
+                )
         except Exception as e:  # noqa: BLE001
             log.warning("HTTPController.tell failed (continuing): %s", e)
 
-        self._history.append({
-            "params": dict(params), "value": value, "status": status,
-        })
+        self._history.append(
+            {
+                "params": dict(params),
+                "value": value,
+                "status": status,
+            }
+        )

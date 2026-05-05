@@ -47,9 +47,7 @@ def test_dump_schema_unknown_kind_errors():
 
 def test_dump_schema_query_with_record_kind_errors():
     """--record-kind 는 query 에서 의미 없음."""
-    result = runner.invoke(
-        app, ["dump-schema", "--kind", "query", "--record-kind", "run"]
-    )
+    result = runner.invoke(app, ["dump-schema", "--kind", "query", "--record-kind", "run"])
     assert result.exit_code != 0
 
 
@@ -84,9 +82,7 @@ def test_validate_record_invalid_kind(tmp_path: Path):
 def test_validate_record_json_format(tmp_path: Path):
     p = tmp_path / "rec.json"
     p.write_text(
-        json.dumps(
-            {"kind": "metric", "run_id": "r1", "metric": "ttft", "p": "p99", "value": 100.0}
-        )
+        json.dumps({"kind": "metric", "run_id": "r1", "metric": "ttft", "p": "p99", "value": 100.0})
     )
     result = runner.invoke(app, ["validate-record", str(p)])
     assert result.exit_code == 0, result.output

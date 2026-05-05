@@ -17,8 +17,16 @@ def test_schema_has_new_columns(tmp_path):
     assert {"sessions", "trajectory_events"} <= tables
     cols = {r[0] for r in store.conn.execute("DESCRIBE requests").fetchall()}
     for new_col in [
-        "cached_tokens", "thinking_tokens", "tool_call_count", "tool_result_tokens",
-        "phase", "role", "energy_wh", "cost_usd", "started_at", "completed_at",
+        "cached_tokens",
+        "thinking_tokens",
+        "tool_call_count",
+        "tool_result_tokens",
+        "phase",
+        "role",
+        "energy_wh",
+        "cost_usd",
+        "started_at",
+        "completed_at",
     ]:
         assert new_col in cols, f"missing column: {new_col}"
     store.close()
@@ -43,28 +51,55 @@ def test_request_row_roundtrip_with_agent_metadata(tmp_path):
         finished_at=time.time() + 1,
         requests=[
             RequestRow(
-                req_id="req-0", turn_idx=0, conversation_id="c0",
-                input_tokens=1200, output_tokens=300,
-                cached_tokens=800, thinking_tokens=200, tool_call_count=3,
-                tool_result_tokens=1500, phase="exploration", role="planner",
-                energy_wh=0.015, cost_usd=0.0012,
-                ttft_ms=220.0, itl_mean_ms=18.0, e2e_ms=2400.0,
-                started_at=time.time(), completed_at=time.time() + 2,
+                req_id="req-0",
+                turn_idx=0,
+                conversation_id="c0",
+                input_tokens=1200,
+                output_tokens=300,
+                cached_tokens=800,
+                thinking_tokens=200,
+                tool_call_count=3,
+                tool_result_tokens=1500,
+                phase="exploration",
+                role="planner",
+                energy_wh=0.015,
+                cost_usd=0.0012,
+                ttft_ms=220.0,
+                itl_mean_ms=18.0,
+                e2e_ms=2400.0,
+                started_at=time.time(),
+                completed_at=time.time() + 2,
             )
         ],
         sessions=[
             SessionRow(
-                session_id="c0", task_id="swe-bench/issue-1",
-                total_input_tokens=15000, total_output_tokens=3000,
-                total_cached_tokens=8000, turn_count=12, tool_call_count=25,
-                duration_ms=120_000, success=True,
-                total_cost_usd=0.15, total_energy_wh=1.8,
+                session_id="c0",
+                task_id="swe-bench/issue-1",
+                total_input_tokens=15000,
+                total_output_tokens=3000,
+                total_cached_tokens=8000,
+                turn_count=12,
+                tool_call_count=25,
+                duration_ms=120_000,
+                success=True,
+                total_cost_usd=0.15,
+                total_energy_wh=1.8,
             )
         ],
         trajectory=[
-            TrajectoryEvent(session_id="c0", seq=0, event_type="user", phase="exploration", tokens=200),
-            TrajectoryEvent(session_id="c0", seq=1, event_type="assistant", phase="exploration", tokens=150),
-            TrajectoryEvent(session_id="c0", seq=2, event_type="tool_call", tokens=100, metadata={"tool": "read_file"}),
+            TrajectoryEvent(
+                session_id="c0", seq=0, event_type="user", phase="exploration", tokens=200
+            ),
+            TrajectoryEvent(
+                session_id="c0", seq=1, event_type="assistant", phase="exploration", tokens=150
+            ),
+            TrajectoryEvent(
+                session_id="c0",
+                seq=2,
+                event_type="tool_call",
+                tokens=100,
+                metadata={"tool": "read_file"},
+            ),
             TrajectoryEvent(session_id="c0", seq=3, event_type="tool_result", tokens=2000),
         ],
     )
@@ -90,8 +125,11 @@ def test_request_row_roundtrip_with_agent_metadata(tmp_path):
     assert tcount == 4
 
     # 이벤트 타입 분포
-    types = {r[0] for r in store.conn.execute(
-        "SELECT DISTINCT event_type FROM trajectory_events WHERE run_id='r-e1'"
-    ).fetchall()}
+    types = {
+        r[0]
+        for r in store.conn.execute(
+            "SELECT DISTINCT event_type FROM trajectory_events WHERE run_id='r-e1'"
+        ).fetchall()
+    }
     assert types == {"user", "assistant", "tool_call", "tool_result"}
     store.close()

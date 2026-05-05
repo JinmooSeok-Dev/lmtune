@@ -44,11 +44,17 @@ def test_record_run_and_read_back(store, tmp_path):
         finished_at=time.time() + 1,
         metrics={"ttft": {"p50": 100.0, "p99": 500.0}, "e2e": {"p50": 1200.0}},
         requests=[
-            RequestRow(req_id="req-0", input_tokens=200, output_tokens=50, ttft_ms=110.0, e2e_ms=1100.0),
-            RequestRow(req_id="req-1", input_tokens=210, output_tokens=48, ttft_ms=125.0, e2e_ms=1300.0),
+            RequestRow(
+                req_id="req-0", input_tokens=200, output_tokens=50, ttft_ms=110.0, e2e_ms=1100.0
+            ),
+            RequestRow(
+                req_id="req-1", input_tokens=210, output_tokens=48, ttft_ms=125.0, e2e_ms=1300.0
+            ),
         ],
     )
-    store.record_run(artifact, profile, endpoint, profile_yaml_text="slug: smoke\n", git_sha="abc123")
+    store.record_run(
+        artifact, profile, endpoint, profile_yaml_text="slug: smoke\n", git_sha="abc123"
+    )
 
     rows = store.list_runs(limit=10)
     assert len(rows) == 1

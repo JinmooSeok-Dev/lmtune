@@ -46,7 +46,10 @@ class DistributionSampler:
         if self.kind == "zipf":
             return min(sample_zipf(self.zipf_s, r), self.zipf_clip)
         if self.kind == "bimodal":
-            modes = self.modes or ((self.mean, self.stddev or 1.0), (self.mean * 3, self.stddev or 1.0))
+            modes = self.modes or (
+                (self.mean, self.stddev or 1.0),
+                (self.mean * 3, self.stddev or 1.0),
+            )
             (m1, s1), (m2, s2) = modes
             return r.gauss(m1, s1) if r.random() < self.mode_weight else r.gauss(m2, s2)
         if self.kind == "lognormal":
@@ -67,10 +70,18 @@ def sample_zipf(s: float, rng: random.Random | None = None) -> int:
             return x
 
 
-def sample_bimodal(mean_small: float, mean_large: float, weight_small: float = 0.5,
-                   rng: random.Random | None = None) -> float:
+def sample_bimodal(
+    mean_small: float,
+    mean_large: float,
+    weight_small: float = 0.5,
+    rng: random.Random | None = None,
+) -> float:
     r = rng or random
-    return r.gauss(mean_small, mean_small * 0.2) if r.random() < weight_small else r.gauss(mean_large, mean_large * 0.2)
+    return (
+        r.gauss(mean_small, mean_small * 0.2)
+        if r.random() < weight_small
+        else r.gauss(mean_large, mean_large * 0.2)
+    )
 
 
 def fit_summary(values: Iterable[float]) -> dict[str, float]:

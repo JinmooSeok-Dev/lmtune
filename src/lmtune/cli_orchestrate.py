@@ -34,13 +34,16 @@ def cmd_deploy(
         raise typer.BadParameter(f"invalid --params-json: {e}") from e
     if adapter == "local-vllm":
         from lmtune.deploy import LocalVLLMAdapter
+
         ad = LocalVLLMAdapter()
     elif adapter == "llmd-k8s":
         from lmtune.deploy import LLMDK8sAdapter
+
         # endpoint YAML 의 deployment.helmfile_overrides 를 우선 사용 (cli_search 와 동일 패턴).
         # bare ctor 의 (selector=name=ms-phase1, env=dev) 디폴트는 peer-repo phase1 만 매칭.
         try:
             import yaml as _yaml
+
             ep_data = _yaml.safe_load(Path(endpoint).read_text(encoding="utf-8"))
             ad = LLMDK8sAdapter.from_endpoint(ep_data)
         except Exception:
@@ -50,8 +53,10 @@ def cmd_deploy(
 
     console.print(f"[bold]apply[/]: adapter={adapter} endpoint={endpoint} params={params}")
     result = ad.apply(endpoint, params)
-    console.print(f"  ok={result.ok}  health.ready={result.health.ready}  "
-                  f"latency_ms={result.health.latency_ms:.1f}  detail={result.health.detail}")
+    console.print(
+        f"  ok={result.ok}  health.ready={result.health.ready}  "
+        f"latency_ms={result.health.latency_ms:.1f}  detail={result.health.detail}"
+    )
     if not result.ok:
         console.print(f"[red]failed[/]: {result.notes}")
         raise typer.Exit(1)

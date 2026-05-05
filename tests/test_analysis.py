@@ -17,8 +17,7 @@ def test_percentiles_small_and_large():
 
 def test_summarize_requests_goodput():
     rows = [
-        RequestRow(req_id=f"r{i}", ttft_ms=100 + i * 10, e2e_ms=500 + i * 50)
-        for i in range(10)
+        RequestRow(req_id=f"r{i}", ttft_ms=100 + i * 10, e2e_ms=500 + i * 50) for i in range(10)
     ]
     s = summarize_requests(rows, ttft_slo_ms=150, e2e_slo_ms=800)
     assert s.total_requests == 10

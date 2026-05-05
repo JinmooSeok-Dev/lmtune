@@ -22,7 +22,7 @@ TraceFormat = Literal["burstgpt", "servegen", "auto"]
 
 @dataclass
 class TraceRecord:
-    offset_sec: float                     # trace 시작 기준 상대 시각
+    offset_sec: float  # trace 시작 기준 상대 시각
     input_tokens: int
     output_tokens: int
     meta: dict | None = None
@@ -71,7 +71,11 @@ class TraceReplay:
                     offset_sec=(ts - t0) / self.replay_speed,
                     input_tokens=inp,
                     output_tokens=out,
-                    meta={k: v for k, v in row.items() if k not in {"Timestamp", "Request tokens", "Response tokens"}},
+                    meta={
+                        k: v
+                        for k, v in row.items()
+                        if k not in {"Timestamp", "Request tokens", "Response tokens"}
+                    },
                 )
 
     def _iter_servegen(self):

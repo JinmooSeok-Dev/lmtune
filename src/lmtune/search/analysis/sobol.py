@@ -38,11 +38,11 @@ from sklearn.ensemble import RandomForestRegressor
 @dataclass(slots=True)
 class SobolResult:
     axis: str
-    S1: float                    # first-order
-    ST: float                    # total-order (includes interactions)
-    S1_conf: float               # 95% CI half-width
+    S1: float  # first-order
+    ST: float  # total-order (includes interactions)
+    S1_conf: float  # 95% CI half-width
     ST_conf: float
-    interaction_gap: float       # ST - S1: large ⇒ interactions dominate
+    interaction_gap: float  # ST - S1: large ⇒ interactions dominate
 
 
 def _pick_continuous(trials: list[dict], axes_spec: list[dict]) -> list[dict]:
@@ -50,7 +50,12 @@ def _pick_continuous(trials: list[dict], axes_spec: list[dict]) -> list[dict]:
     operates on hyperbox domains."""
     out = []
     for a in axes_spec:
-        if a.get("kind") in ("float", "log_uniform") or a.get("kind") == "int" and a.get("low") is not None and a.get("high") is not None:
+        if (
+            a.get("kind") in ("float", "log_uniform")
+            or a.get("kind") == "int"
+            and a.get("low") is not None
+            and a.get("high") is not None
+        ):
             out.append(a)
     return out
 
@@ -85,7 +90,8 @@ def sobol_from_history(
     df = pd.DataFrame([t["params"] for t in completed])
     y = np.asarray([float(t["score"]) for t in completed])
     obj_cols = [
-        c for c in df.columns
+        c
+        for c in df.columns
         if pd.api.types.is_object_dtype(df[c])
         or pd.api.types.is_bool_dtype(df[c])
         or pd.api.types.is_string_dtype(df[c])
@@ -122,12 +128,14 @@ def sobol_from_history(
 
     results: list[SobolResult] = []
     for i, name in enumerate(cont_names):
-        results.append(SobolResult(
-            axis=name,
-            S1=float(Si["S1"][i]),
-            ST=float(Si["ST"][i]),
-            S1_conf=float(Si["S1_conf"][i]),
-            ST_conf=float(Si["ST_conf"][i]),
-            interaction_gap=float(Si["ST"][i] - Si["S1"][i]),
-        ))
+        results.append(
+            SobolResult(
+                axis=name,
+                S1=float(Si["S1"][i]),
+                ST=float(Si["ST"][i]),
+                S1_conf=float(Si["S1_conf"][i]),
+                ST_conf=float(Si["ST_conf"][i]),
+                interaction_gap=float(Si["ST"][i] - Si["S1"][i]),
+            )
+        )
     return results

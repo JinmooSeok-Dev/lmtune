@@ -8,6 +8,7 @@ which env profile YAMLs apply. Matched profiles contribute:
 This collapses the 70+ flat axis problem (B6) into ~12 effective axes per study.
 See plan § Autoresearch Architecture (Macro × Env Profile × Micro).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -20,6 +21,7 @@ import yaml
 @dataclass(slots=True)
 class TunableAxis:
     """One micro axis exposed by a profile."""
+
     name: str
     values: list[Any] | None = None
     low: float | None = None
