@@ -58,6 +58,13 @@ axes:
     low: 0.85
     high: 0.92
 
+  # max_model_len 은 단일 값 axis — 모든 trial 이 native max (131072) 로 돌아감.
+  # sweep 추가 원하면 values 에 [32768, 65536, 131072] 등으로 확장.
+  # axis 가 있어야 yaml 만 봐도 130K 사용이 명시적이고, 후속 확장도 한 줄.
+  max_model_len:
+    type: categorical
+    values: [131072]
+
 
 # ─── Feasibility constraints (vllm-config-puzzle validation.ts subset, short form) ───
 # Sampler 가 sample 한 후 src/lmtune/search/feasibility.py 가 evaluator.
