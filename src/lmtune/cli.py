@@ -45,6 +45,11 @@ from lmtune.cli_dashboard import app as _dashboard_app  # noqa: E402
 
 app.add_typer(_dashboard_app, name="dashboard")
 
+# lmtune#WS: workload spec/provider subcommand (WorkloadSpec contract)
+from lmtune.cli_workload import app as _workload_app  # noqa: E402
+
+app.add_typer(_workload_app, name="workload")
+
 
 def _default_db_path() -> Path:
     return Path(os.environ.get("LMTUNE_DB", "data/db/lmtune.duckdb"))
