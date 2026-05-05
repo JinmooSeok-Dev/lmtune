@@ -51,7 +51,18 @@ _JSON_COLUMNS: dict[str, set[str]] = {
 # Append-only 테이블 (schema.sql 에 PRIMARY KEY 없음 → INSERT OR REPLACE 불가).
 # 이들은 단순 INSERT 로 처리하며 같은 record 가 여러 번 put 되면 중복 행 허용.
 # put() 사용자는 dedup 책임을 진다.
-_APPEND_ONLY_KINDS: set[str] = {"prom_sample", "detection"}
+#
+# - prom_sample / detection: 시계열 / 이벤트 로그 — 본질적으로 append-only
+# - request / trajectory_event: schema.sql 의 requests / trajectory_events 가
+#   PK 없음 (run_id 단위 batch insert 만 가정) — INSERT OR REPLACE 사용 시
+#   DuckDB BinderException 발생. 동일 (run_id, req_id/seq) 재 put 시 dedup 은
+#   상위 (driver/orchestrate) 책임.
+_APPEND_ONLY_KINDS: set[str] = {
+    "prom_sample",
+    "detection",
+    "request",
+    "trajectory_event",
+}
 
 
 def _serialize_row(record: RecordSpec) -> dict[str, Any]:
