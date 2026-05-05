@@ -282,6 +282,39 @@ lmtune contracts records-from-result <result.json> --out <records-dir>
 | `diff` | 두 store 의 record 차이 — `only_left` / `only_right` / `mismatched` | 0 |
 | `list-backends` | `_BACKENDS` 목록 출력 (PLUG 진입로) | 0 |
 
+## Tuner 메타 도구
+
+`lmtune tuner` 서브커맨드는 PLUG 화이트리스트 (`_NATIVE_STRATEGIES`, `_LLM_STRATEGIES`, `_NATIVE_PRUNER_KINDS`, `_OPTUNA_PRUNER_KINDS`) 를 단일 진실원으로 사용 — 새 sampler / pruner 합류 시 코드 수정 0 으로 자동 노출.
+
+```bash
+# 1. 등록된 sampler / pruner kind 목록 (PLUG 합류 즉시 자동 출력)
+lmtune tuner list-samplers       # native / optuna / llm 그룹별
+lmtune tuner list-pruners        # native / optuna 그룹별
+lmtune tuner list-samplers --json | jq .native
+
+# 2. 특정 kind 의 hyperparameter introspect
+lmtune tuner describe percentile_native
+# percentile_native  (pruner, native) — lmtune.tuner.percentile_pruner.NativePercentilePruner
+#   step-wise percentile 기반 Pruner.
+#   params:
+#     - percentile: float = 0.25
+#     - n_startup_trials: int = 5
+#     - n_warmup_steps: int = 0
+#     - direction: str = 'maximize'
+
+# 3. Optuna 빌트인은 reference URL fallback
+lmtune tuner describe hyperband --json | jq .reference
+# "https://optuna.readthedocs.io/en/stable/reference/pruners.html"
+```
+
+| 명령 | 무엇을 하는가 | exit code |
+|:---|:---|:---:|
+| `list-samplers` | sampler strategy 목록 (native / optuna / llm) | 0 |
+| `list-pruners` | pruner kind 목록 (native / optuna) | 0 |
+| `describe <kind>` | `inspect.signature` 로 native + llm introspect, optuna 는 reference URL | 0 / 2 (unknown) |
+
+새 PLUG 합류 시 `_resolve_kind` 에 1줄 매핑만 추가하면 `describe` 가 자동 인지. drift 가드 테스트가 화이트리스트와 CLI 출력의 set 동일성을 영속 검증.
+
 ## User Contract — Inputs & Outputs
 
 ### Inputs — 사용자가 제공해야 하는 것
