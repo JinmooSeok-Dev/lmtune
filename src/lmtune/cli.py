@@ -30,6 +30,33 @@ app = typer.Typer(
 )
 console = Console()
 
+
+def _version_callback(value: bool) -> None:
+    if value:
+        from lmtune import __version__
+
+        # rich 마크업 없이 plain — 스크립트가 grep / awk 가능
+        print(f"lmtune {__version__}")
+        raise typer.Exit(0)
+
+
+@app.callback()
+def _root_options(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-V",
+            callback=_version_callback,
+            is_eager=True,
+            help="Print version and exit.",
+        ),
+    ] = False,
+) -> None:
+    """Top-level options. ``--version`` prints package version and exits."""
+    del version
+
+
 # Phase S1: search subcommand group
 from lmtune.cli_search import app as _search_app  # noqa: E402
 
