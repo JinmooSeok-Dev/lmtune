@@ -32,10 +32,16 @@ axes:
   dp:
     type: categorical
     values: [1, 2, 4, 8]
-    # tp×dp ≤ 16 (총 GPU). feasibility c1_npu_count 가 자동 prune
+    # tp×pp×dp ≤ 16 (총 GPU). feasibility c1_npu_count 가 자동 prune
 
-  # pp = 1 고정 — gpt-oss-120b 36 layers 는 PP 도입 효과 작음.
-  # ep_size 는 active_if 로 MoE 모델만 활성
+  pp:
+    type: categorical
+    values: [1]
+    # PP=1 단일값 — 현 inference-scheduling chart 는 multinode: false + pod 당
+    # nvidia.com/gpu = tp 만. PP=2+ 는 한 pod 안 tp*pp GPU 또는 LeaderWorkerSet
+    # multinode 가 필요해 chart 도 함께 변경해야 함 (wide-ep-lws / P/D path 의
+    # helmfile 영역). 본 min search-space 는 inference-scheduling path 단일.
+    # PP sweep 원하면 별도 search-space + helmfile path 페어 필요.
 
   ep:
     type: bool
@@ -71,12 +77,16 @@ axes:
 # `--cluster-env b200-dual-node` 없으면 미설치 (회귀 안전).
 feasibility_constraints:
   - id: c1_npu_count
-    rule: "tp * dp <= environment.total_npus"
-    message: "tp × dp must fit total NPUs (16 on B200 dual-node)"
+    rule: "tp * pp * dp <= environment.total_npus"
+    message: "tp × pp × dp must fit total NPUs (16 on B200 dual-node)"
 
   - id: c2_tp_single_node
     rule: "tp <= environment.npus_per_server"
     message: "TP must fit in a single node (NCCL ring within NVLink)"
+
+  - id: c3_pp_layers
+    rule: "pp <= model.num_layers"
+    message: "PP stages cannot exceed model layers (gpt-oss-120b: 36 layers)"
 
   - id: c4_heads_div_tp
     rule: "model.num_attention_heads % tp == 0"
@@ -87,6 +97,10 @@ feasibility_constraints:
     message: "Active params + KV must fit in GPU HBM (B200: 192 GB)"
 
   - id: c7_tp_dp_balance
-    rule: "(tp * dp >= 8) OR (environment.total_npus < 16)"
+    rule: "(tp * pp * dp >= 8) OR (environment.total_npus < 16)"
     severity: warning
-    message: "16-GPU 환경에서 tp×dp < 8 은 GPU 활용도 ↓ (warning, hard fail 아님)"
+    message: "16-GPU 환경에서 tp×pp×dp < 8 은 GPU 활용도 ↓ (warning, hard fail 아님)"
+
+  - id: c11_inference_scheduling_pp1
+    rule: "pp == 1"
+    message: "inference-scheduling path 는 PP=1 만 지원 (chart multinode false, GPU/pod=tp). PP sweep 은 wide-ep-lws / P/D path 에서"
