@@ -139,5 +139,7 @@ Outer loop (시각화/분석):
   - 부수: **#57 docs** — REFACTOR-PLAN CHANGELOG SS-leaf 4종 누적
   - 부수: **#61 docs** — REFACTOR-PLAN CHANGELOG PLUG 3종 (#58-#60) 누적
   - 부수: **#67 docs** — README Storage 운영 도구 4종 + CHANGELOG #65/#66 누적
+  - 부수: **#69 docs** — README storage diff 명령 노출 + CHANGELOG #67/#68 누적
+  - **#70 S1-pruner-bridge** — `tuner.factory.make_pruner` ABC 어댑터 결합 + `_OPTUNA_PRUNER_KINDS` drift 가드 (SH / Hyperband 가 Pruner ABC 위에서 통일 dispatch)
 - **Storage 운영 도구 5종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
 - 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60 으로 두 축 (Storage + Sampler) 모두 시연 — 추가 plug-in (S3 / Mooncake / BoTorch) 은 follow-up 가능. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
