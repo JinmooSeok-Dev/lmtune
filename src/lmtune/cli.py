@@ -43,6 +43,11 @@ from lmtune.cli_dashboard import app as _dashboard_app  # noqa: E402
 
 app.add_typer(_dashboard_app, name="dashboard")
 
+# lmtune#SS-rec: contracts subcommand (RecordSpec / QuerySpec schema dump)
+from lmtune.cli_contracts import app as _contracts_app  # noqa: E402
+
+app.add_typer(_contracts_app, name="contracts")
+
 
 def _default_db_path() -> Path:
     return Path(os.environ.get("LMTUNE_DB", "data/db/lmtune.duckdb"))
