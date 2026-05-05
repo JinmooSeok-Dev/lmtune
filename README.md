@@ -305,6 +305,17 @@ lmtune tuner describe percentile_native
 # 3. Optuna 빌트인은 reference URL fallback
 lmtune tuner describe hyperband --json | jq .reference
 # "https://optuna.readthedocs.io/en/stable/reference/pruners.html"
+
+# 4. SearchSpace YAML 의 빈 슬롯에 paste 할 default-filled 블록 출력
+lmtune tuner make-config percentile_native
+# pruner:
+#   kind: percentile_native
+#   percentile: 0.25
+#   n_startup_trials: 5
+#   n_warmup_steps: 0
+#   direction: maximize
+lmtune tuner make-config percentile_native --format json --flat
+# {"kind":"percentile_native","percentile":0.25,"n_startup_trials":5,...}
 ```
 
 | 명령 | 무엇을 하는가 | exit code |
@@ -312,8 +323,9 @@ lmtune tuner describe hyperband --json | jq .reference
 | `list-samplers` | sampler strategy 목록 (native / optuna / llm) | 0 |
 | `list-pruners` | pruner kind 목록 (native / optuna) | 0 |
 | `describe <kind>` | `inspect.signature` 로 native + llm introspect, optuna 는 reference URL | 0 / 2 (unknown) |
+| `make-config <kind>` | default kwargs 채워진 YAML/JSON 블록 — SearchSpace YAML 에 paste 가능 (`--format yaml\|json`, `--flat`) | 0 / 2 (unknown) |
 
-새 PLUG 합류 시 `_resolve_kind` 에 1줄 매핑만 추가하면 `describe` 가 자동 인지. drift 가드 테스트가 화이트리스트와 CLI 출력의 set 동일성을 영속 검증.
+`describe` 는 metadata 표면 (사람용 hyperparam 표), `make-config` 는 paste-able 표면 (기계용 default-filled config block). 새 PLUG 합류 시 `_resolve_kind` 에 1줄 매핑만 추가하면 두 명령 모두 자동 인지. drift 가드 테스트가 화이트리스트와 CLI 출력의 set 동일성을 영속 검증.
 
 ## User Contract — Inputs & Outputs
 
