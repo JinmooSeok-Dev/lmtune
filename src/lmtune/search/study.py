@@ -97,6 +97,11 @@ class Study:
         # EPP/InferencePool churn 으로 study 가 silently 망가지는 것을 방지).
         self.breaker = CircuitBreaker(cfg=config.breaker or CircuitBreakerConfig())
         self._halt_reason: str | None = None
+        # Feasibility — vllm-config-puzzle validation.ts 1:1 port. config.space 에
+        # feasibility_constraints 가 있고 + config.context 에 environment 가 있으면
+        # ask() 가 sample 후 evaluate, infeasible → tell(PRUNED) 후 retry.
+        self._feasibility = _build_feasibility(config)
+        self._infeasible_count = 0
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -134,14 +139,41 @@ class Study:
     # --- ask / tell / run --------------------------------------------------
 
     def ask(self) -> Trial:
+        # Sample → feasibility check → retry up to N times.  vllm-config-puzzle
+        # validation.ts 의 10 룰 위반 시 helmfile redeploy 0회로 즉시 prune.
+        max_infeasible_retries = 30
+        for _ in range(max_infeasible_retries + 1):
+            if self._prefetch:
+                self._optuna_study.enqueue_trial(self._prefetch.pop(0))
+            ot = self._optuna_study.ask()
+            params: dict[str, Any] = {}
+            for axis in self._active_axes:
+                params[axis.name] = suggest_from_axis(ot, axis)
+            if self._feasibility is None or self._feasibility.is_feasible(params):
+                break
+            # infeasible — tell PRUNED so Optuna learns the rejection signal,
+            # then loop and ask() again.
+            self._infeasible_count += 1
+            log.debug(
+                "study %s: infeasible candidate seq~%d params=%s reason=%s",
+                self.study_id, self._seq + 1, params,
+                self._feasibility.last_reason(),
+            )
+            try:
+                self._optuna_study.tell(ot, state=optuna.trial.TrialState.PRUNED)
+            except RuntimeError:
+                # Optuna's GridSampler may signal exhaustion here too.
+                self._exhausted = True
+                raise
+        else:
+            # Exhausted without finding a feasible candidate.
+            raise RuntimeError(
+                f"study {self.study_id}: no feasible candidate after "
+                f"{max_infeasible_retries} retries (last reason: "
+                f"{self._feasibility.last_reason() if self._feasibility else 'n/a'})"
+            )
+
         self._seq += 1
-        # Prefetched LHC samples take priority.
-        if self._prefetch:
-            self._optuna_study.enqueue_trial(self._prefetch.pop(0))
-        ot = self._optuna_study.ask()
-        params: dict[str, Any] = {}
-        for axis in self._active_axes:
-            params[axis.name] = suggest_from_axis(ot, axis)
         trial = Trial(
             trial_id=f"tr-{ULID()}",
             study_id=self.study_id,
@@ -292,3 +324,69 @@ def _distributions_for(axes, params: dict) -> dict:
 def load_space_from_path(path: str | Path) -> SearchSpace:
     from lmtune.search.space import load_space as _ls
     return _ls(path)
+
+
+# --- Feasibility wiring -------------------------------------------------------
+
+
+class _FeasibilityChecker:
+    """Wrapper around feasibility.evaluate() — caches Constraint list and the
+    bound (environment, model) tuple so per-trial overhead is just one eval pass.
+    """
+
+    __slots__ = ("_constraints", "_environment", "_model_name", "_last_reason")
+
+    def __init__(self, constraints, environment, model_name: str | None):
+        self._constraints = constraints
+        self._environment = environment
+        self._model_name = model_name
+        self._last_reason: str = "ok"
+
+    def is_feasible(self, params: dict[str, Any]) -> bool:
+        from lmtune.models import by_name
+        from lmtune.search.feasibility import evaluate as _eval
+
+        model = by_name(self._model_name) if self._model_name else None
+        rep = _eval(
+            params, environment=self._environment, model=model,
+            constraints=self._constraints,
+        )
+        self._last_reason = rep.reason()
+        return rep.feasible
+
+    def last_reason(self) -> str:
+        return self._last_reason
+
+
+def _build_feasibility(cfg: StudyConfig) -> _FeasibilityChecker | None:
+    """Construct a checker if the SearchSpace declares constraints AND the
+    StudyConfig.context provides an `environment` (and optional `model_id`).
+
+    SearchSpace 만 가지고는 environment (NPU 토폴로지) 를 알 수 없으니 caller
+    (CLI 또는 외부 study driver) 가 context 로 명시 주입.
+    """
+    space = cfg.space
+    raw = list(space.feasibility_constraints or [])
+    if not raw:
+        return None
+    ctx = cfg.context or {}
+    env = ctx.get("environment")
+    if env is None:
+        return None
+    from lmtune.search.feasibility import Constraint
+    constraints = [
+        Constraint(
+            id=str(e.get("id") or f"c_{i}"),
+            rule=str(e["rule"]),
+            message=str(e.get("message") or ""),
+            severity=str(e.get("severity") or "error"),
+        )
+        for i, e in enumerate(raw)
+        if isinstance(e, dict) and "rule" in e
+    ]
+    if not constraints:
+        return None
+    model_name = ctx.get("model_id") or ctx.get("model")
+    return _FeasibilityChecker(
+        constraints=constraints, environment=env, model_name=model_name,
+    )
