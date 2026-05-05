@@ -1,0 +1,125 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b3-gpt-oss-120b-extended
+
+# B3 [Track B-I] — gpt-oss-120b 16-GPU TP/DP autotune 확장 search-space.
+#
+# 본 파일 = b3_gpt_oss_120b_min.yaml (9 axis, smoke 검증) 의 확장판:
+#   - parallelism axis 그대로 (tp/pp/dp/ep, short form, chart wiring 검증됨)
+#   - b2_vllm_engine_v0171.yaml 의 vllm 0.17.1 verified axis 합류
+#     (max_num_batched_tokens, prefix_caching_hash_algo, block_size 등)
+#   - max_model_len 도 sweep 으로 확장 ([65536, 131072])
+#   - gpu_memory_utilization 범위 확장 (0.80 ~ 0.92, b2 와 정렬)
+#
+# 본 PR 의 비-목표 (별도 후속 PR):
+#   - PCP / DCP — vllm 0.17.1 가 prefill_context_parallel_size /
+#     decode_context_parallel_size CLI flag 받는지 사전 검증 안 됨. 받는다 해도
+#     chart values gotmpl 의 vllmArgs 경로가 그 이름으로 emit 하는지 추가 검증
+#     필요. 안전하게 다음 PR 으로 분리.
+#   - intra/cross_node_type, mla_*, node_split_strategy — chart wiring 없음
+#     (이전 안전 정정 시 동일 사유)
+#   - PP=2+ — multinode chart (wide-ep-lws / P/D path) 영역
+#
+# 사용:
+#   lmtune search start \
+#     --space b200/search-spaces/b3_gpt_oss_120b_extended.yaml \
+#     --endpoint b200/endpoints/b200_gpt-oss-120b.yaml \
+#     --adapter llmd-k8s --cluster-env b200-dual-node \
+#     --strategy tpe --max-trials 40 --seed 11 \
+#     --warmstart-db data/db/lmtune.duckdb --warmstart-top-k 8 \
+#     --name b3-gpt-oss-120b-extended \
+#     --repeats 3 --ttft-slo-ms 2000 \
+#     -p configs/profiles/autotune/short.yaml
+
+axes:
+  # ─── Parallelism (b3_min 와 동일, chart 호환 확인됨) ───
+  tp:
+    type: categorical
+    values: [2, 4, 8]
+
+  pp:
+    type: categorical
+    values: [1]
+    # PP=1 강제 (inference-scheduling chart 한정, multinode false). b3_min 와 동일.
+
+  dp:
+    type: categorical
+    values: [1, 2, 4, 8]
+
+  ep:
+    type: bool
+
+  # ─── Scheduling / Batching (b2 verified) ───
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256, 512]
+
+  max_num_batched_tokens:
+    type: categorical
+    values: [2048, 4096, 8192, 16384]
+    # vllm 0.17.1 V1 engine. chunked-prefill 활성 시 token budget. 큰 값은
+    # prefill 한 번에 더 많이 처리 (TTFT ↓) but KV pressure ↑.
+
+  max_model_len:
+    type: categorical
+    values: [65536, 131072]
+    # 130K 가 native max. 65K vs 130K sweep 으로 context 길이가 throughput·TTFT
+    # 에 미치는 영향 측정. 두 값 다 short profile 의 prompt (256 토큰) 보다 훨씬
+    # 크니 effective KV usage 는 max_num_seqs × prompt 이 더 결정적.
+
+  # ─── KV / Compute ───
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  prefix_caching_hash_algo:
+    type: categorical
+    values: [builtin, sha256]
+    active_if: {enable_prefix_caching: true}
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+    # b2 와 정렬. 너무 높으면 OOM, 너무 낮으면 KV 여유 부족.
+
+  block_size:
+    type: categorical
+    values: [16, 32]
+    # KV cache block size (PagedAttention). 16 = 보수적, 32 = 메모리 효율.
+    # 64/128 은 vllm 0.17 에서 long context 와 호환 이슈 가능 → 제외.
+
+
+# ─── Feasibility constraints (b3_min 와 동일 — 사용자 환경 검증된 룰) ───
+# `--cluster-env b200-dual-node` 명시 시에만 활성, 미명시 시 회귀 안전.
+feasibility_constraints:
+  - id: c1_npu_count
+    rule: "tp * pp * dp <= environment.total_npus"
+    message: "tp × pp × dp must fit total NPUs (16 on B200 dual-node)"
+
+  - id: c2_tp_single_node
+    rule: "tp <= environment.npus_per_server"
+    message: "TP must fit in a single node (NCCL ring within NVLink)"
+
+  - id: c3_pp_layers
+    rule: "pp <= model.num_layers"
+    message: "PP stages cannot exceed model layers (gpt-oss-120b: 36 layers)"
+
+  - id: c4_heads_div_tp
+    rule: "model.num_attention_heads % tp == 0"
+    message: "TP must divide attention heads (gpt-oss-120b: 64 heads)"
+
+  - id: c6_gpu_memory
+    rule: "surrogate.simulated_total_gb <= environment.gpu_vram_gb * gpu_memory_utilization"
+    message: "Active params + KV must fit in GPU HBM (B200: 192 GB)"
+
+  - id: c7_tp_dp_balance
+    rule: "(tp * pp * dp >= 8) OR (environment.total_npus < 16)"
+    severity: warning
+    message: "16-GPU 환경에서 tp×pp×dp < 8 은 GPU 활용도 ↓ (warning, hard fail 아님)"
+
+  - id: c11_inference_scheduling_pp1
+    rule: "pp == 1"
+    message: "inference-scheduling path 는 PP=1 만 지원 (chart multinode false)"
