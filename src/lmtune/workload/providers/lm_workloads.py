@@ -42,9 +42,7 @@ class LMWorkloadsProvider(WorkloadProvider):
         cluster_id: str | None = None,
     ) -> None:
         if ":" not in source_uri:
-            raise ValueError(
-                f"source URI 형식: <adapter>:<path>. got: {source_uri!r}"
-            )
+            raise ValueError(f"source URI 형식: <adapter>:<path>. got: {source_uri!r}")
         self.source_uri = source_uri
         self.store_path = Path(store_path) if store_path else None
         self.out_dir = Path(out_dir) if out_dir else None
@@ -83,12 +81,11 @@ class LMWorkloadsProvider(WorkloadProvider):
                 if s.meta.id == self.cluster_id:
                     return s
             available = [s.meta.id for s in result.specs]
-            raise ValueError(
-                f"cluster_id={self.cluster_id!r} not found in {available}"
-            )
+            raise ValueError(f"cluster_id={self.cluster_id!r} not found in {available}")
 
         if len(result.specs) > 1:
             import warnings
+
             available = [s.meta.id for s in result.specs]
             warnings.warn(
                 f"lm-workloads returned {len(result.specs)} clusters {available}; "
@@ -108,6 +105,5 @@ class LMWorkloadsProvider(WorkloadProvider):
 
     def __repr__(self) -> str:
         return (
-            f"LMWorkloadsProvider(source_uri={self.source_uri!r}, "
-            f"cluster_id={self.cluster_id!r})"
+            f"LMWorkloadsProvider(source_uri={self.source_uri!r}, cluster_id={self.cluster_id!r})"
         )

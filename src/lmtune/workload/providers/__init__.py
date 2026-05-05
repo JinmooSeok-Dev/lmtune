@@ -20,13 +20,12 @@ def build_provider(spec_path: str | None, source: str | None) -> WorkloadProvide
       --workload-source <uri>  → LMWorkloadsProvider (requires [workloads] extra)
     """
     if spec_path and source:
-        raise ValueError(
-            "--workload-spec 과 --workload-source 는 동시 지정 불가"
-        )
+        raise ValueError("--workload-spec 과 --workload-source 는 동시 지정 불가")
     if spec_path:
         return LiteralWorkloadProvider(spec_path)
     if source:
         # Lazy import — [workloads] extra 미설치 환경에서도 LiteralProvider 동작
         from lmtune.workload.providers.lm_workloads import LMWorkloadsProvider
+
         return LMWorkloadsProvider(source)
     raise ValueError("provider 입력 필요 — --workload-spec 또는 --workload-source")
