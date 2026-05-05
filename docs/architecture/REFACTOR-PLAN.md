@@ -147,6 +147,8 @@ Outer loop (시각화/분석):
   - **#75 PLUG-NativePercentilePruner** — Pruner axis 의 두 번째 native impl. `_NATIVE_PRUNER_KINDS` 에 `percentile_native` 합류 — 임의 percentile (0.5 = median 동치, 수학적 검증 포함). PLUG 패턴이 한 axis 안에서 2회 시연됨
   - **#76 cli-tuner-list** — `lmtune tuner list-{samplers,pruners}` 신규. PLUG 화이트리스트 (`_NATIVE_STRATEGIES`, `_LLM_STRATEGIES`, `_NATIVE_PRUNER_KINDS`, `_OPTUNA_PRUNER_KINDS`) 를 단일 진실원으로 노출 — `lmtune storage list-backends` 와 동등한 PLUG 가시성
   - **#77 cli-tuner-describe** — `lmtune tuner describe <kind>` 신규. `inspect.signature` 로 native + llm 클래스의 hyperparameter introspect, Optuna 빌트인은 reference URL fallback. 외부 기여자가 새 PLUG 추가 시 자동으로 describe 가능
+  - **#78 docs(README)** — Tuner 메타 도구 섹션 추가 (`list-samplers` / `list-pruners` / `describe`). Storage 운영 도구와 동등한 형식
+  - **#79 ergo(tuner)** — `lmtune.tuner` 의 lazy `__getattr__` 에 `NativeMedianPruner` / `NativePercentilePruner` 추가. import path 단순화 (`from lmtune.tuner import NativeMedianPruner`)
 - **Storage 운영 도구 5종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
 - **Tuner 메타 도구 3종** (`lmtune tuner list-samplers` / `list-pruners` / `describe <kind>`) — PLUG 합류 즉시 자동 노출 + introspect (drift 가드 테스트 포함).
 - **Pruner axis PLUG 합류** — Optuna (SH/Hyperband) + Native (Median + Percentile) 네 빌트인. ASHA / 외부 SDK pruner 추가 시 1+1 줄 변경.
