@@ -29,8 +29,8 @@ _LLM_STRATEGIES = {"llm_oracle"}
 # drift 방지용 단일 진실원: 본 set 만 갱신하면 factory 가 자동 흡수.
 _OPTUNA_PRUNER_KINDS = {"sh", "successive_halving", "hyperband"}
 
-# Native Pruner — Optuna 위임 없이 stdlib 만으로 동작. PLUG slot 의 첫 합류.
-_NATIVE_PRUNER_KINDS = {"median_native"}
+# Native Pruner — Optuna 위임 없이 stdlib 만으로 동작. PLUG slot 의 합류.
+_NATIVE_PRUNER_KINDS = {"median_native", "percentile_native"}
 
 
 def make_sampler(
@@ -142,10 +142,14 @@ def make_pruner(kind: str | None = None, **kwargs) -> Pruner | None:
 
 def _make_native_pruner(kind: str, **kwargs) -> Pruner:
     """Native Pruner 디스패치. Optuna 미설치 환경에서도 동작."""
-    from lmtune.tuner.median_pruner import NativeMedianPruner
-
     if kind == "median_native":
+        from lmtune.tuner.median_pruner import NativeMedianPruner
+
         return NativeMedianPruner(**kwargs)
+    if kind == "percentile_native":
+        from lmtune.tuner.percentile_pruner import NativePercentilePruner
+
+        return NativePercentilePruner(**kwargs)
     raise ValueError(f"unknown native pruner kind: {kind!r}")
 
 

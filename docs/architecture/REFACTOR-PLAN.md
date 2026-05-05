@@ -143,6 +143,8 @@ Outer loop (시각화/분석):
   - **#70 S1-pruner-bridge** — `tuner.factory.make_pruner` ABC 어댑터 결합 + `_OPTUNA_PRUNER_KINDS` drift 가드 (SH / Hyperband 가 Pruner ABC 위에서 통일 dispatch)
   - **#72 docs(arch)** — PLUG_PATTERN.md 에 Pruner axis 항목 + 'Pruner 의 경우' 5단계 + 세 reference impl 섹션 (#70/#71)
   - **#73 PLUG-NativeMedianPruner** — Pruner axis 의 첫 native impl. `_NATIVE_PRUNER_KINDS = {"median_native"}` 신규 + `tuner.factory.make_pruner` 분기 — Optuna 위임 없이 stdlib statistics 만으로 cross-trial median 기반 prune
+  - **#74 docs(README)** — PLUG 표 두 추상 → 세 추상 (Pruner row 추가) + Native MedianPruner 노출
+  - **#75 PLUG-NativePercentilePruner** — Pruner axis 의 두 번째 native impl. `_NATIVE_PRUNER_KINDS` 에 `percentile_native` 합류 — 임의 percentile (0.5 = median 동치, 수학적 검증 포함). PLUG 패턴이 한 axis 안에서 2회 시연됨
 - **Storage 운영 도구 5종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
-- **Pruner axis PLUG 합류** — Optuna (SH/Hyperband) + Native (MedianPruner) 두 빌트인. ASHA / 외부 SDK pruner 추가 시 1+1 줄 변경.
-- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60/#73 으로 세 축 (Storage + Sampler + Pruner) 모두 시연. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
+- **Pruner axis PLUG 합류** — Optuna (SH/Hyperband) + Native (Median + Percentile) 네 빌트인. ASHA / 외부 SDK pruner 추가 시 1+1 줄 변경.
+- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60/#73/#75 으로 세 축 (Storage + Sampler + Pruner) 모두 시연. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
