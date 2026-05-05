@@ -11,10 +11,12 @@ from lmtune.storage.store.base import ArtifactStore
 from lmtune.storage.store.duckdb_adapter import DuckDBArtifactStore
 from lmtune.storage.store.in_memory import InMemoryArtifactStore
 from lmtune.storage.store.local import LocalArtifactStore
+from lmtune.storage.store.postgres import PostgresArtifactStore
 
 __all__ = [
     "ArtifactStore",
     "InMemoryArtifactStore",
     "DuckDBArtifactStore",
     "LocalArtifactStore",
+    "PostgresArtifactStore",
 ]

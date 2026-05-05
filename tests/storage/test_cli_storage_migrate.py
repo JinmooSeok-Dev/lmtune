@@ -174,12 +174,13 @@ def test_migrate_unknown_kinds_rejected(tmp_path: Path):
 
 
 def test_migrate_unknown_backend_rejected(tmp_path: Path):
+    """등록되지 않은 backend kind → exit != 0."""
     result = runner.invoke(
         app,
         [
             "migrate",
             "--src-kind",
-            "postgres",
+            "mongodb",  # 등록되지 않은 가상의 backend
             "--src",
             str(tmp_path / "x"),
             "--dst-kind",

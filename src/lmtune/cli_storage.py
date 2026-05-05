@@ -27,13 +27,14 @@ from lmtune.storage.store import (
     ArtifactStore,
     DuckDBArtifactStore,
     LocalArtifactStore,
+    PostgresArtifactStore,
 )
 
 app = typer.Typer(no_args_is_help=True, help="lmtune storage 도구")
 console = Console()
 
 
-_BACKENDS = ("local", "duckdb")
+_BACKENDS = ("local", "duckdb", "postgres")
 
 
 def _open_store(kind: str, path: Path) -> ArtifactStore:
@@ -41,6 +42,13 @@ def _open_store(kind: str, path: Path) -> ArtifactStore:
         return LocalArtifactStore(path)
     if kind == "duckdb":
         return DuckDBArtifactStore(path)
+    if kind == "postgres":
+        # Postgres backend 는 path 를 dsn (postgres://...) 으로 해석.
+        # psycopg 미설치 시 명확한 ImportError → typer.BadParameter 로 변환.
+        try:
+            return PostgresArtifactStore(str(path))
+        except ImportError as e:
+            raise typer.BadParameter(str(e)) from None
     raise typer.BadParameter(f"unknown backend: {kind!r}, valid: {_BACKENDS}")
 
 
