@@ -18,6 +18,12 @@
 {{- $release := "ms-infsch" -}}
 {{- $sv := index .StateValues $release | default dict -}}
 {{- $vllmArgs := index $sv "vllmArgs" | default dict -}}
+{{- /* lmtune b3 search-space (tp/dp) 가 inject 하는 parallelism/replicas. 미주입 시
+      hardcoded baseline (TP=8 × DP=2) 사용. axis 활성화 시 trial 마다 chart redeploy. */}}
+{{- $svDecode := index $sv "decode" | default dict -}}
+{{- $svPar := index $svDecode "parallelism" | default dict -}}
+{{- $tp := index $svPar "tensor" | default 8 -}}
+{{- $rep := index $svDecode "replicas" | default 2 -}}
 
 multinode: false
 
@@ -46,9 +52,9 @@ prefill:
 
 decode:
   parallelism:
-    tensor: 8     # TP=8: pod 1개가 단일 노드 8 GPU 통째 NVLink
+    tensor: {{ $tp }}     # TP: lmtune StateValues 우선, default=8 (pod 1개 8 GPU NVLink)
   create: true
-  replicas: 2     # DP=2: 2 노드 × 1 replica = 16 GPU 전부 활용
+  replicas: {{ $rep }}    # DP: lmtune StateValues 우선, default=2 (2 노드 × 1 replica)
   monitoring:
     podmonitor:
       enabled: false
@@ -90,11 +96,11 @@ decode:
         {{- end }}
       resources:
         requests:
-          nvidia.com/gpu: "8"   # TP=8 단일 pod
+          nvidia.com/gpu: {{ $tp | quote }}   # GPU/pod = TP (NVLink intra-node)
           cpu: "32"
           memory: 384Gi
         limits:
-          nvidia.com/gpu: "8"
+          nvidia.com/gpu: {{ $tp | quote }}
           cpu: "64"
           memory: 512Gi
       env:

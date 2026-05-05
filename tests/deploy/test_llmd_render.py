@@ -32,10 +32,14 @@ def test_render_kebab_case_vllm_args():
     assert va["gpu-memory-utilization"] == 0.85
     assert va["kv-cache-dtype"] == "fp8"
 
-    # parallelism translates to vLLM CLI flag names
-    assert va["tensor-parallel-size"] == 4
+    # tp/dp 는 vllmArgs 가 아니라 chart 의 decode.parallelism.tensor /
+    # decode.replicas 로 emit (chart 가 자동 inject 하는 영역과 중복 차단).
+    assert "tensor-parallel-size" not in va
+    assert "data-parallel-size" not in va
+    assert ms["decode"]["parallelism"]["tensor"] == 4
+    assert ms["decode"]["replicas"] == 1
+    # pp/ep 는 vllm CLI flag 그대로 (chart 가 자동 emit 안 함)
     assert va["pipeline-parallel-size"] == 2
-    assert va["data-parallel-size"] == 1
     assert va["enable-expert-parallel"] is True
 
 
@@ -77,15 +81,18 @@ def test_render_pd_replicas_emit_per_release():
     assert "ms-pd" in overlay
     ms = overlay["ms-pd"]
     assert ms["prefill"] == {"replicas": 2}
-    assert ms["decode"] == {"replicas": 3}
-    # vllmArgs 가 prefill/decode 와 공존 (chart 가 둘을 별도로 처리)
+    # tp axis (=4) → decode.parallelism.tensor; replicas.decode (=3) → decode.replicas.
+    assert ms["decode"]["parallelism"]["tensor"] == 4
+    assert ms["decode"]["replicas"] == 3
+    # vllmArgs 는 max_num_seqs 만, tp 는 vllmArgs 에 안 들어감 (chart 영역과 중복 차단)
     assert ms["vllmArgs"]["max-num-seqs"] == 128
-    assert ms["vllmArgs"]["tensor-parallel-size"] == 4
+    assert "tensor-parallel-size" not in ms["vllmArgs"]
 
 
 def test_render_omits_replicas_when_absent():
-    """deployment.replicas 가 없으면 overlay 에도 prefill/decode 키 자체가 없어야 한다."""
-    endpoint = {"model": "m", "deployment": {"engine_args": {}, "parallelism": {"tp": 1}}}
+    """deployment.replicas 가 없고 axis 도 안 sample 됐을 때 overlay 에 prefill/decode
+    키 자체가 없어야 한다 (chart default 그대로)."""
+    endpoint = {"model": "m", "deployment": {"engine_args": {}, "parallelism": {"pp": 1}}}
     overlay = render_values_overlay(endpoint)
     ms = overlay["ms-phase1"]
     assert "prefill" not in ms

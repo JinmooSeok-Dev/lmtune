@@ -118,10 +118,16 @@ def test_unsupported_path_returns_failure(endpoint_yaml, tmp_path):
 
 
 def test_render_overlay_carries_parallelism_per_path(endpoint_yaml):
-    """Sanity: render_values_overlay still emits TP/DP regardless of path routing."""
+    """Sanity: render_values_overlay still emits TP/DP regardless of path routing.
+
+    Note: tp/dp 는 vllmArgs 가 아니라 decode.parallelism.tensor / decode.replicas
+    로 emit (chart hardcoded path 와 충돌 차단).
+    """
     data = yaml.safe_load(endpoint_yaml.read_text())
     overlay = render_values_overlay(data, release_names=["ms-pd-prefill", "ms-pd-decode"])
     assert set(overlay.keys()) == {"ms-pd-prefill", "ms-pd-decode"}
     for payload in overlay.values():
-        assert payload["vllmArgs"]["tensor-parallel-size"] == 4
-        assert payload["vllmArgs"]["data-parallel-size"] == 2
+        assert payload["decode"]["parallelism"]["tensor"] == 4
+        assert payload["decode"]["replicas"] == 2
+        assert "tensor-parallel-size" not in payload["vllmArgs"]
+        assert "data-parallel-size" not in payload["vllmArgs"]

@@ -130,16 +130,20 @@ def render_values_overlay(
     for k, v in engine_args.items():
         vllm_args[k.replace("_", "-")] = v
 
-    # Parallelism → typical vLLM flags (llm-d maps these onto Deployment replicas
-    # and --tensor-parallel-size etc.)
-    if "tp" in parallelism:
-        vllm_args["tensor-parallel-size"] = int(parallelism["tp"])
+    # Parallelism — chart values 가 자동 inject 하는 axis (tp, dp) 는 vllmArgs 가
+    # 아닌 chart 의 원래 위치 (decode.parallelism.tensor / decode.replicas) 로 emit.
+    # 그렇게 안 하면 chart 의 default 와 vllmArgs 가 둘 다 --tensor-parallel-size 를
+    # emit 해 vllm CLI 가 'unrecognized argument' 또는 dup 으로 reject (R8 의 잔여 갭).
+    # pp/ep 는 vllm 이 인식하는 CLI flag 라 vllmArgs 로 그대로 두어도 무해.
+    decode_overlay: dict[str, Any] = {}
     if "pp" in parallelism:
         vllm_args["pipeline-parallel-size"] = int(parallelism["pp"])
-    if "dp" in parallelism:
-        vllm_args["data-parallel-size"] = int(parallelism["dp"])
     if parallelism.get("ep"):
         vllm_args["enable-expert-parallel"] = True
+    if "tp" in parallelism:
+        decode_overlay.setdefault("parallelism", {})["tensor"] = int(parallelism["tp"])
+    if "dp" in parallelism:
+        decode_overlay["replicas"] = int(parallelism["dp"])
 
     # Resolve target releases.
     if release_names:
@@ -155,13 +159,18 @@ def render_values_overlay(
         },
         "vllmArgs": vllm_args,
     }
+    # tp/dp axis → decode.parallelism.tensor / decode.replicas (chart 가 읽는 위치).
+    # 본 overlay 가 chart 의 default 를 override.
+    if decode_overlay:
+        payload["decode"] = decode_overlay
     # P/D disaggregation: replicas.prefill / replicas.decode → helmfile values 의
     # prefill.replicas / decode.replicas 로 분리 emit. base helmfile values yaml 의
     # parallelism.tensor 등 다른 prefill/decode 필드는 그대로 상속.
     if "prefill" in replicas:
         payload["prefill"] = {"replicas": int(replicas["prefill"])}
     if "decode" in replicas:
-        payload["decode"] = {"replicas": int(replicas["decode"])}
+        # endpoint YAML 의 replicas.decode 가 axis 와 충돌하면 axis (decode_overlay) 우선.
+        payload.setdefault("decode", {})["replicas"] = int(replicas["decode"])
     return {name: payload for name in targets}
 
 
