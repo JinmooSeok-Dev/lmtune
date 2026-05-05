@@ -23,6 +23,7 @@ from lmtune.search.space import SearchSpace
 from lmtune.tuner.base import Sampler
 
 _NATIVE_STRATEGIES = {"random_native", "lhc_native", "tpe_native"}
+_LLM_STRATEGIES = {"llm_oracle"}
 
 
 def make_sampler(
@@ -45,6 +46,9 @@ def make_sampler(
 
     if s in _NATIVE_STRATEGIES:
         return _make_native(s, space, seed=seed, n_samples=n_samples), None
+
+    if s in _LLM_STRATEGIES:
+        return _make_llm(s, space), None
 
     # Optuna 경로 — 기존 search.samplers.make_sampler 재사용 후 어댑터로 wrap
     from lmtune.search.samplers import make_sampler as _make_optuna
@@ -83,6 +87,15 @@ def _make_native(
     if strategy == "tpe_native":
         return NativeTPESampler(space, seed=seed)
     raise ValueError(f"unknown native strategy: {strategy!r}")
+
+
+def _make_llm(strategy: str, space: SearchSpace) -> Sampler:
+    """LLM-guided sampler 디스패치. anthropic SDK 가 없으면 ImportError."""
+    from lmtune.tuner.llm_oracle import LLMOracleSampler
+
+    if strategy == "llm_oracle":
+        return LLMOracleSampler(space)
+    raise ValueError(f"unknown LLM strategy: {strategy!r}")
 
 
 __all__ = ["make_sampler"]
