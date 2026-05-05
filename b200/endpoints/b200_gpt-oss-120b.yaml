@@ -15,9 +15,11 @@ deployment:
   engine_args:
     enable_prefix_caching: true
     max_num_seqs: 128
-    max_model_len: 8192
+    # gpt-oss-120b native max = 131072. KV cache 가 단일 GPU 에 안 들어가면
+    # parallelism (TP/EP/DP) 으로 분산 — b200/search-spaces/b3_parallelism.yaml.
+    max_model_len: 131072
     gpu_memory_utilization: 0.90
-    kv_cache_dtype: auto
+    kv_cache_dtype: fp8
     dtype: bfloat16
     # tensor_parallel_size 는 deployment.parallelism.tp 또는 chart 의
     # decode.parallelism.tensor 에서만 설정. engine_args 에서 또 주면 중복 emit.

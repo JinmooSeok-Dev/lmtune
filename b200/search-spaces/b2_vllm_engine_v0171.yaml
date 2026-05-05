@@ -20,10 +20,9 @@ axes:
     type: categorical
     values: [2048, 4096, 8192, 16384]
 
-  # gpt-oss-120b native 131072. baseline 32768. KV cache 압박 측정용.
-  max_model_len:
-    type: categorical
-    values: [8192, 16384, 32768, 65536]
+  # max_model_len 은 axis 에서 제거 — endpoint YAML 의 baseline (131072) 을 그대로
+  # 사용. gpt-oss-120b native max = 131072. KV cache 압박은 max_num_seqs ×
+  # max_num_batched_tokens 와 parallelism (별도 search-space) 으로 다룸.
 
   enable_chunked_prefill:
     type: bool
@@ -81,6 +80,6 @@ axes:
     # float16 활성화 가능.
 
   # ─────────── Compute ───────────
-  enforce_eager:
-    type: bool
-    # CUDA graph 전용 모델은 false. eager 는 디버그·startup 시간 감소.
+  # enforce_eager 는 axis 에서 제거 — gpt-oss-120b 같은 큰 모델은 CUDA graph 가
+  # 거의 모든 axis 조합에서 우위. eager 는 디버그·startup 시간 감소 외 의미 X.
+  # 필요 시 endpoint YAML 의 engine_args 에 fixed=false (default) 그대로.
