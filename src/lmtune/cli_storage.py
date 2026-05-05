@@ -136,6 +136,78 @@ def cmd_list_backends() -> None:
         console.print(f"- {b}")
 
 
+@app.command("validate")
+def cmd_validate(
+    kind: Annotated[
+        str,
+        typer.Option("--kind", help=f"backend: {' | '.join(_BACKENDS)}"),
+    ],
+    path: Annotated[
+        Path,
+        typer.Option("--path", help="store path"),
+    ],
+    json_out: Annotated[
+        bool,
+        typer.Option("--json", help="machine-readable JSON 출력"),
+    ] = False,
+) -> None:
+    """ArtifactStore 의 모든 record 가 RecordSpec schema 를 통과하는지 검증.
+
+    각 record kind 마다 ``store.query(QuerySpec(record_kind=k))`` 시도. backend
+    가 jsonl/duckdb 파일을 RecordSpec 으로 deserialize 하는 단계에서 schema 위반
+    시 raise. 본 명령은 그 raise 를 잡아 어느 kind 가 깨졌는지 보고.
+
+    Use cases:
+    - 외부 archive 디렉토리를 받았을 때 신뢰성 검증
+    - DuckDB 마이그레이션 후 round-trip 무결성 확인
+    - CI 의 schema drift 가드 (record 추가 시 누락된 필드 자동 검출)
+    """
+    import json as _json
+
+    store = _open_store(kind, path)
+    valid: dict[str, int] = {}
+    invalid: dict[str, str] = {}
+    try:
+        for record_kind in RECORD_KINDS:
+            try:
+                rows = store.query(QuerySpec(record_kind=record_kind))
+                valid[record_kind] = len(rows)
+            except Exception as e:  # noqa: BLE001
+                invalid[record_kind] = f"{type(e).__name__}: {e}"
+    finally:
+        store.close()
+
+    total_valid = sum(valid.values())
+    is_valid = not invalid
+
+    if json_out:
+        payload = {
+            "backend": kind,
+            "path": str(path),
+            "valid": is_valid,
+            "valid_counts": valid,
+            "invalid": invalid,
+        }
+        print(_json.dumps(payload, separators=(",", ":")))
+        if not is_valid:
+            raise typer.Exit(1)
+        return
+
+    if is_valid:
+        console.print(
+            f"[bold green]valid[/bold green]  {kind}://{path}  "
+            f"({total_valid} records across {len(valid)} kinds)"
+        )
+    else:
+        console.print(f"[red]invalid[/red]  {kind}://{path}")
+        for k, err in invalid.items():
+            console.print(f"  ✗ {k}: {err}")
+        for k, n in valid.items():
+            if n > 0:
+                console.print(f"  ✓ {k}: {n}")
+        raise typer.Exit(1)
+
+
 @app.command("info")
 def cmd_info(
     kind: Annotated[
