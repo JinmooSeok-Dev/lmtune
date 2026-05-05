@@ -131,8 +131,11 @@ Outer loop (시각화/분석):
   - **#62 docs(README)** — PLUG/Storage 섹션 추가 + `pip install lmtune[...]` 정합화 (rename drift 차단)
   - **#63 SS-info** — `lmtune storage info` — record kind 별 count 보고 (--json 으로 monitoring loop 친화)
   - **#64 cli-version** — `lmtune --version` / `-V` flag + drift test (`__version__` ↔ pyproject)
+  - **#65 docs(arch)** — `PLUG_PATTERN.md` 5단계 + 체크리스트 (외부 기여자가 새 backend/sampler 추가하는 step-by-step recipe)
+  - **#66 SS-validate** — `lmtune storage validate` — record schema validity 검증 (외부 archive 신뢰성 + CI drift 가드)
   - 부수: **#41 fix(ci)** — vllm_restart venv fallback + ruff format 일괄 적용 (post-rename)
   - 부수: **#52 docs** — REFACTOR-PLAN CHANGELOG 13 PR 누적 정리
   - 부수: **#57 docs** — REFACTOR-PLAN CHANGELOG SS-leaf 4종 누적
   - 부수: **#61 docs** — REFACTOR-PLAN CHANGELOG PLUG 3종 (#58-#60) 누적
+- **Storage 운영 도구 4종 완비** (`migrate` / `info` / `validate` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
 - 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60 으로 두 축 (Storage + Sampler) 모두 시연 — 추가 plug-in (S3 / Mooncake / BoTorch) 은 follow-up 가능. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
