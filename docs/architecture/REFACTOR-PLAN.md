@@ -149,7 +149,8 @@ Outer loop (시각화/분석):
   - **#77 cli-tuner-describe** — `lmtune tuner describe <kind>` 신규. `inspect.signature` 로 native + llm 클래스의 hyperparameter introspect, Optuna 빌트인은 reference URL fallback. 외부 기여자가 새 PLUG 추가 시 자동으로 describe 가능
   - **#78 docs(README)** — Tuner 메타 도구 섹션 추가 (`list-samplers` / `list-pruners` / `describe`). Storage 운영 도구와 동등한 형식
   - **#79 ergo(tuner)** — `lmtune.tuner` 의 lazy `__getattr__` 에 `NativeMedianPruner` / `NativePercentilePruner` 추가. import path 단순화 (`from lmtune.tuner import NativeMedianPruner`)
+  - **#80 cli-tuner-make-config** — `lmtune tuner make-config <kind>` 신규. `inspect.signature` 의 default kwargs 로 채워진 SearchSpace YAML/JSON 블록 출력 (`--format yaml|json` + `--flat`). 사용자가 SearchSpace YAML 의 빈 슬롯에 즉시 paste 가능 — describe 가 metadata 표면, make-config 가 paste-able 표면
 - **Storage 운영 도구 5종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
-- **Tuner 메타 도구 3종** (`lmtune tuner list-samplers` / `list-pruners` / `describe <kind>`) — PLUG 합류 즉시 자동 노출 + introspect (drift 가드 테스트 포함).
+- **Tuner 메타 도구 4종** (`lmtune tuner list-samplers` / `list-pruners` / `describe <kind>` / `make-config <kind>`) — PLUG 합류 즉시 자동 노출 + introspect + paste-able config block (drift 가드 테스트 포함).
 - **Pruner axis PLUG 합류** — Optuna (SH/Hyperband) + Native (Median + Percentile) 네 빌트인. ASHA / 외부 SDK pruner 추가 시 1+1 줄 변경.
 - 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60/#73/#75 으로 세 축 (Storage + Sampler + Pruner) 모두 시연. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
