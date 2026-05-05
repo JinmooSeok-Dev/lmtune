@@ -260,7 +260,13 @@ lmtune storage info --kind duckdb --path data/db/lmtune.duckdb --json | jq .tota
 lmtune storage validate --kind local --path data/archive/2026-05-06/
 lmtune storage validate --kind duckdb --path data/db/lmtune.duckdb --json | jq .valid
 
-# 4. 등록된 backend 목록 (PLUG 합류 시 자동 노출)
+# 4. 두 store 비교 — drift 검출
+lmtune storage diff \
+  --left-kind duckdb --left data/db/lmtune.duckdb \
+  --right-kind local --right data/archive/2026-05-06/
+lmtune storage diff --left-kind ... --right-kind ... --json | jq .equal
+
+# 5. 등록된 backend 목록 (PLUG 합류 시 자동 노출)
 lmtune storage list-backends
 
 # 외부 result.json → ArtifactStore mirror 변환 (contracts 도구 — storage 와 별개)
@@ -272,6 +278,7 @@ lmtune contracts records-from-result <result.json> --out <records-dir>
 | `migrate` | src store → dst store 일괄 복사 (RECORD_KINDS 순회) | 0 / 비어있으면 0 + warn |
 | `info` | record kind 별 count 보고 (사람용 + `--json`) | 0 |
 | `validate` | 모든 record 가 RecordSpec schema 통과하는지 query 시도 | 0 (valid) / 1 (invalid) |
+| `diff` | 두 store 의 record 차이 — `only_left` / `only_right` / `mismatched` | 0 |
 | `list-backends` | `_BACKENDS` 목록 출력 (PLUG 진입로) | 0 |
 
 ## User Contract — Inputs & Outputs
