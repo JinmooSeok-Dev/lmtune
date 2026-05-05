@@ -136,6 +136,108 @@ def cmd_list_backends() -> None:
         console.print(f"- {b}")
 
 
+@app.command("diff")
+def cmd_diff(
+    left_kind: Annotated[
+        str,
+        typer.Option("--left-kind", help=f"left backend: {' | '.join(_BACKENDS)}"),
+    ],
+    left: Annotated[
+        Path,
+        typer.Option("--left", help="left store path"),
+    ],
+    right_kind: Annotated[
+        str,
+        typer.Option("--right-kind", help=f"right backend: {' | '.join(_BACKENDS)}"),
+    ],
+    right: Annotated[
+        Path,
+        typer.Option("--right", help="right store path"),
+    ],
+    json_out: Annotated[
+        bool,
+        typer.Option("--json", help="machine-readable JSON 출력"),
+    ] = False,
+) -> None:
+    """두 ArtifactStore 의 record 차이 보고 — primary_key 기준.
+
+    각 record kind 마다 양쪽 store 를 query → primary_key 집합 비교.
+    only_left, only_right, mismatched (같은 PK 인데 다른 값) 3 카테고리로 분류.
+
+    Use cases:
+    - DuckDB 운영본 ↔ Local archive drift 검출
+    - 외부에서 받은 archive 와 자기 DB 의 차이 분석
+    - migrate 후 round-trip 정합성 (양쪽 should be equal)
+    """
+    import json as _json
+
+    left_store = _open_store(left_kind, left)
+    right_store = _open_store(right_kind, right)
+
+    by_kind: dict[str, dict[str, int]] = {}
+    try:
+        for record_kind in RECORD_KINDS:
+            l_rows = left_store.query(QuerySpec(record_kind=record_kind))
+            r_rows = right_store.query(QuerySpec(record_kind=record_kind))
+            l_map = {r.primary_key(): r for r in l_rows}  # type: ignore[attr-defined]
+            r_map = {r.primary_key(): r for r in r_rows}  # type: ignore[attr-defined]
+
+            l_keys = set(l_map.keys())
+            r_keys = set(r_map.keys())
+            only_left = l_keys - r_keys
+            only_right = r_keys - l_keys
+            common = l_keys & r_keys
+
+            mismatched = 0
+            for k in common:
+                if l_map[k].model_dump() != r_map[k].model_dump():
+                    mismatched += 1
+
+            counts = {
+                "left": len(l_rows),
+                "right": len(r_rows),
+                "only_left": len(only_left),
+                "only_right": len(only_right),
+                "mismatched": mismatched,
+            }
+            # 0/0/0 인 kind 는 생략 (출력 노이즈 감소)
+            if any(v > 0 for v in counts.values()):
+                by_kind[record_kind] = counts
+    finally:
+        left_store.close()
+        right_store.close()
+
+    is_equal = all(
+        c["only_left"] == 0 and c["only_right"] == 0 and c["mismatched"] == 0
+        for c in by_kind.values()
+    )
+
+    if json_out:
+        payload = {
+            "left": f"{left_kind}://{left}",
+            "right": f"{right_kind}://{right}",
+            "equal": is_equal,
+            "by_kind": by_kind,
+        }
+        print(_json.dumps(payload, separators=(",", ":")))
+        return
+
+    if is_equal:
+        console.print(
+            f"[bold green]equal[/bold green]  {left_kind}://{left}  ==  {right_kind}://{right}"
+        )
+        return
+
+    console.print(f"[yellow]differs[/yellow]  {left_kind}://{left}  vs  {right_kind}://{right}")
+    for k, c in by_kind.items():
+        if c["only_left"] == 0 and c["only_right"] == 0 and c["mismatched"] == 0:
+            continue
+        console.print(
+            f"  {k:<20} L={c['left']} R={c['right']}  "
+            f"only_L={c['only_left']} only_R={c['only_right']} mismatch={c['mismatched']}"
+        )
+
+
 @app.command("validate")
 def cmd_validate(
     kind: Annotated[
