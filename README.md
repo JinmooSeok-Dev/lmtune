@@ -327,6 +327,42 @@ lmtune tuner make-config percentile_native --format json --flat
 
 `describe` 는 metadata 표면 (사람용 hyperparam 표), `make-config` 는 paste-able 표면 (기계용 default-filled config block). 새 PLUG 합류 시 `_resolve_kind` 에 1줄 매핑만 추가하면 두 명령 모두 자동 인지. drift 가드 테스트가 화이트리스트와 CLI 출력의 set 동일성을 영속 검증.
 
+## Contracts 도구
+
+`lmtune contracts` 서브커맨드는 RecordSpec / QuerySpec / BenchmarkResult 의 schema 와 인스턴스 다루는 5 명령. Pydantic `model_fields` 기반 — 새 record kind 합류 시 `RECORD_KINDS` 에 1줄 추가만으로 모든 명령이 자동 인지.
+
+```bash
+# 1. JSON Schema dump
+lmtune contracts dump-schema --kind record --record-kind run | jq
+lmtune contracts dump-schema --kind result -o /tmp/result-schema.json
+
+# 2. instance 검증
+lmtune contracts validate-record /path/to/record.{json,yaml}
+lmtune contracts validate-result /path/to/result.json
+
+# 3. BenchmarkResult JSON → records/<kind>.jsonl 디렉토리 (archive/migration 용)
+lmtune contracts records-from-result raw/<run_id>/result.json --out archive/<run_id>/
+
+# 4. 신규 record 작성용 default-filled 템플릿 (paste-able 표면)
+lmtune contracts make-template --record-kind run --format yaml
+# api_version: lmtune/record/v1alpha1
+# kind: run
+# run_id: <run_id>
+# profile_slug: <profile_slug>
+# ...
+lmtune contracts make-template -k metric -f json | jq
+```
+
+| 명령 | 무엇을 하는가 | exit code |
+|:---|:---|:---:|
+| `dump-schema` | RecordSpec / QuerySpec / BenchmarkResult 의 JSON Schema 출력 (`--out file` 또는 stdout) | 0 |
+| `validate-record` | 단일 record yaml/json 의 schema validity 검증 | 0 (valid) / 1 (invalid) |
+| `validate-result` | BenchmarkResult yaml/json 의 schema validity 검증 | 0 / 1 |
+| `records-from-result` | result.json → records/<kind>.jsonl 디렉토리 (LocalArtifactStore 적재) | 0 |
+| `make-template <kind>` | 빈 record 템플릿 (필수 placeholder + optional default) — JSON/YAML | 0 / 2 (unknown kind) |
+
+`tuner make-config` ↔ `contracts make-template` 은 동일한 paste-able 패턴이 두 axis 에서 시연. 사용자가 새 SearchSpace YAML / RecordSpec instance 를 작성할 때 default 부터 시작 → 수정.
+
 ## User Contract — Inputs & Outputs
 
 ### Inputs — 사용자가 제공해야 하는 것
