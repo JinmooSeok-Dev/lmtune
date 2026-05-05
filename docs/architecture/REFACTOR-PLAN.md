@@ -125,6 +125,10 @@ Outer loop (시각화/분석):
   - **#54 SS-cli** — `bench run` 이 raw_dir/<run_id>/records/ 에 LocalArtifactStore mirror 적재 (result.json + records 양립)
   - **#55 SS-cli2** — `lmtune contracts records-from-result` — BenchmarkResult JSON → records/<kind>.jsonl 변환 도구 (archive/migration)
   - **#56 SS-migrate** — `lmtune storage migrate` — local↔duckdb backend 무관 일괄 복사 (`list-backends` 포함, PLUG 진입로)
+  - **#58 PLUG** — PostgresArtifactStore stub: ArtifactStore ABC plug-in 패턴 실증 (psycopg optional, ImportError → typer.BadParameter 변환, _BACKENDS 자동 합류)
+  - **#59 PLUG** — LLMOracleSampler stub: Sampler ABC plug-in 패턴 실증 (anthropic optional, `tuner.factory.make_sampler('llm_oracle')` dispatch)
+  - **#60 PLUG-deps** — `[postgres]` / `[agent]` extras 등록 + drift test (ImportError 메시지의 install command 가 pyproject 와 항상 일치)
   - 부수: **#41 fix(ci)** — vllm_restart venv fallback + ruff format 일괄 적용 (post-rename)
   - 부수: **#52 docs** — REFACTOR-PLAN CHANGELOG 13 PR 누적 정리
-- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module), PLUG (LLMOracleSampler / PostgresStore stub)
+  - 부수: **#57 docs** — REFACTOR-PLAN CHANGELOG SS-leaf 4종 누적
+- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60 으로 두 축 (Storage + Sampler) 모두 시연 — 추가 plug-in (S3 / Mooncake / BoTorch) 은 follow-up 가능.
