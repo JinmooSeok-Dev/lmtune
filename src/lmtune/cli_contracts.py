@@ -12,6 +12,9 @@
   lmtune contracts records-from-result <result.json> --out <dir>
       BenchmarkResult → records (run/metric/...) jsonl 디렉토리.
       to_records() + LocalArtifactStore 결합. archive/migration 도구.
+  lmtune contracts make-template --record-kind run [--format json|yaml]
+      특정 record kind 의 빈 (필수 필드 채워진) 템플릿 출력 — 사용자가
+      신규 record 작성 시 paste 가능. lmtune tuner make-config 와 동일 패턴.
 """
 
 from __future__ import annotations
@@ -149,3 +152,78 @@ def cmd_records_from_result(
         by_kind[rec.kind] = by_kind.get(rec.kind, 0) + 1
     breakdown = ", ".join(f"{k}={v}" for k, v in sorted(by_kind.items()))
     console.print(f"[bold green]wrote[/bold green]  {n} records → {out}  ({breakdown})")
+
+
+@app.command("make-template")
+def cmd_make_template(
+    record_kind: Annotated[
+        str,
+        typer.Option(
+            "--record-kind",
+            "-k",
+            help=f"record kind (필수). valid: {', '.join(RECORD_KINDS)}",
+        ),
+    ],
+    fmt: Annotated[
+        str,
+        typer.Option("--format", "-f", help="출력 형식: json | yaml"),
+    ] = "json",
+) -> None:
+    """``record_kind`` 의 빈 (필수 필드 채워진) 템플릿 출력.
+
+    Pydantic ``model_fields`` introspection — 필수 필드는 placeholder, optional
+    필드는 default 값. 사용자가 신규 record 작성 시 paste 후 placeholder 만
+    수정. ``lmtune contracts validate-record`` 으로 검증 가능한 형식.
+
+    ``lmtune tuner make-config`` 와 동일 패턴 (paste-able 표면).
+    """
+    if record_kind not in RECORD_KINDS:
+        raise typer.BadParameter(
+            f"unknown record kind: {record_kind!r}. valid: {list(RECORD_KINDS)}"
+        )
+
+    cls = kind_to_class(record_kind)
+    template: dict[str, object] = {}
+    for name, field in cls.model_fields.items():
+        if name == "kind":
+            template[name] = record_kind
+            continue
+        if field.is_required():
+            # placeholder for required fields — type-aware
+            ann = field.annotation
+            template[name] = _placeholder_for(ann, name)
+        else:
+            template[name] = field.default if field.default is not None else None
+
+    if fmt.lower() == "json":
+        print(json.dumps(template, separators=(",", ":"), default=str))
+        return
+    if fmt.lower() == "yaml":
+        print(yaml.safe_dump(template, sort_keys=False, allow_unicode=True).rstrip())
+        return
+    raise typer.BadParameter(f"unknown format: {fmt!r}. valid: json | yaml")
+
+
+def _placeholder_for(ann: object, name: str) -> object:
+    """type annotation → 합리적 placeholder.
+
+    int → 0, float → 0.0, str → '<name>', bool → false, dict → {}, list → [].
+    Union/Optional 은 첫 non-None branch. 그 외 None.
+    """
+    s = str(ann)
+    if "int" in s and "List" not in s and "list" not in s:
+        return 0
+    if "float" in s:
+        return 0.0
+    if "bool" in s:
+        return False
+    if "dict" in s or "Dict" in s or "Mapping" in s:
+        return {}
+    if "list" in s or "List" in s:
+        return []
+    if "datetime" in s:
+        # ISO 8601 placeholder
+        return "1970-01-01T00:00:00Z"
+    if "str" in s:
+        return f"<{name}>"
+    return None
