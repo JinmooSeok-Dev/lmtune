@@ -9,6 +9,9 @@
       RecordSpec 단일 레코드 yaml/json 의 schema validity 검증.
   lmtune contracts validate-result <yaml-or-json>
       BenchmarkResult yaml/json 의 schema validity 검증.
+  lmtune contracts records-from-result <result.json> --out <dir>
+      BenchmarkResult → records (run/metric/...) jsonl 디렉토리.
+      to_records() + LocalArtifactStore 결합. archive/migration 도구.
 """
 
 from __future__ import annotations
@@ -109,3 +112,40 @@ def cmd_validate_result(
         f"runner={result.runner_kind}  status={result.status}  "
         f"metrics={len(result.metrics)}  requests={len(result.requests)}"
     )
+
+
+@app.command("records-from-result")
+def cmd_records_from_result(
+    path: Annotated[Path, typer.Argument(exists=True, readable=True)],
+    out: Annotated[
+        Path,
+        typer.Option("--out", "-o", help="LocalArtifactStore root (jsonl 디렉토리)"),
+    ],
+) -> None:
+    """BenchmarkResult yaml/json → ``out/<kind>.jsonl`` 디렉토리.
+
+    ``to_records()`` + ``LocalArtifactStore`` 결합. result.json 한 파일에 들어
+    있는 RunRecord/MetricRecord/RequestRecord/SessionRecord/TrajectoryEvent 를
+    kind 별 jsonl 로 풀어내어 grep/jq/git 친화 형식 + ArtifactStore.query() 가능.
+    """
+    from lmtune.contracts import to_records
+    from lmtune.storage.store import LocalArtifactStore
+
+    text = path.read_text(encoding="utf-8")
+    data = json.loads(text) if path.suffix == ".json" else (yaml.safe_load(text) or {})
+
+    try:
+        result = BenchmarkResult.model_validate(data)
+    except Exception as e:
+        console.print(f"[red]invalid result:[/red] {e}")
+        raise typer.Exit(1) from None
+
+    records = to_records(result)
+    store = LocalArtifactStore(out)
+    n = store.put(records)
+
+    by_kind: dict[str, int] = {}
+    for rec in records:
+        by_kind[rec.kind] = by_kind.get(rec.kind, 0) + 1
+    breakdown = ", ".join(f"{k}={v}" for k, v in sorted(by_kind.items()))
+    console.print(f"[bold green]wrote[/bold green]  {n} records → {out}  ({breakdown})")
