@@ -81,7 +81,4 @@ def cmd_validate_record(
     except Exception as e:
         console.print(f"[red]invalid:[/red] {e}")
         raise typer.Exit(1) from None
-    console.print(
-        f"[bold green]ok[/bold green]  kind={rec.kind}  "
-        f"primary_key={rec.primary_key()}"
-    )
+    console.print(f"[bold green]ok[/bold green]  kind={rec.kind}  primary_key={rec.primary_key()}")

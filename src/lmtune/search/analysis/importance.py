@@ -27,10 +27,7 @@ def axis_importance(
     seed: int = 0,
 ) -> dict[str, dict[str, Any]]:
     """Return {axis: {"importance": float, "recommendation": keep|drop}}."""
-    completed = [
-        t for t in trials
-        if t.get("status") == "completed" and t.get("score") is not None
-    ]
+    completed = [t for t in trials if t.get("status") == "completed" and t.get("score") is not None]
     if len(completed) < 5:
         return {}
 
@@ -39,7 +36,8 @@ def axis_importance(
 
     # Encode: bool/string categorical → get_dummies; numeric axes stay as-is.
     obj_cols = [
-        c for c in df.columns
+        c
+        for c in df.columns
         if pd.api.types.is_object_dtype(df[c])
         or pd.api.types.is_bool_dtype(df[c])
         or pd.api.types.is_string_dtype(df[c])

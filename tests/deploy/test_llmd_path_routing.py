@@ -7,6 +7,7 @@
   3. 미작성 path (tiered-prefix-cache 등) sample 시 UnsupportedWellLitPath 즉시 raise
   4. apply(dry_run=True) 가 sampled path 의 overlay 를 정상 생성
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -27,17 +28,21 @@ from lmtune.deploy.llmd_k8s import (
 @pytest.fixture
 def endpoint_yaml(tmp_path: Path) -> Path:
     p = tmp_path / "ep.yaml"
-    p.write_text(yaml.safe_dump({
-        "apiVersion": "lmtune/v1alpha1",
-        "slug": "test-ep",
-        "url": "http://127.0.0.1:8080/v1",
-        "model": "Qwen/Qwen2.5-1.5B",
-        "deployment": {
-            "engine": "vllm",
-            "parallelism": {"tp": 4, "dp": 2},
-            "engine_args": {"max_num_seqs": 64, "enable_prefix_caching": True},
-        },
-    }))
+    p.write_text(
+        yaml.safe_dump(
+            {
+                "apiVersion": "lmtune/v1alpha1",
+                "slug": "test-ep",
+                "url": "http://127.0.0.1:8080/v1",
+                "model": "Qwen/Qwen2.5-1.5B",
+                "deployment": {
+                    "engine": "vllm",
+                    "parallelism": {"tp": 4, "dp": 2},
+                    "engine_args": {"max_num_seqs": 64, "enable_prefix_caching": True},
+                },
+            }
+        )
+    )
     return p
 
 
@@ -53,25 +58,34 @@ def test_resolve_three_ready_paths_to_b200_helmfile():
 
 def test_resolve_unsupported_paths_raise():
     """README placeholder 만 있는 4 path 는 즉시 raise."""
-    for name in ("tiered-prefix-cache", "precise-prefix-cache",
-                 "predicted-latency-scheduling", "workload-autoscaling"):
+    for name in (
+        "tiered-prefix-cache",
+        "precise-prefix-cache",
+        "predicted-latency-scheduling",
+        "workload-autoscaling",
+    ):
         with pytest.raises(UnsupportedWellLitPath, match=name):
             resolve_well_lit_path(name)
 
 
 def test_well_lit_paths_table_only_lists_ready_ones():
     assert set(WELL_LIT_PATHS.keys()) == {
-        "inference-scheduling", "pd-disaggregation", "wide-ep-lws",
+        "inference-scheduling",
+        "pd-disaggregation",
+        "wide-ep-lws",
     }
 
 
 def test_well_lit_path_does_not_leak_into_engine_args(endpoint_yaml, tmp_path):
     """Meta-axis is stripped before merging into endpoint.deployment.engine_args."""
     adapter = LLMDK8sAdapter(dry_run=True, helmfile_root=str(tmp_path))
-    result = adapter.apply(endpoint_yaml, {
-        "well_lit_path": "inference-scheduling",
-        "max_num_seqs": 128,  # legitimate engine_arg override
-    })
+    result = adapter.apply(
+        endpoint_yaml,
+        {
+            "well_lit_path": "inference-scheduling",
+            "max_num_seqs": 128,  # legitimate engine_arg override
+        },
+    )
     assert result.ok, f"dry-run apply failed: {result.notes} / {result.health.detail}"
     # The overlay file path is in result.notes; parse it back
     notes = result.health.detail
@@ -95,9 +109,12 @@ def test_apply_dry_run_with_path_routes_to_b200(endpoint_yaml, tmp_path):
     fake_peer = tmp_path / "fake_peer_repo"
     fake_peer.mkdir()
     adapter = LLMDK8sAdapter(dry_run=True, helmfile_root=str(fake_peer))
-    result = adapter.apply(endpoint_yaml, {
-        "well_lit_path": "pd-disaggregation",
-    })
+    result = adapter.apply(
+        endpoint_yaml,
+        {
+            "well_lit_path": "pd-disaggregation",
+        },
+    )
     assert result.ok
     # dry-run skips the actual helmfile/kubectl calls but writes the overlay.
     # If path routing failed, the dry_run would still pass since helmfile isn't
@@ -108,9 +125,12 @@ def test_unsupported_path_returns_failure(endpoint_yaml, tmp_path):
     """Sampling an unimplemented path returns ApplyResult(ok=False) with the
     UnsupportedWellLitPath message — does NOT raise."""
     adapter = LLMDK8sAdapter(dry_run=True, helmfile_root=str(tmp_path))
-    result = adapter.apply(endpoint_yaml, {
-        "well_lit_path": "tiered-prefix-cache",
-    })
+    result = adapter.apply(
+        endpoint_yaml,
+        {
+            "well_lit_path": "tiered-prefix-cache",
+        },
+    )
     assert result.ok is False
     assert "tiered-prefix-cache" in result.health.detail
     assert "autotune-driveable" in result.health.detail

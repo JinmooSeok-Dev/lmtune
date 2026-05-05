@@ -16,6 +16,6 @@ def make_tpe(seed: int | None = None, n_startup_trials: int = 10) -> optuna.samp
     return optuna.samplers.TPESampler(
         seed=seed,
         n_startup_trials=n_startup_trials,
-        multivariate=True,   # joint density → usually better for correlated params
-        group=True,          # handle conditional (active_if) axes gracefully
+        multivariate=True,  # joint density → usually better for correlated params
+        group=True,  # handle conditional (active_if) axes gracefully
     )

@@ -17,7 +17,9 @@ from pydantic import BaseModel, ConfigDict
 
 # ─── Filter ──────────────────────────────────────────────────────────
 
-CompareOp = Literal["==", "!=", "<", "<=", ">", ">=", "in", "not_in", "like", "is_null", "is_not_null"]
+CompareOp = Literal[
+    "==", "!=", "<", "<=", ">", ">=", "in", "not_in", "like", "is_null", "is_not_null"
+]
 
 
 class FilterCond(BaseModel):

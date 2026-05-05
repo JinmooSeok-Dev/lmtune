@@ -263,7 +263,16 @@ class TrialMetricRecord(_RecordBase):
 # 가 본 union 을 받으면 kind 로 자동 분기.
 
 RecordSpec = Annotated[
-    RunRecord | MetricRecord | RequestRecord | SessionRecord | TrajectoryEventRecord | PromSampleRecord | DetectionRecord | StudyRecord | TrialRecord | TrialMetricRecord,
+    RunRecord
+    | MetricRecord
+    | RequestRecord
+    | SessionRecord
+    | TrajectoryEventRecord
+    | PromSampleRecord
+    | DetectionRecord
+    | StudyRecord
+    | TrialRecord
+    | TrialMetricRecord,
     Field(discriminator="kind"),
 ]
 

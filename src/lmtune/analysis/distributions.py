@@ -16,19 +16,21 @@ class VarianceStats:
     n: int
     mean: float
     std: float
-    cv: float                    # Coefficient of Variation
+    cv: float  # Coefficient of Variation
     min_: float
     max_: float
     p50: float
     iqr: float
-    iqr_ratio: float             # IQR / median
+    iqr_ratio: float  # IQR / median
 
 
 def variance_stats(values: Iterable[float]) -> VarianceStats:
     xs = sorted(float(v) for v in values if v is not None and not _nan(v))
     n = len(xs)
     if n == 0:
-        return VarianceStats(0, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan)
+        return VarianceStats(
+            0, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan
+        )
     mean = sum(xs) / n
     std = math.sqrt(sum((x - mean) ** 2 for x in xs) / n) if n > 1 else 0.0
     p50 = xs[n // 2]
@@ -36,10 +38,14 @@ def variance_stats(values: Iterable[float]) -> VarianceStats:
     q3 = xs[(3 * n) // 4]
     iqr = q3 - q1
     return VarianceStats(
-        n=n, mean=mean, std=std,
+        n=n,
+        mean=mean,
+        std=std,
         cv=(std / mean) if mean else math.nan,
-        min_=xs[0], max_=xs[-1],
-        p50=p50, iqr=iqr,
+        min_=xs[0],
+        max_=xs[-1],
+        p50=p50,
+        iqr=iqr,
         iqr_ratio=(iqr / p50) if p50 else math.nan,
     )
 
@@ -72,6 +78,7 @@ def ecdf(values: Iterable[float]) -> tuple[list[float], list[float]]:
 def fit_zipf_s(values: Iterable[int]) -> float:
     """매우 단순한 Zipf shape 추정: `rank * freq = C` 에서 log-log 회귀."""
     from collections import Counter
+
     xs = [int(v) for v in values if v and v >= 1]
     if len(xs) < 10:
         return math.nan

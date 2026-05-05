@@ -11,11 +11,18 @@ def _rows_phase_mix():
     rows = []
     for i in range(20):
         phase = ("exploration", "editing", "execution", "verification")[i % 4]
-        rows.append(RequestRow(
-            req_id=f"r{i}", conversation_id=str(i // 5), turn_idx=i % 5,
-            input_tokens=500 + i * 100, output_tokens=50 + i * 5,
-            phase=phase, ttft_ms=200 + i * 10, e2e_ms=2000 + i * 50,
-        ))
+        rows.append(
+            RequestRow(
+                req_id=f"r{i}",
+                conversation_id=str(i // 5),
+                turn_idx=i % 5,
+                input_tokens=500 + i * 100,
+                output_tokens=50 + i * 5,
+                phase=phase,
+                ttft_ms=200 + i * 10,
+                e2e_ms=2000 + i * 50,
+            )
+        )
     return rows
 
 
@@ -24,13 +31,21 @@ def _rows_phase_mix():
 
 def test_plot_registry_contains_new_plots():
     kinds = set(list_plots())
-    for kind in ("ttft_vs_turn", "ttft_vs_input_len", "cdf", "histogram",
-                 "phase_breakdown", "token_snowball", "variance_box"):
+    for kind in (
+        "ttft_vs_turn",
+        "ttft_vs_input_len",
+        "cdf",
+        "histogram",
+        "phase_breakdown",
+        "token_snowball",
+        "variance_box",
+    ):
         assert kind in kinds, f"missing plot: {kind}"
 
 
 def test_phase_breakdown_plot_generates(tmp_path):
     from lmtune.visualization.plots import get_plot
+
     fn = get_plot("phase_breakdown")
     out = fn(_rows_phase_mix(), tmp_path / "phase.png", metric="input_tokens")
     assert out.exists() and out.stat().st_size > 0
@@ -38,6 +53,7 @@ def test_phase_breakdown_plot_generates(tmp_path):
 
 def test_cdf_plot_generates(tmp_path):
     from lmtune.visualization.plots import get_plot
+
     fn = get_plot("cdf")
     out = fn(_rows_phase_mix(), tmp_path / "cdf.png", metric="ttft_ms")
     assert out.exists() and out.stat().st_size > 0
@@ -45,6 +61,7 @@ def test_cdf_plot_generates(tmp_path):
 
 def test_token_snowball_plot_generates(tmp_path):
     from lmtune.visualization.plots import get_plot
+
     fn = get_plot("token_snowball")
     out = fn(_rows_phase_mix(), tmp_path / "snowball.png")
     assert out.exists()
@@ -52,9 +69,11 @@ def test_token_snowball_plot_generates(tmp_path):
 
 def test_variance_box_plot_generates(tmp_path):
     from lmtune.visualization.plots import get_plot
+
     fn = get_plot("variance_box")
-    out = fn({f"run{i}": [100 + i * 10 + j for j in range(20)] for i in range(5)},
-             tmp_path / "box.png")
+    out = fn(
+        {f"run{i}": [100 + i * 10 + j for j in range(20)] for i in range(5)}, tmp_path / "box.png"
+    )
     assert out.exists()
 
 
@@ -96,25 +115,32 @@ def test_sink_jupyter_writes(tmp_path):
 
 
 def test_profile_accepts_analysis_spec():
-    p = ProfileSpec.model_validate({
-        "slug": "with-analysis", "name": "x", "stage": 3,
-        "runner": "aiperf", "mode": "concurrency",
-        "workload": {
-            "synthetic_input_tokens_mean": 1000, "output_tokens_mean": 200,
-            "concurrency": 1, "request_count": 5,
-        },
-        "analysis": {
-            "group_by": ["turn_idx"],
-            "metrics": ["ttft", "e2e"],
-            "plots": [
-                {"kind": "ttft_vs_turn"},
-                {"kind": "cdf", "metric": "ttft_ms"},
-                {"kind": "phase_breakdown", "metric": "input_tokens"},
-            ],
-            "sinks": ["markdown", "csv", "html"],
-            "derived": [{"name": "prefix_hit_rate"}],
-        },
-    })
+    p = ProfileSpec.model_validate(
+        {
+            "slug": "with-analysis",
+            "name": "x",
+            "stage": 3,
+            "runner": "aiperf",
+            "mode": "concurrency",
+            "workload": {
+                "synthetic_input_tokens_mean": 1000,
+                "output_tokens_mean": 200,
+                "concurrency": 1,
+                "request_count": 5,
+            },
+            "analysis": {
+                "group_by": ["turn_idx"],
+                "metrics": ["ttft", "e2e"],
+                "plots": [
+                    {"kind": "ttft_vs_turn"},
+                    {"kind": "cdf", "metric": "ttft_ms"},
+                    {"kind": "phase_breakdown", "metric": "input_tokens"},
+                ],
+                "sinks": ["markdown", "csv", "html"],
+                "derived": [{"name": "prefix_hit_rate"}],
+            },
+        }
+    )
     assert isinstance(p.analysis, AnalysisSpec)
     assert len(p.analysis.plots) == 3
     assert p.analysis.sinks == ["markdown", "csv", "html"]

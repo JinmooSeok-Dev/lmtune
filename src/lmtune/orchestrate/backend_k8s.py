@@ -56,18 +56,22 @@ def render_job_manifest(
     name = f"bench-trial-{payload.trial_id.lower()}"
     tpl["metadata"]["name"] = name
     tpl["metadata"].setdefault("labels", {})
-    tpl["metadata"]["labels"].update({
-        "bench/study-id": payload.study_id,
-        "bench/trial-id": payload.trial_id,
-    })
+    tpl["metadata"]["labels"].update(
+        {
+            "bench/study-id": payload.study_id,
+            "bench/trial-id": payload.trial_id,
+        }
+    )
     tpl["metadata"]["namespace"] = namespace
     tpl["spec"]["ttlSecondsAfterFinished"] = int(ttl_seconds)
 
     container = tpl["spec"]["template"]["spec"]["containers"][0]
     container["image"] = image
     env = {e["name"]: e for e in container.get("env", [])}
+
     def _set(k, v):
         env[k] = {"name": k, "value": str(v)}
+
     _set("TRIAL_ID", payload.trial_id)
     _set("STUDY_ID", payload.study_id)
     _set("TRIAL_SEQ", payload.seq)
@@ -104,6 +108,7 @@ class K8sJobBackend(TrialBackend):
         ttl_seconds: int = 600,
     ):
         from kubernetes import client, config
+
         if kubeconfig:
             config.load_kube_config(config_file=kubeconfig)
         else:
@@ -123,8 +128,11 @@ class K8sJobBackend(TrialBackend):
 
     def submit(self, payload: TrialPayload) -> TrialHandle:
         manifest = render_job_manifest(
-            payload, image=self._image, namespace=self._ns,
-            gpu_count=self._gpu, ttl_seconds=self._ttl,
+            payload,
+            image=self._image,
+            namespace=self._ns,
+            gpu_count=self._gpu,
+            ttl_seconds=self._ttl,
         )
         job_name = manifest["metadata"]["name"]
         self._batch.create_namespaced_job(body=manifest, namespace=self._ns)
@@ -155,16 +163,21 @@ class K8sJobBackend(TrialBackend):
                 try:
                     p = subprocess.run(
                         [kubectl, "-n", self._ns, "logs", pod_name, "--tail=200"],
-                        capture_output=True, text=True, timeout=20,
+                        capture_output=True,
+                        text=True,
+                        timeout=20,
                     )
                     log_text = p.stdout or ""
                 except Exception as e:  # noqa: BLE001
                     log.warning("kubectl logs %s failed: %s", pod_name, e)
             if not log_text:
                 try:
-                    log_text = self._core.read_namespaced_pod_log(
-                        name=pod_name, namespace=self._ns, tail_lines=200
-                    ) or ""
+                    log_text = (
+                        self._core.read_namespaced_pod_log(
+                            name=pod_name, namespace=self._ns, tail_lines=200
+                        )
+                        or ""
+                    )
                 except Exception as e:  # noqa: BLE001
                     log.warning("failed to read pod log %s: %s", pod_name, e)
 
@@ -181,7 +194,9 @@ class K8sJobBackend(TrialBackend):
 
         if parsed is None:
             return TrialResult(
-                trial_id=handle.trial_id, status="crash", score=None,
+                trial_id=handle.trial_id,
+                status="crash",
+                score=None,
                 error=f"no JSON in pod log for Job {handle.ref}",
                 backend=self.name,
             )
@@ -207,7 +222,8 @@ class K8sJobBackend(TrialBackend):
     def cancel(self, handle: TrialHandle) -> None:
         try:
             self._batch.delete_namespaced_job(
-                name=handle.ref, namespace=self._ns,
+                name=handle.ref,
+                namespace=self._ns,
                 propagation_policy="Background",
             )
         except Exception as e:  # noqa: BLE001

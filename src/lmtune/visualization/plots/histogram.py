@@ -13,7 +13,13 @@ from lmtune.visualization.plots import register_plot
 
 
 @register_plot("histogram")
-def plot_histogram(rows: Iterable[RequestRow], out_path: str | Path, metric: str = "input_tokens", bins: int = 40, **opts) -> Path:
+def plot_histogram(
+    rows: Iterable[RequestRow],
+    out_path: str | Path,
+    metric: str = "input_tokens",
+    bins: int = 40,
+    **opts,
+) -> Path:
     values = [getattr(r, metric, None) for r in rows]
     values = [v for v in values if v is not None]
     if not values:

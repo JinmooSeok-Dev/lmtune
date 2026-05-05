@@ -17,6 +17,7 @@ Wraps any underlying sampler (Optuna TPE / RandomSampler / NSGA-II / ...).
 이 클래스는 Optuna 의존성 없이 sampler agnostic — `sample(space, context) -> dict`
 인터페이스를 따르면 wrap 가능.
 """
+
 from __future__ import annotations
 
 from typing import Any, Protocol
@@ -25,8 +26,7 @@ from lmtune.search.space import Axis, SearchSpace
 
 
 class _SamplerLike(Protocol):
-    def sample(self, space: SearchSpace, context: dict[str, Any]) -> dict[str, Any]:
-        ...
+    def sample(self, space: SearchSpace, context: dict[str, Any]) -> dict[str, Any]: ...
 
 
 class CostAwareSampler:

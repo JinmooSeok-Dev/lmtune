@@ -37,7 +37,7 @@ class TrialPayload:
 @dataclass(slots=True)
 class TrialResult:
     trial_id: str
-    status: str                                  # completed | crash | pruned
+    status: str  # completed | crash | pruned
     score: float | None
     metrics: dict[tuple[str, str | None], float] = field(default_factory=dict)
     error: str | None = None
@@ -50,6 +50,7 @@ class TrialHandle:
     """Opaque reference returned by submit(); poll() resolves it to a TrialResult.
     Concrete backends may store a concurrent.futures.Future, a K8s Job name, etc.
     """
+
     trial_id: str
     backend: str
     ref: Any = None

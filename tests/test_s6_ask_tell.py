@@ -6,6 +6,7 @@ flow:
   3. bench search tell 이 metrics-json 받아 trial 을 completed 로 update
   4. bench search status 가 top-K 에 반영
 """
+
 from __future__ import annotations
 
 import json
@@ -43,6 +44,7 @@ _LMTUNE_BIN = str(_VENV_LMTUNE) if _VENV_LMTUNE.exists() else "lmtune"
 
 def _bench(args: list[str], db: Path, **kwargs):
     import os
+
     base_path = os.environ.get("PATH", "")
     venv_bin = _VENV_LMTUNE.parent
     if venv_bin.exists():
@@ -59,13 +61,25 @@ def _bench(args: list[str], db: Path, **kwargs):
 
 def _start_empty_study(db: Path, space: Path, name: str = "s6-test") -> str:
     r = _bench(
-        ["search", "start", "--space", str(space), "--strategy", "random",
-         "--max-trials", "0", "--name", name, "--dry-run"],
+        [
+            "search",
+            "start",
+            "--space",
+            str(space),
+            "--strategy",
+            "random",
+            "--max-trials",
+            "0",
+            "--name",
+            name,
+            "--dry-run",
+        ],
         db=db,
     )
     assert r.returncode == 0, r.stderr
     # parse "study_id: st-XXXX" from stdout
     import re
+
     m = re.search(r"study_id:\s*(st-[A-Z0-9]+)", r.stdout)
     assert m, r.stdout
     return m.group(1)
@@ -95,14 +109,18 @@ def test_tell_records_completed_trial(isolated_db, smoke_space, tmp_path):
 
     # tell with sample metrics-json
     metrics_file = tmp_path / "result.json"
-    metrics_file.write_text(json.dumps({
-        "total_score": 1289.5,
-        "metrics": {
-            "throughput_avg_short": 145.2,
-            "ttft_p99_short": 192.5,
-        },
-        "accepted": True,
-    }))
+    metrics_file.write_text(
+        json.dumps(
+            {
+                "total_score": 1289.5,
+                "metrics": {
+                    "throughput_avg_short": 145.2,
+                    "ttft_p99_short": 192.5,
+                },
+                "accepted": True,
+            }
+        )
+    )
     r_tell = _bench(
         ["search", "tell", sid, "--trial", trial_id, "--metrics-json", str(metrics_file)],
         db=isolated_db,
@@ -124,11 +142,15 @@ def test_tell_pruned_on_not_accepted(isolated_db, smoke_space, tmp_path):
     trial_id = json.loads(r_ask.stdout)["trial_id"]
 
     metrics_file = tmp_path / "rejected.json"
-    metrics_file.write_text(json.dumps({
-        "total_score": 0.0,
-        "metrics": {"throughput_avg_short": 0.0},
-        "accepted": False,
-    }))
+    metrics_file.write_text(
+        json.dumps(
+            {
+                "total_score": 0.0,
+                "metrics": {"throughput_avg_short": 0.0},
+                "accepted": False,
+            }
+        )
+    )
     r_tell = _bench(
         ["search", "tell", sid, "--trial", trial_id, "--metrics-json", str(metrics_file)],
         db=isolated_db,
@@ -153,11 +175,15 @@ def test_three_iterations_warmstart(isolated_db, smoke_space, tmp_path):
         seen_trials.append(tid)
 
         rf = tmp_path / f"r{i}.json"
-        rf.write_text(json.dumps({
-            "total_score": score,
-            "metrics": {"throughput_avg_short": score / 10},
-            "accepted": True,
-        }))
+        rf.write_text(
+            json.dumps(
+                {
+                    "total_score": score,
+                    "metrics": {"throughput_avg_short": score / 10},
+                    "accepted": True,
+                }
+            )
+        )
         r_tell = _bench(
             ["search", "tell", sid, "--trial", tid, "--metrics-json", str(rf)],
             db=isolated_db,

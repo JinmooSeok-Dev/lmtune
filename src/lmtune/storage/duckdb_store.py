@@ -28,10 +28,7 @@ class DuckDBStore:
                 self.conn.execute(s)
         # Phase S1 compat: older DBs have runs without trial_id column.
         # PRAGMA table_info returns (cid, name, type, notnull, dflt_value, pk).
-        existing_cols = {
-            r[1]
-            for r in self.conn.execute("PRAGMA table_info('runs')").fetchall()
-        }
+        existing_cols = {r[1] for r in self.conn.execute("PRAGMA table_info('runs')").fetchall()}
         if "trial_id" not in existing_cols:
             self.conn.execute("ALTER TABLE runs ADD COLUMN trial_id TEXT")
 
@@ -43,8 +40,12 @@ class DuckDBStore:
         profile_yaml_text: str,
         git_sha: str | None = None,
     ):
-        started = datetime.fromtimestamp(artifact.started_at, tz=UTC) if artifact.started_at else None
-        finished = datetime.fromtimestamp(artifact.finished_at, tz=UTC) if artifact.finished_at else None
+        started = (
+            datetime.fromtimestamp(artifact.started_at, tz=UTC) if artifact.started_at else None
+        )
+        finished = (
+            datetime.fromtimestamp(artifact.finished_at, tz=UTC) if artifact.finished_at else None
+        )
         self.conn.execute(
             """
             INSERT OR REPLACE INTO runs
@@ -79,15 +80,26 @@ class DuckDBStore:
             rows = [
                 (
                     artifact.run_id,
-                    r.req_id, r.turn_idx, r.conversation_id,
-                    r.input_tokens, r.output_tokens,
-                    r.cached_tokens, r.thinking_tokens,
-                    r.tool_call_count, r.tool_result_tokens,
-                    r.phase, r.role,
-                    r.energy_wh, r.cost_usd,
-                    r.ttft_ms, r.itl_mean_ms, r.e2e_ms,
-                    _epoch_to_ts(r.started_at), _epoch_to_ts(r.completed_at),
-                    r.status, r.error,
+                    r.req_id,
+                    r.turn_idx,
+                    r.conversation_id,
+                    r.input_tokens,
+                    r.output_tokens,
+                    r.cached_tokens,
+                    r.thinking_tokens,
+                    r.tool_call_count,
+                    r.tool_result_tokens,
+                    r.phase,
+                    r.role,
+                    r.energy_wh,
+                    r.cost_usd,
+                    r.ttft_ms,
+                    r.itl_mean_ms,
+                    r.e2e_ms,
+                    _epoch_to_ts(r.started_at),
+                    _epoch_to_ts(r.completed_at),
+                    r.status,
+                    r.error,
                 )
                 for r in artifact.requests
             ]
@@ -110,10 +122,18 @@ class DuckDBStore:
         if artifact.sessions:
             srows = [
                 (
-                    artifact.run_id, s.session_id, s.task_id,
-                    s.total_input_tokens, s.total_output_tokens, s.total_cached_tokens,
-                    s.turn_count, s.tool_call_count, s.duration_ms,
-                    s.success, s.total_cost_usd, s.total_energy_wh,
+                    artifact.run_id,
+                    s.session_id,
+                    s.task_id,
+                    s.total_input_tokens,
+                    s.total_output_tokens,
+                    s.total_cached_tokens,
+                    s.turn_count,
+                    s.tool_call_count,
+                    s.duration_ms,
+                    s.success,
+                    s.total_cost_usd,
+                    s.total_energy_wh,
                 )
                 for s in artifact.sessions
             ]
@@ -132,8 +152,13 @@ class DuckDBStore:
         if artifact.trajectory:
             trows = [
                 (
-                    artifact.run_id, e.session_id, e.seq,
-                    _epoch_to_ts(e.ts), e.event_type, e.phase, e.tokens,
+                    artifact.run_id,
+                    e.session_id,
+                    e.seq,
+                    _epoch_to_ts(e.ts),
+                    e.event_type,
+                    e.phase,
+                    e.tokens,
                     json.dumps(e.metadata) if e.metadata else None,
                 )
                 for e in artifact.trajectory
@@ -170,9 +195,16 @@ class DuckDBStore:
             VALUES (?,?,?,?,?,?,?,?,?,?)
             """,
             [
-                study_id, name, strategy, space_yaml, endpoint_slug,
+                study_id,
+                name,
+                strategy,
+                space_yaml,
+                endpoint_slug,
                 json.dumps(profile_slugs) if profile_slugs else None,
-                metric_name, direction, status, notes,
+                metric_name,
+                direction,
+                status,
+                notes,
             ],
         )
 
@@ -189,9 +221,7 @@ class DuckDBStore:
             )
 
     def get_study(self, study_id: str):
-        return self.conn.execute(
-            "SELECT * FROM studies WHERE study_id = ?", [study_id]
-        ).fetchone()
+        return self.conn.execute("SELECT * FROM studies WHERE study_id = ?", [study_id]).fetchone()
 
     def list_studies(self, limit: int = 20):
         return self.conn.execute(
@@ -224,8 +254,15 @@ class DuckDBStore:
             VALUES (?,?,?,?,?,?,?,?,?, {completed_at})
             """,
             [
-                trial_id, study_id, int(seq), json.dumps(params, sort_keys=True),
-                status, score, backend, worker_id, error,
+                trial_id,
+                study_id,
+                int(seq),
+                json.dumps(params, sort_keys=True),
+                status,
+                score,
+                backend,
+                worker_id,
+                error,
             ],
         )
 
@@ -240,7 +277,7 @@ class DuckDBStore:
             if v is None:
                 continue
             if isinstance(v, (list, tuple, dict)):
-                continue   # multi-obj sentinel
+                continue  # multi-obj sentinel
             try:
                 fv = float(v)
             except (TypeError, ValueError):

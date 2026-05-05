@@ -48,7 +48,9 @@ class LocalVLLMAdapter(DeploymentAdapter):
             if int(v or 1) != 1:
                 return ApplyResult(
                     ok=False,
-                    health=HealthReport(ready=False, detail=f"{key}={v} not supported in LocalVLLMAdapter"),
+                    health=HealthReport(
+                        ready=False, detail=f"{key}={v} not supported in LocalVLLMAdapter"
+                    ),
                     endpoint_path=ep,
                     adapter=self.adapter_label,
                     notes="LocalVLLMAdapter requires tp=pp=dp=1",
@@ -58,7 +60,10 @@ class LocalVLLMAdapter(DeploymentAdapter):
         log.info("LocalVLLMAdapter: restarting via %s", self._script)
         proc = subprocess.run(
             ["bash", str(self._script), str(ep)],
-            capture_output=True, text=True, timeout=self._timeout_s, check=False,
+            capture_output=True,
+            text=True,
+            timeout=self._timeout_s,
+            check=False,
         )
         if proc.returncode != 0:
             tail = (proc.stderr or proc.stdout).strip().splitlines()[-8:]
@@ -72,7 +77,11 @@ class LocalVLLMAdapter(DeploymentAdapter):
 
         # 3. Independent health probe (vllm_restart.sh already polled, but double-check).
         url = (data.get("url") or "").strip()
-        health = probe_openai_models(url) if url else HealthReport(ready=False, detail="no url in endpoint yaml")
+        health = (
+            probe_openai_models(url)
+            if url
+            else HealthReport(ready=False, detail="no url in endpoint yaml")
+        )
         return ApplyResult(
             ok=bool(health.ready),
             health=health,

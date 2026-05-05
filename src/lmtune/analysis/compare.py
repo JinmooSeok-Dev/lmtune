@@ -40,11 +40,15 @@ class RunComparison:
         if self.regressions:
             lines.append("\n## 🔻 Regressions")
             for d in self.regressions:
-                lines.append(f"- {d.metric}[{d.p}]: {d.baseline:.2f} → {d.candidate:.2f} ({d.delta_pct:+.2f}%)")
+                lines.append(
+                    f"- {d.metric}[{d.p}]: {d.baseline:.2f} → {d.candidate:.2f} ({d.delta_pct:+.2f}%)"
+                )
         if self.improvements:
             lines.append("\n## 🟢 Improvements")
             for d in self.improvements:
-                lines.append(f"- {d.metric}[{d.p}]: {d.baseline:.2f} → {d.candidate:.2f} ({d.delta_pct:+.2f}%)")
+                lines.append(
+                    f"- {d.metric}[{d.p}]: {d.baseline:.2f} → {d.candidate:.2f} ({d.delta_pct:+.2f}%)"
+                )
         return "\n".join(lines) + "\n"
 
 
