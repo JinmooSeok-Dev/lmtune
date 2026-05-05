@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from lmtune.tuner.base import Pruner, Sampler
 
-__all__ = ["Pruner", "Sampler", "make_sampler"]
+__all__ = ["Pruner", "Sampler", "make_pruner", "make_sampler"]
 
 
 def __getattr__(name: str):
@@ -27,4 +27,8 @@ def __getattr__(name: str):
         from lmtune.tuner.factory import make_sampler
 
         return make_sampler
+    if name == "make_pruner":
+        from lmtune.tuner.factory import make_pruner
+
+        return make_pruner
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
