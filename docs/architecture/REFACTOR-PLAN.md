@@ -141,5 +141,8 @@ Outer loop (시각화/분석):
   - 부수: **#67 docs** — README Storage 운영 도구 4종 + CHANGELOG #65/#66 누적
   - 부수: **#69 docs** — README storage diff 명령 노출 + CHANGELOG #67/#68 누적
   - **#70 S1-pruner-bridge** — `tuner.factory.make_pruner` ABC 어댑터 결합 + `_OPTUNA_PRUNER_KINDS` drift 가드 (SH / Hyperband 가 Pruner ABC 위에서 통일 dispatch)
+  - **#72 docs(arch)** — PLUG_PATTERN.md 에 Pruner axis 항목 + 'Pruner 의 경우' 5단계 + 세 reference impl 섹션 (#70/#71)
+  - **#73 PLUG-NativeMedianPruner** — Pruner axis 의 첫 native impl. `_NATIVE_PRUNER_KINDS = {"median_native"}` 신규 + `tuner.factory.make_pruner` 분기 — Optuna 위임 없이 stdlib statistics 만으로 cross-trial median 기반 prune
 - **Storage 운영 도구 5종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
-- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60 으로 두 축 (Storage + Sampler) 모두 시연 — 추가 plug-in (S3 / Mooncake / BoTorch) 은 follow-up 가능. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
+- **Pruner axis PLUG 합류** — Optuna (SH/Hyperband) + Native (MedianPruner) 두 빌트인. ASHA / 외부 SDK pruner 추가 시 1+1 줄 변경.
+- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60/#73 으로 세 축 (Storage + Sampler + Pruner) 모두 시연. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
