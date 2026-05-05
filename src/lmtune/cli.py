@@ -45,6 +45,11 @@ from lmtune.cli_dashboard import app as _dashboard_app  # noqa: E402
 
 app.add_typer(_dashboard_app, name="dashboard")
 
+# lmtune#SS-rec: contracts subcommand (RecordSpec / QuerySpec schema dump)
+from lmtune.cli_contracts import app as _contracts_app  # noqa: E402
+
+app.add_typer(_contracts_app, name="contracts")
+
 # lmtune#WS: workload spec/provider subcommand (WorkloadSpec contract)
 from lmtune.cli_workload import app as _workload_app  # noqa: E402
 

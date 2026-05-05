@@ -1,6 +1,6 @@
-"""lmtune contracts — Input/Output spec 단일 진실.
+"""lmtune contracts — input/output spec 정본 패키지.
 
-본 모듈은 lmtune 의 input/output spec 모음. 6 contract 중 일부는 외부 master
+본 패키지는 lmtune 의 input/output spec 모음. 6 contract 중 일부는 외부 master
 (lm-workloads, ariadne) 에서 mirror, 나머지는 lmtune own.
 
 | Contract        | apiVersion                    | Master         |
@@ -17,7 +17,53 @@
 
 from __future__ import annotations
 
-__all__ = ["WorkloadSpec"]
+from lmtune.contracts.query_spec import (
+    AggregateSpec,
+    CompareOp,
+    FilterCond,
+    QuerySpec,
+    SortKey,
+)
+from lmtune.contracts.record_spec import (
+    RECORD_KINDS,
+    DetectionRecord,
+    MetricRecord,
+    PromSampleRecord,
+    RecordSpec,
+    RequestRecord,
+    RunRecord,
+    SessionRecord,
+    StudyRecord,
+    TrajectoryEventRecord,
+    TrialMetricRecord,
+    TrialRecord,
+    kind_to_class,
+)
+
+__all__ = [
+    # record
+    "RECORD_KINDS",
+    "RecordSpec",
+    "RunRecord",
+    "MetricRecord",
+    "RequestRecord",
+    "SessionRecord",
+    "TrajectoryEventRecord",
+    "PromSampleRecord",
+    "DetectionRecord",
+    "StudyRecord",
+    "TrialRecord",
+    "TrialMetricRecord",
+    "kind_to_class",
+    # query
+    "QuerySpec",
+    "FilterCond",
+    "SortKey",
+    "AggregateSpec",
+    "CompareOp",
+    # workload (lazy-imported from external master lm-workloads)
+    "WorkloadSpec",
+]
 
 
 def __getattr__(name: str):
