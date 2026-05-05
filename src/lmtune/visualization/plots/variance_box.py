@@ -12,8 +12,10 @@ from lmtune.visualization.plots import register_plot
 
 @register_plot("variance_box")
 def plot_variance_box(
-    run_values: dict[str, list[float]], out_path: str | Path,
-    title: str = "Run-to-run variance", **opts,
+    run_values: dict[str, list[float]],
+    out_path: str | Path,
+    title: str = "Run-to-run variance",
+    **opts,
 ) -> Path:
     """N-run 반복 실행 결과의 box plot.
 

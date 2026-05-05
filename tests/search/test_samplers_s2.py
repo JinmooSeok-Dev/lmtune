@@ -41,9 +41,12 @@ def _obj_mixed(params):
 
 def test_tpe_converges_better_than_random_on_average():
     """Over N=30 trials on a mixed space, TPE's top-1 should match or beat Random."""
+
     def top_under(strategy, seed):
         store = _fake_store(Path(tempfile.mkdtemp()))
-        cfg = StudyConfig(name=f"{strategy}-{seed}", strategy=strategy, space=_sp_mixed(), seed=seed)
+        cfg = StudyConfig(
+            name=f"{strategy}-{seed}", strategy=strategy, space=_sp_mixed(), seed=seed
+        )
         s = Study(cfg, store)
         ts = s.run(CallableObjective(_obj_mixed), max_trials=30)
         store.close()

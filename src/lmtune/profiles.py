@@ -20,7 +20,7 @@ ArrivalKind = Literal["constant", "poisson", "diurnal", "burst", "replay"]
 
 class ArrivalSpec(BaseModel):
     kind: ArrivalKind = "constant"
-    rate: float | None = None             # req/s (constant/poisson)
+    rate: float | None = None  # req/s (constant/poisson)
     duration_sec: float | None = None
     # diurnal
     peak_rate: float | None = None
@@ -115,8 +115,8 @@ Workload = Annotated[
 
 
 class SLOCheck(BaseModel):
-    metric: str                    # ttft | itl | e2e | throughput_tok | goodput ...
-    p: str = "p99"                 # p50 | p95 | p99 | avg ...
+    metric: str  # ttft | itl | e2e | throughput_tok | goodput ...
+    p: str = "p99"  # p50 | p95 | p99 | avg ...
     op: CmpOp = "<="
     value: float
     severity: Literal["warning", "critical"] = "warning"

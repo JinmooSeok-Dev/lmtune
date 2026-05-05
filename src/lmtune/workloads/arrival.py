@@ -19,13 +19,13 @@ ArrivalKind = Literal["constant", "poisson", "diurnal", "burst", "replay"]
 @dataclass
 class ArrivalPattern:
     kind: ArrivalKind = "constant"
-    rate: float = 1.0                     # req/s (constant / poisson 평균)
+    rate: float = 1.0  # req/s (constant / poisson 평균)
     duration_sec: float = 60.0
 
     # diurnal
     peak_rate: float | None = None
     valley_rate: float | None = None
-    period_sec: float = 3600.0            # 1h
+    period_sec: float = 3600.0  # 1h
 
     # burst
     burst_rate: float | None = None

@@ -16,6 +16,7 @@ def register_plot(kind: str):
     def decorator(fn: Callable):
         _REGISTRY[kind] = fn
         return fn
+
     return decorator
 
 

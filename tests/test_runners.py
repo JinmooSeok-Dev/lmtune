@@ -107,6 +107,7 @@ def test_vllm_bench_multiturn_config_written(endpoint, multiturn_profile, tmp_pa
     config_path = raw_dir / "multi_turn_config.json"
     assert config_path.exists()
     import json as _json
+
     cfg = _json.loads(config_path.read_text())
     assert cfg["num_conversations"] == 10
     assert cfg["distributions"]["num_turns"]["params"]["mean"] == 5
@@ -125,6 +126,7 @@ def test_aiperf_parse_0_7_0_schema(tmp_path):
     NHN B200 mac 환경 실측 dump 기반 minimal fixture (sub-set of real keys).
     """
     import json
+
     aiperf_dir = tmp_path / "aiperf"
     aiperf_dir.mkdir()
     fixture = {
@@ -132,20 +134,41 @@ def test_aiperf_parse_0_7_0_schema(tmp_path):
         "aiperf_version": "0.7.0",
         "request_throughput": {"unit": "requests/sec", "avg": 5.69},
         "request_latency": {
-            "unit": "ms", "avg": 588.94, "p50": 572.59, "p99": 625.61,
-            "p1": 554.28, "p5": 556.34, "min": 553.76, "max": 625.64, "std": 29.77,
+            "unit": "ms",
+            "avg": 588.94,
+            "p50": 572.59,
+            "p99": 625.61,
+            "p1": 554.28,
+            "p5": 556.34,
+            "min": 553.76,
+            "max": 625.64,
+            "std": 29.77,
         },
         "time_to_first_token": {
-            "unit": "ms", "avg": 61.91, "p50": 44.21, "p99": 96.86,
-            "p25": 42.85, "min": 27.63, "max": 96.86, "std": 28.95,
+            "unit": "ms",
+            "avg": 61.91,
+            "p50": 44.21,
+            "p99": 96.86,
+            "p25": 42.85,
+            "min": 27.63,
+            "max": 96.86,
+            "std": 28.95,
         },
         "inter_token_latency": {
-            "unit": "ms", "avg": 4.15, "p50": 4.15, "p99": 4.20,
-            "min": 4.12, "max": 4.20, "std": 0.02,
+            "unit": "ms",
+            "avg": 4.15,
+            "p50": 4.15,
+            "p99": 4.20,
+            "min": 4.12,
+            "max": 4.20,
+            "std": 0.02,
         },
         "output_token_throughput": {"unit": "tokens/sec", "avg": 728.55},
         "output_token_throughput_per_user": {
-            "unit": "tokens/sec/user", "avg": 240.98, "p50": 240.82, "p99": 242.99,
+            "unit": "tokens/sec/user",
+            "avg": 240.98,
+            "p50": 240.82,
+            "p99": 242.99,
         },
     }
     (aiperf_dir / "profile_export_aiperf.json").write_text(json.dumps(fixture))

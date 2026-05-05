@@ -8,6 +8,7 @@
   5. apply.sh 가 executable 권한
   6. README.md 가 score + trial_id 포함
 """
+
 from __future__ import annotations
 
 import json
@@ -26,12 +27,14 @@ def seeded_db(tmp_path: Path) -> Path:
     db_path = tmp_path / "lmtune.duckdb"
     store = DuckDBStore(db_path)
     # study
-    space_yaml = yaml.safe_dump({
-        "apiVersion": "lmtune/search/v1alpha1",
-        "kind": "SearchSpace",
-        "name": "test-space",
-        "axes": {"max_num_seqs": {"type": "categorical", "values": [16, 32, 64]}},
-    })
+    space_yaml = yaml.safe_dump(
+        {
+            "apiVersion": "lmtune/search/v1alpha1",
+            "kind": "SearchSpace",
+            "name": "test-space",
+            "axes": {"max_num_seqs": {"type": "categorical", "values": [16, 32, 64]}},
+        }
+    )
     store.record_study(
         study_id="st-TEST",
         name="export-test-study",
@@ -44,20 +47,32 @@ def seeded_db(tmp_path: Path) -> Path:
         notes="",
     )
     # 3 trials
-    for i, (score, params) in enumerate([
-        (100.0, {"max_num_seqs": 16}),
-        (200.0, {"max_num_seqs": 64}),       # winner
-        (150.0, {"max_num_seqs": 32}),
-    ], start=1):
+    for i, (score, params) in enumerate(
+        [
+            (100.0, {"max_num_seqs": 16}),
+            (200.0, {"max_num_seqs": 64}),  # winner
+            (150.0, {"max_num_seqs": 32}),
+        ],
+        start=1,
+    ):
         tid = f"tr-{i:03d}"
         store.record_trial(
-            trial_id=tid, study_id="st-TEST", seq=i, params=params,
-            status="completed", score=score, backend="inline", completed=True,
+            trial_id=tid,
+            study_id="st-TEST",
+            seq=i,
+            params=params,
+            status="completed",
+            score=score,
+            backend="inline",
+            completed=True,
         )
-        store.record_trial_metrics(tid, {
-            ("throughput_avg", "short"): score * 0.5,
-            ("ttft_p99", "short"): 50.0,
-        })
+        store.record_trial_metrics(
+            tid,
+            {
+                ("throughput_avg", "short"): score * 0.5,
+                ("ttft_p99", "short"): 50.0,
+            },
+        )
     return db_path
 
 

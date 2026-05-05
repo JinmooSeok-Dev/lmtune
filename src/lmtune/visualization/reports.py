@@ -53,7 +53,7 @@ def render_run_report(
         try:
             path = fn(rows, target, **kwargs)
             generated_plots.append((kind, path))
-        except (ValueError, Exception):   # 데이터 부족 등
+        except (ValueError, Exception):  # 데이터 부족 등
             continue
 
     # 2. Markdown 본문
@@ -72,14 +72,22 @@ def render_run_report(
     md.append("|:-------|----:|----:|----:|----:|")
     for name in sorted(metrics):
         b = metrics[name]
-        md.append(f"| {name} | {_f(b.get('p50'))} | {_f(b.get('p95'))} | {_f(b.get('p99'))} | {_f(b.get('avg'))} |")
+        md.append(
+            f"| {name} | {_f(b.get('p50'))} | {_f(b.get('p95'))} | {_f(b.get('p99'))} | {_f(b.get('avg'))} |"
+        )
     md.append("")
 
     if analysis and analysis.group_by:
-        agg_df = aggregate(df, group_by=analysis.group_by,
-                           metrics=[f"{m}_ms" if m in ("ttft", "itl", "e2e") else m for m in (analysis.metrics or ["ttft_ms"])],
-                           aggs=tuple(analysis.percentiles or ["p50", "p95", "p99"]),
-                           buckets=analysis.buckets)
+        agg_df = aggregate(
+            df,
+            group_by=analysis.group_by,
+            metrics=[
+                f"{m}_ms" if m in ("ttft", "itl", "e2e") else m
+                for m in (analysis.metrics or ["ttft_ms"])
+            ],
+            aggs=tuple(analysis.percentiles or ["p50", "p95", "p99"]),
+            buckets=analysis.buckets,
+        )
         if not agg_df.empty:
             md.append(f"## Aggregation (group_by={analysis.group_by})")
             md.append("")
@@ -106,8 +114,14 @@ def render_run_report(
     sinks = (analysis.sinks if analysis else None) or ["markdown"]
     for s in sinks:
         if s == "markdown":
-            continue            # 이미 report.md
-        ext = {"csv": "csv", "parquet": "parquet", "json": "json", "html": "html", "jupyter": "ipynb"}.get(s, s)
+            continue  # 이미 report.md
+        ext = {
+            "csv": "csv",
+            "parquet": "parquet",
+            "json": "json",
+            "html": "html",
+            "jupyter": "ipynb",
+        }.get(s, s)
         try:
             sink_write(s, df, out_dir / f"requests.{ext}", title=f"{profile_slug} / {run_id}")
         except Exception:

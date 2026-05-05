@@ -25,14 +25,14 @@ class RequestRow:
     thinking_tokens: int | None = None
     tool_call_count: int | None = None
     tool_result_tokens: int | None = None
-    phase: str | None = None              # exploration | editing | execution | verification | other
-    role: str | None = None               # planner | reasoner | verifier | solo
+    phase: str | None = None  # exploration | editing | execution | verification | other
+    role: str | None = None  # planner | reasoner | verifier | solo
     energy_wh: float | None = None
     cost_usd: float | None = None
     ttft_ms: float | None = None
     itl_mean_ms: float | None = None
     e2e_ms: float | None = None
-    started_at: float | None = None       # epoch seconds
+    started_at: float | None = None  # epoch seconds
     completed_at: float | None = None
     status: str = "ok"
     error: str | None = None
@@ -57,7 +57,7 @@ class SessionRow:
 class TrajectoryEvent:
     session_id: str
     seq: int
-    event_type: str                       # user | assistant | tool_call | tool_result | thinking
+    event_type: str  # user | assistant | tool_call | tool_result | thinking
     ts: float | None = None
     phase: str | None = None
     tokens: int | None = None

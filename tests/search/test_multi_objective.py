@@ -14,8 +14,7 @@ from lmtune.storage.duckdb_store import DuckDBStore
 def _space() -> SearchSpace:
     return SearchSpace(
         name="p",
-        axes=[Axis("x", "float", low=-2.0, high=2.0),
-              Axis("y", "float", low=-2.0, high=2.0)],
+        axes=[Axis("x", "float", low=-2.0, high=2.0), Axis("y", "float", low=-2.0, high=2.0)],
     )
 
 
@@ -24,7 +23,7 @@ def _base_obj(p):
         score=0.0,
         metrics={
             ("obj1", None): -((p["x"] - 1) ** 2 + (p["y"] - 1) ** 2),  # maximize
-            ("obj2", None): abs(p["x"]) + abs(p["y"]),                 # minimize
+            ("obj2", None): abs(p["x"]) + abs(p["y"]),  # minimize
         },
         accepted=True,
     )
@@ -34,12 +33,14 @@ def test_nsga2_multi_objective_finds_pareto_front(tmp_path: Path):
     store = DuckDBStore(tmp_path / "p.duckdb")
     pareto = ParetoObjective(
         CallableObjective(_base_obj),
-        [ObjectiveKey("obj1", None, "maximize"),
-         ObjectiveKey("obj2", None, "minimize")],
+        [ObjectiveKey("obj1", None, "maximize"), ObjectiveKey("obj2", None, "minimize")],
     )
     cfg = StudyConfig(
-        name="nsga2", strategy="nsga2", space=_space(),
-        directions=["maximize", "minimize"], seed=0,
+        name="nsga2",
+        strategy="nsga2",
+        space=_space(),
+        directions=["maximize", "minimize"],
+        seed=0,
     )
     study = Study(cfg, store)
     trials = study.run(pareto, max_trials=25)
@@ -65,8 +66,14 @@ def test_trial_metrics_skip_non_scalar_values_sentinel(tmp_path: Path):
         direction="maximize",
     )
     store.record_trial(
-        "tr-mv", "st-mv", 1, {"x": 1}, status="completed",
-        score=0.5, backend="inline", completed=True,
+        "tr-mv",
+        "st-mv",
+        1,
+        {"x": 1},
+        status="completed",
+        score=0.5,
+        backend="inline",
+        completed=True,
     )
     # Mix scalar + list; the list must be dropped, scalar must persist.
     store.record_trial_metrics(
