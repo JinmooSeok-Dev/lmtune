@@ -52,6 +52,13 @@ distributed = [
     "kubernetes>=29.0",
     "jinja2>=3.1",
 ]
+workloads = [
+    # lmtune#WS — WorkloadSpec contract master = lm-workloads.
+    # 본 dep 가 있으면 contracts/workload_spec.py 가 직접 re-export → drift 0.
+    # 미설치 환경에선 LiteralWorkloadProvider 도 불가 (WorkloadSpec import 자체 실패).
+    # 사용자 host 의 file:// editable 사용 시 별도 `pip install -e /path/to/workloads` 권장.
+    "lm-workloads",
+]
 
 [project.scripts]
 lmtune = "lmtune.cli:app"
