@@ -92,6 +92,14 @@ def cmd_start(
         int,
         typer.Option("--repeats", help="trial 당 lmtune run 반복 횟수 (variance gate)"),
     ] = 3,
+    cluster_env: Annotated[
+        str | None,
+        typer.Option(
+            "--cluster-env",
+            help="Feasibility 활성용 환경 preset. b200-dual-node | b200-single-node | "
+                 "local-single-gpu. 미지정 시 feasibility evaluator 미설치 (회귀 안전).",
+        ),
+    ] = None,
     ttft_slo_ms: Annotated[
         float,
         typer.Option(
@@ -143,6 +151,32 @@ def cmd_start(
         raise typer.BadParameter(f"unknown --adapter: {adapter}")
 
     space_context = adapter_obj.context() if adapter_obj is not None else None
+
+    # Feasibility wiring (R8): --cluster-env 가 명시되면 environment + model_id 를
+    # context 에 주입 → Study.ask() 가 vllm-config-puzzle validation.ts 12 룰로
+    # infeasible 후보를 helmfile 호출 0회로 prune.
+    if cluster_env:
+        from lmtune.search.feasibility import Environment as _Env
+        env_map = {
+            "b200-dual-node": _Env.b200_dual_node,
+            "b200-single-node": _Env.b200_single_node,
+            "local-single-gpu": _Env.local_single_gpu,
+        }
+        if cluster_env not in env_map:
+            raise typer.BadParameter(
+                f"--cluster-env: {cluster_env} (allowed: {', '.join(env_map)})"
+            )
+        space_context = dict(space_context or {})
+        space_context["environment"] = env_map[cluster_env]()
+        if endpoint is not None:
+            ep_data = yaml.safe_load(endpoint.read_text(encoding="utf-8"))
+            model_id = ep_data.get("model")
+            if model_id:
+                space_context["model_id"] = model_id
+        console.print(
+            f"[dim]feasibility evaluator: env={cluster_env} "
+            f"model={space_context.get('model_id') or '(unknown)'}[/]"
+        )
 
     cfg = StudyConfig(
         name=name or sp.name,
