@@ -59,6 +59,17 @@ workloads = [
     # 사용자 host 의 file:// editable 사용 시 별도 `pip install -e /path/to/workloads` 권장.
     "lm-workloads",
 ]
+postgres = [
+    # PLUG (#58): PostgresArtifactStore — multi-writer / 분산 환경용 ArtifactStore.
+    # ABC 구현체는 미설치 환경에서도 import 가능 (lazy load) — 실 사용 시에만 본 extra 필요.
+    "psycopg[binary]>=3.2",
+]
+agent = [
+    # PLUG (#59): LLMOracleSampler — LLM 도메인 지식 기반 sampler.
+    # README LLM Dependency Policy: Headless 가 1st-class, agent 는 optional.
+    # 외부 사용자가 받아 실행하는 모든 핵심 경로는 본 extra 없이도 동작.
+    "anthropic>=0.40",
+]
 
 [project.scripts]
 lmtune = "lmtune.cli:app"
