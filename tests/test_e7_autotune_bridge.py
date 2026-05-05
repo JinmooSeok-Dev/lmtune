@@ -28,6 +28,7 @@ def _make_artifact(run_id: str, status: str, metrics: dict) -> RunArtifact:
 
 # ----- lmtune CLI helpers ---------------------------------------------------
 
+
 def test_build_run_summary_flatten_and_slo_pass():
     from lmtune.cli import _build_run_summary
 
@@ -72,10 +73,9 @@ def test_build_run_summary_missing_metric_counts_as_fail():
 
 # ----- lmtune_score.py ------------------------------------------------------
 
+
 def _load_score_module():
-    spec = importlib.util.spec_from_file_location(
-        "lmtune_score", SCRIPTS / "lmtune_score.py"
-    )
+    spec = importlib.util.spec_from_file_location("lmtune_score", SCRIPTS / "lmtune_score.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -95,10 +95,16 @@ def test_lmtune_score_cv_positive_for_spread():
 def test_lmtune_score_aggregate_composite_formula():
     mod = _load_score_module()
     summaries = [
-        {"slo_pass": True, "run_id": "a",
-         "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 250.0, "e2e.p99": 500.0}},
-        {"slo_pass": True, "run_id": "b",
-         "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 250.0, "e2e.p99": 500.0}},
+        {
+            "slo_pass": True,
+            "run_id": "a",
+            "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 250.0, "e2e.p99": 500.0},
+        },
+        {
+            "slo_pass": True,
+            "run_id": "b",
+            "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 250.0, "e2e.p99": 500.0},
+        },
     ]
     out = mod.aggregate(summaries, ttft_slo_ms=500.0)
     # penalty = 1 - 250/(2*500) = 0.75; score = 100 * 0.75 = 75
@@ -111,10 +117,16 @@ def test_lmtune_score_aggregate_composite_formula():
 def test_lmtune_score_aggregate_zero_on_slo_fail():
     mod = _load_score_module()
     summaries = [
-        {"slo_pass": True, "run_id": "a",
-         "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 250.0}},
-        {"slo_pass": False, "run_id": "b",
-         "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 999.0}},
+        {
+            "slo_pass": True,
+            "run_id": "a",
+            "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 250.0},
+        },
+        {
+            "slo_pass": False,
+            "run_id": "b",
+            "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 999.0},
+        },
     ]
     out = mod.aggregate(summaries, ttft_slo_ms=500.0)
     assert out["slo_pass"] is False
@@ -124,8 +136,11 @@ def test_lmtune_score_aggregate_zero_on_slo_fail():
 def test_lmtune_score_aggregate_score_clamped_at_high_ttft():
     mod = _load_score_module()
     summaries = [
-        {"slo_pass": True, "run_id": "a",
-         "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 1500.0}},
+        {
+            "slo_pass": True,
+            "run_id": "a",
+            "metrics": {"throughput_tok.avg": 100.0, "ttft.p99": 1500.0},
+        },
     ]
     out = mod.aggregate(summaries, ttft_slo_ms=500.0)
     # ttft 1500 > 2*500 → penalty clamped to 0 → score = 0
@@ -147,6 +162,7 @@ def test_lmtune_score_config_hash_stable(tmp_path):
 
 # ----- vllm_restart.sh dry-run --------------------------------------------
 
+
 def test_vllm_restart_dry_run_converts_engine_args(tmp_path):
     endpoint = tmp_path / "ep.yaml"
     endpoint.write_text(
@@ -167,7 +183,9 @@ def test_vllm_restart_dry_run_converts_engine_args(tmp_path):
     )
     proc = subprocess.run(
         [str(SCRIPTS / "vllm_restart.sh"), str(endpoint), "--dry-run"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     lines = proc.stdout.splitlines()
     # Script prints: <vllm> serve <model> --host <> --port <> <flags...>
@@ -200,7 +218,9 @@ def test_vllm_restart_parallel_gt1(tmp_path):
     )
     proc = subprocess.run(
         [str(SCRIPTS / "vllm_restart.sh"), str(endpoint), "--dry-run"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     lines = proc.stdout.splitlines()
     assert "--tensor-parallel-size" in lines
@@ -209,6 +229,7 @@ def test_vllm_restart_parallel_gt1(tmp_path):
 
 
 # ----- autotune profile parsing -------------------------------------------
+
 
 def test_autotune_profiles_parse():
     from lmtune.profiles import load_profile

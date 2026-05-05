@@ -25,8 +25,14 @@ def test_writer_queue_serializes_concurrent_writes(tmp_path: Path):
         for i in range(N_per):
             tid = f"tr-{pid}-{i:02d}"
             wq.enqueue(
-                "record_trial", tid, "st-wq", pid * N_per + i, {"i": i},
-                status="completed", score=float(i), backend="test",
+                "record_trial",
+                tid,
+                "st-wq",
+                pid * N_per + i,
+                {"i": i},
+                status="completed",
+                score=float(i),
+                backend="test",
                 completed=True,
             )
             wq.enqueue("record_trial_metrics", tid, {("metric", None): float(i)})

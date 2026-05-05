@@ -3,6 +3,7 @@
 CircuitBreaker 와 classify_outcome 의 동작을 mocking 없이 검증.
 실제 study/driver 와의 통합은 별도 smoke 에서 (별도 fixture 필요).
 """
+
 from __future__ import annotations
 
 from lmtune.orchestrate.failure_handler import (
@@ -13,8 +14,8 @@ from lmtune.orchestrate.failure_handler import (
     suggest_recovery,
 )
 
-
 # ---- classify_outcome -----------------------------------------------------
+
 
 def test_classify_completed_is_success():
     assert classify_outcome("completed") == FailureClass.SUCCESS
@@ -58,6 +59,7 @@ def test_classify_unknown_status_is_hard():
 
 
 # ---- CircuitBreaker -------------------------------------------------------
+
 
 def test_breaker_passes_through_successes():
     b = CircuitBreaker()
@@ -104,7 +106,7 @@ def test_breaker_consecutive_resets_on_success():
     b = CircuitBreaker(cfg=cfg)
     b.record(FailureClass.OOM)
     b.record(FailureClass.OOM)
-    b.record(FailureClass.SUCCESS)   # reset consecutive
+    b.record(FailureClass.SUCCESS)  # reset consecutive
     b.record(FailureClass.OOM)
     b.record(FailureClass.OOM)
     halt, _ = b.should_halt()
@@ -113,7 +115,7 @@ def test_breaker_consecutive_resets_on_success():
 
 def test_breaker_window_rate_trigger():
     cfg = CircuitBreakerConfig(
-        max_consecutive_failures=99,    # 발동 X
+        max_consecutive_failures=99,  # 발동 X
         max_failure_rate=0.6,
         window=10,
         min_trials_before_rate_check=5,
@@ -172,6 +174,7 @@ def test_breaker_summary_format():
 
 # ---- suggest_recovery -----------------------------------------------------
 
+
 def test_suggest_recovery_oom_halves_max_num_seqs():
     new = suggest_recovery(FailureClass.OOM, {"max_num_seqs": 128})
     assert new == {"max_num_seqs": 64}
@@ -189,14 +192,17 @@ def test_suggest_recovery_oom_falls_back_to_gpu_mem_util():
 
 
 def test_suggest_recovery_oom_no_levers():
-    assert suggest_recovery(FailureClass.OOM, {"max_num_seqs": 16, "gpu_memory_utilization": 0.80}) is None
+    assert (
+        suggest_recovery(FailureClass.OOM, {"max_num_seqs": 16, "gpu_memory_utilization": 0.80})
+        is None
+    )
 
 
 def test_suggest_recovery_transient_returns_same():
     p = {"max_num_seqs": 64}
     new = suggest_recovery(FailureClass.TRANSIENT, p)
     assert new == p
-    assert new is not p   # caller 가 mutate 해도 원본 안전
+    assert new is not p  # caller 가 mutate 해도 원본 안전
 
 
 def test_suggest_recovery_infeasible_no_retry():

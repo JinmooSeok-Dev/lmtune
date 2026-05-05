@@ -9,6 +9,7 @@ def test_double_lease_on_same_gpu_rejects(tmp_path, monkeypatch):
     monkeypatch.setenv("BENCH_GPU_LEASE_DIR", str(tmp_path))
     # force-reimport module constant
     import lmtune.orchestrate.gpu_lease as gl
+
     gl._LEASE_DIR = tmp_path
 
     with GPULease(0):
@@ -19,6 +20,7 @@ def test_double_lease_on_same_gpu_rejects(tmp_path, monkeypatch):
 
 def test_different_gpus_can_coexist(tmp_path, monkeypatch):
     import lmtune.orchestrate.gpu_lease as gl
+
     gl._LEASE_DIR = tmp_path
     with GPULease(0), GPULease(1):
         # both held, no exception
@@ -27,6 +29,7 @@ def test_different_gpus_can_coexist(tmp_path, monkeypatch):
 
 def test_try_acquire_skips_held(tmp_path, monkeypatch):
     import lmtune.orchestrate.gpu_lease as gl
+
     gl._LEASE_DIR = tmp_path
     with GPULease(0):
         with try_acquire_gpu([0, 1]) as lease:

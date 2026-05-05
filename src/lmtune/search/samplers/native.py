@@ -33,6 +33,7 @@ from lmtune.search.space import Axis, SearchSpace
 
 # --- Random ----------------------------------------------------------------
 
+
 class NativeRandomSampler:
     def __init__(self, space: SearchSpace, seed: int | None = None):
         self._space = space
@@ -48,14 +49,25 @@ class NativeRandomSampler:
 
 # --- Latin Hypercube -------------------------------------------------------
 
+
 class NativeLHCSampler:
-    def __init__(self, space: SearchSpace, n_samples: int, seed: int | None = None, context: dict | None = None):
+    def __init__(
+        self,
+        space: SearchSpace,
+        n_samples: int,
+        seed: int | None = None,
+        context: dict | None = None,
+    ):
         self._space = space
         axes = space.active_axes(context)
         if not axes:
             self._queue: list[dict] = []
             return
-        engine = LatinHypercube(d=len(axes), seed=seed) if seed is not None else LatinHypercube(d=len(axes))
+        engine = (
+            LatinHypercube(d=len(axes), seed=seed)
+            if seed is not None
+            else LatinHypercube(d=len(axes))
+        )
         U = engine.random(n=int(n_samples))
         self._queue = [
             {axes[i].name: _project_u(axes[i], float(U[r, i])) for i in range(len(axes))}
@@ -69,6 +81,7 @@ class NativeLHCSampler:
 
 
 # --- TPE --------------------------------------------------------------------
+
 
 class NativeTPESampler:
     """Minimal TPE that handles continuous and categorical axes independently.
@@ -86,7 +99,7 @@ class NativeTPESampler:
         space: SearchSpace,
         seed: int | None = None,
         *,
-        gamma: float = 0.25,         # top fraction → good pool
+        gamma: float = 0.25,  # top fraction → good pool
         n_startup_trials: int = 10,
         n_ei_candidates: int = 24,
         direction: str = "maximize",
@@ -109,8 +122,9 @@ class NativeTPESampler:
             return NativeRandomSampler(self._space, seed=self._rng.randint(0, 2**31)).ask(context)
 
         # Partition: top-γ are "good" (l), rest are "bad" (g).
-        sorted_hist = sorted(self._history, key=lambda t: t[1],
-                             reverse=(self._direction == "maximize"))
+        sorted_hist = sorted(
+            self._history, key=lambda t: t[1], reverse=(self._direction == "maximize")
+        )
         n_good = max(1, int(math.ceil(self._gamma * len(sorted_hist))))
         good = sorted_hist[:n_good]
         bad = sorted_hist[n_good:]
@@ -140,9 +154,9 @@ class NativeTPESampler:
             total_b = sum(bad_counts.values())
             ratios = {c: (good_counts[c] / total_g) / (bad_counts[c] / total_b) for c in choices}
             # Sample from P_good, pick arg-max ratio among candidates.
-            cands = self._rng.choices(choices,
-                                      weights=[good_counts[c] / total_g for c in choices],
-                                      k=self._n_cand)
+            cands = self._rng.choices(
+                choices, weights=[good_counts[c] / total_g for c in choices], k=self._n_cand
+            )
             return max(cands, key=lambda c: ratios[c])
 
         # Continuous (float / log_uniform / int)
@@ -187,6 +201,7 @@ class NativeTPESampler:
 
 
 # --- helpers --------------------------------------------------------------
+
 
 def _sample_axis(axis: Axis, rng: random.Random, np_rng: np.random.Generator) -> Any:
     if axis.kind == "categorical":

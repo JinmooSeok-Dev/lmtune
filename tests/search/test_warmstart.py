@@ -30,24 +30,28 @@ def _seed_fixture_db(path: Path) -> None:
         );
         """
     )
-    good_ea = json.dumps({
-        "deployment": {
-            "engine_args": {
-                "max_num_seqs": 128,
-                "enable_prefix_caching": True,
-                "gpu_memory_utilization": 0.85,
+    good_ea = json.dumps(
+        {
+            "deployment": {
+                "engine_args": {
+                    "max_num_seqs": 128,
+                    "enable_prefix_caching": True,
+                    "gpu_memory_utilization": 0.85,
+                }
             }
         }
-    })
-    bad_ea = json.dumps({
-        "deployment": {
-            "engine_args": {
-                "max_num_seqs": 999,   # out of range for current space
-                "enable_prefix_caching": True,
-                "gpu_memory_utilization": 0.85,
+    )
+    bad_ea = json.dumps(
+        {
+            "deployment": {
+                "engine_args": {
+                    "max_num_seqs": 999,  # out of range for current space
+                    "enable_prefix_caching": True,
+                    "gpu_memory_utilization": 0.85,
+                }
             }
         }
-    })
+    )
     c.execute("INSERT INTO runs VALUES (?,?,?,?,?)", ("r1", "short", "ep1", good_ea, "ok"))
     c.execute("INSERT INTO runs VALUES (?,?,?,?,?)", ("r2", "medium", "ep1", good_ea, "ok"))
     c.execute("INSERT INTO runs VALUES (?,?,?,?,?)", ("r3", "short", "ep1", bad_ea, "ok"))
@@ -55,7 +59,7 @@ def _seed_fixture_db(path: Path) -> None:
     for run_id, thr, ttft, e2e in [
         ("r1", 800.0, 200.0, 2.0),
         ("r2", 600.0, 300.0, 5.0),
-        ("r3", 200.0, 600.0, 10.0),   # SLO fail (ttft > 500)
+        ("r3", 200.0, 600.0, 10.0),  # SLO fail (ttft > 500)
         ("r4", 400.0, 100.0, 1.0),
     ]:
         c.execute("INSERT INTO metrics VALUES (?,?,?,?)", (run_id, "throughput_tok", "avg", thr))
@@ -79,7 +83,10 @@ def test_warmstart_returns_top_composite(tmp_path: Path):
     db = tmp_path / "arch.duckdb"
     _seed_fixture_db(db)
     seeds = warmstart_from_archive(
-        db, _space(), endpoint_slug="ep1", top_k=5,
+        db,
+        _space(),
+        endpoint_slug="ep1",
+        top_k=5,
     )
     # r1+r2 pass SLO; their per-workload scores sum as a single group
     assert len(seeds) == 1
@@ -95,7 +102,10 @@ def test_warmstart_rejects_out_of_range_params(tmp_path: Path):
     _seed_fixture_db(db)
     # Space only allows max_num_seqs ∈ {32,64,128,256}; r3's 999 is rejected.
     seeds = warmstart_from_archive(
-        db, _space(), endpoint_slug="ep1", top_k=5,
+        db,
+        _space(),
+        endpoint_slug="ep1",
+        top_k=5,
     )
     for params, _ in seeds:
         assert params["max_num_seqs"] != 999

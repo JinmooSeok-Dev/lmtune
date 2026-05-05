@@ -17,8 +17,10 @@ _PHASES_ORDER = ["exploration", "editing", "execution", "verification", "other"]
 
 @register_plot("phase_breakdown")
 def plot_phase_breakdown(
-    rows: Iterable[RequestRow], out_path: str | Path,
-    metric: str = "input_tokens", **opts,
+    rows: Iterable[RequestRow],
+    out_path: str | Path,
+    metric: str = "input_tokens",
+    **opts,
 ) -> Path:
     """Agent phase(exploration/editing/execution/verification)별 토큰 분해.
 
@@ -33,7 +35,9 @@ def plot_phase_breakdown(
         totals[phase] += float(value)
     if not totals:
         raise ValueError("no phase data to plot")
-    phases = [p for p in _PHASES_ORDER if p in totals] + [p for p in totals if p not in _PHASES_ORDER]
+    phases = [p for p in _PHASES_ORDER if p in totals] + [
+        p for p in totals if p not in _PHASES_ORDER
+    ]
     values = [totals[p] for p in phases]
     total_sum = sum(values) or 1.0
     percentages = [v / total_sum * 100 for v in values]

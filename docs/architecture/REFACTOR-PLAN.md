@@ -1,0 +1,110 @@
+# lmtune Architecture — Refactor Plan
+
+> 본 문서는 lmtune 의 **목표 아키텍처** 와 거기에 도달하는 **단계별 PR sequence** 를 영속화한다.
+> 단일 진실: 매 PR description 은 본 문서의 단계 하나를 인용해야 한다.
+
+## 핵심 원칙 5
+
+1. **외부 master schema 존중** — workload spec 은 [lm-workloads](https://github.com/.../workloads) 가 master, hardware/network/infra spec 은 [ariadne](https://github.com/.../ariadne) 가 master. lmtune 은 mirror + consumer.
+2. **모든 layer 가 ABC + 구현체** — Sampler/Pruner/Backend/Launcher/WorkloadStream/BenchmarkRunner/WorkloadStore/ArtifactStore. 새 구현체 추가 = 1 PR.
+3. **Provider 단일 abstraction** — BYO yaml 과 외부 도구 호출 (Discover) 모두 `WorkloadProvider`/`ClusterProvider` 의 한 구현체. 분기 0.
+4. **Storage 가 single shared hub** — DuckDB/Postgres/ClickHouse 같은 backend 가 ABC 뒤로. Tuner/Output/Analysis/사용자 CLI 모두 readonly query.
+5. **leaf-up refactoring** — 의존성 그래프의 upstream leaf 부터 수정. 변경 영향 격리.
+
+## 의존성 그래프 (lmtune 내부)
+
+```
+L0  Input (leaf — 외부 master 만 의존)
+    ├─ workload/providers/        ← lmtune#WS
+    └─ cluster/providers/         ← lmtune#CS
+                  │
+L1  Storage (leaf-near — contracts subset 만 의존)
+    └─ storage/                    ← lmtune#SS
+                  │
+L2  Compute layers
+    ├─ tuner/                      ← lmtune#S1
+    ├─ deploy/ (Launcher)
+    ├─ workload/streams/
+    └─ runners/                    ← lmtune#R0 (BenchmarkResult contract)
+                  │
+L3  Coordination
+    └─ orchestrate/                ← lmtune#OD (driver/backend 분리)
+                  │
+L4  Output (Storage readonly)
+    └─ output/                     ← lmtune#OUT
+                  │
+L5  CLI (모두 통합)
+    └─ cli/
+```
+
+## PR Sequence (총 10 PR, leaf-up)
+
+| # | PR | layer | 의존 | size | 설명 |
+|:--|:---|:---:|:---|:---|:---|
+| 1 | `lmtune#WS` | L0 | 외부 lm-workloads | 중 | Workload Spec contract + LiteralProvider + LMWorkloadsProvider |
+| 2 | `ariadne#A1` (병렬) | (외부) | — | 중 | ariadne 본체 multi-host snapshot MVP |
+| 3 | `lmtune#CS` | L0 | A1 | 중 | Cluster Spec contract + LiteralProvider + AriadneProvider |
+| 4 | `lmtune#SS-rec` | (contracts subset) | — | 소 | RecordSpec + QuerySpec Pydantic + JSON Schema |
+| 5 | `lmtune#SS` | L1 | SS-rec | 중-대 | WorkloadStore + ArtifactStore ABC, DuckDBStore + InMemoryStore + LocalArtifactStore |
+| 6 | `lmtune#R0` | (contracts) | SS-rec | 중 | result_spec 정형화, 4 runner 가 BenchmarkResult emit |
+| 7 | `lmtune#S1` | L2 | SS + R0 | 중 | search/ → tuner/ (Sampler/Pruner ABC) |
+| 8 | `lmtune#OD` | L3 | S1 | 소-중 | Orchestrator → Driver/Backend 분리 |
+| 9 | `lmtune#OUT` | L4 | SS + R0 | 대 | output/{winner, dashboard, report} |
+| 10 | `lmtune#PLUG` (옵션) | leaf | S1 + R0 + SS | 소 | LLMOracleSampler / PostgresStore stub — plug-in 패턴 시연 |
+
+**Critical path**: WS → SS-rec → SS → R0 → S1 → OD → OUT (8 PR, ~8주). A1+CS 는 별도 라인 병렬.
+
+## 4 Component (단순화된 view)
+
+| Component | 역할 (한 줄) | ABC | 디렉토리 |
+|:---|:---|:---|:---|
+| **Tuner** | "다음에 뭘 실험할까" — 알고리즘 | Sampler, Pruner | `src/lmtune/tuner/` |
+| **Driver** | "1 trial 의 routing 책임" — main loop | (없음, 단일 클래스) | `src/lmtune/orchestrate/driver.py` |
+| **Backend** | "trial 1개 실행" | TrialBackend | `src/lmtune/orchestrate/backend.py` |
+| **Launcher** | "endpoint 띄우고 내림" | DeploymentAdapter | `src/lmtune/deploy/` |
+| **Benchmark+Anal** | "endpoint 측정 + 집계" | WorkloadStream, BenchmarkRunner | `src/lmtune/workload/`, `src/lmtune/runners/` |
+| **Storage** | "single shared resource" | WorkloadStore, ArtifactStore | `src/lmtune/storage/` |
+| **Output** | "winner / dashboard / report" | (Visualizer) | `src/lmtune/output/` |
+
+의존 방향: Driver → Tuner / Backend (둘 다 호출). Tuner ↔ Backend 직접 의존 없음. Storage 는 hub — 모두가 read/write.
+
+## Tuning loop — 데이터 흐름 (요약)
+
+```
+Inner loop (1 trial):
+   Driver.ask()      → Tuner.Sampler  (in-memory archive 보고 params 결정)
+   Driver.submit()   → Backend        (K8sJob/ProcessPool 으로 trial 1개 실행)
+       Backend → Launcher.apply()    (helmfile redeploy / vllm restart)
+       Backend → BenchmarkRunner.run() (workload 부하 + raw 측정)
+       BenchmarkResult → Storage (writer_queue, single writer thread)
+   Driver.tell(score) → Tuner.Sampler (가장 최근 1건만 — archive 는 Storage 가 owner)
+
+Outer loop (시각화/분석):
+   Output/Visualizer ─readonly─→ Storage (DuckDB/Postgres/...)
+   Analysis           ─readonly─→ Storage
+```
+
+**Storage 가 영속 archive owner**. Tuner 의 in-memory archive 는 sampler refit 용 cache 일 뿐. 시각화는 Storage 만 봄, Tuner 거치지 않음.
+
+## Contract 6종
+
+| # | Contract | apiVersion | Master | lmtune 의 역할 |
+|:--|:---|:---|:---|:---|
+| 1 | WorkloadSpec | `workloads/v1alpha1` | **lm-workloads** | mirror (re-export) + Provider |
+| 2 | ClusterSpec | `ariadne/cluster/v1alpha1` | **ariadne** | mirror (re-export) + Provider |
+| 3 | EndpointSpec | `lmtune/endpoint/v1alpha1` | lmtune | own |
+| 4 | ProfileSpec | `lmtune/profile/v1alpha1` | lmtune | own |
+| 5 | SearchSpace | `lmtune/search/v1alpha1` | lmtune | own |
+| 6 | BenchmarkResult | `lmtune/result/v1alpha1` | lmtune | own (controller input) |
+
+**RecordSpec/QuerySpec** (Storage 전용, Pydantic 만) 도 contracts/ 안에서 SS-rec PR 에서 추가.
+
+## 변경 거버넌스
+
+- workloads/ariadne master 가 v 올리면 → lmtune mirror 는 같은 PR 에서 동기. drift 감지는 CI 에서 schema diff 검사.
+- lmtune own contract 는 단독 관리. 추가 only, drop 은 v 분리.
+- 본 문서 변경은 PR description 에 변경 사유 명시 + CHANGELOG entry.
+
+## CHANGELOG
+
+- 2026-05-06: 초안. WS / A1 / CS / SS-rec / SS / R0 / S1 / OD / OUT / PLUG 10 PR sequence 확정.

@@ -43,7 +43,9 @@ class VllmBenchRunner(Runner):
         try:
             out = subprocess.run(
                 ["git", "-C", str(self.vllm_repo), "rev-parse", "--short", "HEAD"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             return (out.stdout or "").strip() or None
         except (OSError, subprocess.TimeoutExpired):
@@ -57,20 +59,33 @@ class VllmBenchRunner(Runner):
             script = self._script("benchmark_serving.py")
             result_file = raw_dir / "vllm_bench_result.json"
             cmd = [
-                self.python, str(script),
-                "--backend", "openai-chat" if endpoint.api_type == "openai" else "openai",
-                "--base-url", endpoint.base_url.removesuffix("/v1"),
-                "--endpoint", "/v1/chat/completions",
-                "--model", endpoint.model,
-                "--tokenizer", endpoint.tokenizer or endpoint.model,
-                "--dataset-name", "random",
-                "--random-input-len", str(w.synthetic_input_tokens_mean),
-                "--random-output-len", str(w.output_tokens_mean),
-                "--num-prompts", str(w.request_count),
-                "--max-concurrency", str(w.concurrency),
-                "--seed", str(w.random_seed),
+                self.python,
+                str(script),
+                "--backend",
+                "openai-chat" if endpoint.api_type == "openai" else "openai",
+                "--base-url",
+                endpoint.base_url.removesuffix("/v1"),
+                "--endpoint",
+                "/v1/chat/completions",
+                "--model",
+                endpoint.model,
+                "--tokenizer",
+                endpoint.tokenizer or endpoint.model,
+                "--dataset-name",
+                "random",
+                "--random-input-len",
+                str(w.synthetic_input_tokens_mean),
+                "--random-output-len",
+                str(w.output_tokens_mean),
+                "--num-prompts",
+                str(w.request_count),
+                "--max-concurrency",
+                str(w.concurrency),
+                "--seed",
+                str(w.random_seed),
                 "--save-result",
-                "--result-filename", str(result_file),
+                "--result-filename",
+                str(result_file),
             ]
             if w.request_rate is not None:
                 cmd += ["--request-rate", str(w.request_rate)]
@@ -85,14 +100,22 @@ class VllmBenchRunner(Runner):
             config_path = raw_dir / "multi_turn_config.json"
             config_path.write_text(json.dumps(_build_multi_turn_config(profile), indent=2))
             return [
-                self.python, str(script),
-                "--model", endpoint.model,
-                "--tokenizer", endpoint.tokenizer or endpoint.model,
-                "--url", endpoint.base_url.removesuffix("/v1"),
-                "--input-file", str(config_path),
-                "--num-clients", str(w.num_users or 1),
-                "--max-active-conversations", str(w.num_users or 1),
-                "--output-dir", str(raw_dir / "vllm_mt"),
+                self.python,
+                str(script),
+                "--model",
+                endpoint.model,
+                "--tokenizer",
+                endpoint.tokenizer or endpoint.model,
+                "--url",
+                endpoint.base_url.removesuffix("/v1"),
+                "--input-file",
+                str(config_path),
+                "--num-clients",
+                str(w.num_users or 1),
+                "--max-active-conversations",
+                str(w.num_users or 1),
+                "--output-dir",
+                str(raw_dir / "vllm_mt"),
             ]
 
         raise RunnerError(f"vllm_bench does not support mode={profile.mode}")
@@ -101,7 +124,11 @@ class VllmBenchRunner(Runner):
         result_file = raw_dir / "vllm_bench_result.json"
         if not result_file.exists():
             # multi-turn output layout: vllm_mt/... json
-            candidates = list((raw_dir / "vllm_mt").rglob("*.json")) if (raw_dir / "vllm_mt").exists() else []
+            candidates = (
+                list((raw_dir / "vllm_mt").rglob("*.json"))
+                if (raw_dir / "vllm_mt").exists()
+                else []
+            )
             if not candidates:
                 return {}, []
             result_file = candidates[0]

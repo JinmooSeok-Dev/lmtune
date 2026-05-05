@@ -18,7 +18,7 @@ import numpy as np
 
 def tighten_bounds(
     trials: list[dict],
-    axes: list[dict],            # SearchSpace.axes as dicts (name, kind, low, high)
+    axes: list[dict],  # SearchSpace.axes as dicts (name, kind, low, high)
     *,
     top_frac: float = 0.25,
     k_sigma: float = 1.0,
@@ -54,7 +54,9 @@ def tighten_bounds(
             new_low = max(math.log(low), mu - k_sigma * sigma)
             new_high = min(math.log(high), mu + k_sigma * sigma)
             new_low, new_high = math.exp(new_low), math.exp(new_high)
-            rel_shrink = 1.0 - (math.log(new_high) - math.log(new_low)) / (math.log(high) - math.log(low))
+            rel_shrink = 1.0 - (math.log(new_high) - math.log(new_low)) / (
+                math.log(high) - math.log(low)
+            )
         else:
             mu, sigma = float(np.mean(vals)), float(np.std(vals))
             new_low = max(low, mu - k_sigma * sigma)

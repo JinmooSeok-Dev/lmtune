@@ -33,9 +33,9 @@ class Detection:
 
 _OPS = {
     "<=": lambda o, v: o <= v,
-    "<":  lambda o, v: o < v,
+    "<": lambda o, v: o < v,
     ">=": lambda o, v: o >= v,
-    ">":  lambda o, v: o > v,
+    ">": lambda o, v: o > v,
     "==": lambda o, v: o == v,
     "!=": lambda o, v: o != v,
 }
@@ -52,9 +52,7 @@ def _severity_for(metric: str, observed: float, threshold: float, op: str, defau
     return default
 
 
-def detect_slo_violations(
-    metrics: dict[str, dict[str, float]], slo: SLOSpec
-) -> list[Detection]:
+def detect_slo_violations(metrics: dict[str, dict[str, float]], slo: SLOSpec) -> list[Detection]:
     results: list[Detection] = []
     for chk in slo.resolved_checks():
         observed = (metrics.get(chk.metric) or {}).get(chk.p)
@@ -164,7 +162,10 @@ def run_all_rules(
         baseline_run_id, baseline_metrics = baseline
         dets.extend(
             detect_regression(
-                baseline_run_id, candidate_run_id, baseline_metrics, metrics,
+                baseline_run_id,
+                candidate_run_id,
+                baseline_metrics,
+                metrics,
                 threshold_pct=regression_threshold_pct,
             )
         )

@@ -7,10 +7,13 @@
      deployment.engine_args 에 정확히 들어감
   3. vllm_restart.sh --dry-run 이 새 axis 를 올바른 kebab-case CLI flag 로 변환
 """
+
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -28,10 +31,15 @@ def test_tier2_space_yaml_parses():
     space = load_space(TIER2_SPACE)
     names = {ax.name for ax in space.axes}
     assert names == {
-        "enable_chunked_prefill", "enable_prefix_caching",
-        "max_num_seqs", "gpu_memory_utilization",
-        "kv_cache_dtype", "block_size", "max_model_len",
-        "async_scheduling", "enforce_eager",
+        "enable_chunked_prefill",
+        "enable_prefix_caching",
+        "max_num_seqs",
+        "gpu_memory_utilization",
+        "kv_cache_dtype",
+        "block_size",
+        "max_model_len",
+        "async_scheduling",
+        "enforce_eager",
     }
     # All cost_tier = 4
     for ax in space.axes:
@@ -41,25 +49,28 @@ def test_tier2_space_yaml_parses():
 def test_new_axes_recognized_as_engine_args():
     """All 5 new axes are explicit members of _ENGINE_ARG_KEYS (not falling
     through the unknown-key fallback)."""
-    for k in ("kv_cache_dtype", "block_size", "max_model_len",
-              "async_scheduling", "enforce_eager"):
+    for k in ("kv_cache_dtype", "block_size", "max_model_len", "async_scheduling", "enforce_eager"):
         assert k in _ENGINE_ARG_KEYS, f"{k} should be explicit engine_arg"
 
 
 @pytest.fixture
 def endpoint_yaml(tmp_path: Path) -> Path:
     p = tmp_path / "ep.yaml"
-    p.write_text(yaml.safe_dump({
-        "apiVersion": "lmtune/v1alpha1",
-        "slug": "test",
-        "url": "http://localhost:8000/v1",
-        "model": "Qwen/Qwen2.5-1.5B-Instruct",
-        "deployment": {
-            "engine": "vllm",
-            "parallelism": {"tp": 1, "dp": 1},
-            "engine_args": {"max_num_seqs": 64},
-        },
-    }))
+    p.write_text(
+        yaml.safe_dump(
+            {
+                "apiVersion": "lmtune/v1alpha1",
+                "slug": "test",
+                "url": "http://localhost:8000/v1",
+                "model": "Qwen/Qwen2.5-1.5B-Instruct",
+                "deployment": {
+                    "engine": "vllm",
+                    "parallelism": {"tp": 1, "dp": 1},
+                    "engine_args": {"max_num_seqs": 64},
+                },
+            }
+        )
+    )
     return p
 
 
@@ -97,18 +108,30 @@ def test_merge_does_not_create_parallelism_keys_for_engine_args(endpoint_yaml):
 def test_vllm_restart_dry_run_emits_kebab_flags(endpoint_yaml, tmp_path):
     """`vllm_restart.sh --dry-run` 가 endpoint YAML 의 새 engine_args 를
     `--kv-cache-dtype fp8`, `--block-size 32`, `--async-scheduling` 등으로 변환."""
-    merge_params_into_endpoint(endpoint_yaml, {
-        "kv_cache_dtype": "fp8",
-        "block_size": 32,
-        "max_model_len": 8192,
-        "async_scheduling": True,
-        "enforce_eager": False,  # boolean false → flag 미출력 (스크립트 규약)
-    })
+    merge_params_into_endpoint(
+        endpoint_yaml,
+        {
+            "kv_cache_dtype": "fp8",
+            "block_size": 32,
+            "max_model_len": 8192,
+            "async_scheduling": True,
+            "enforce_eager": False,  # boolean false → flag 미출력 (스크립트 규약)
+        },
+    )
+    # VENV_PY 우선 (로컬 .venv), 없으면 sys.executable 로 fallback (CI 환경).
+    # VENV_VLLM 은 dry-run 에서 검증 안 됨.
+    py_path = str(REPO_ROOT / ".venv" / "bin" / "python")
+    if not os.access(py_path, os.X_OK):
+        py_path = sys.executable
     proc = subprocess.run(
         ["bash", str(RESTART_SH), str(endpoint_yaml), "--dry-run"],
-        capture_output=True, text=True, env={"VENV_PY": str(REPO_ROOT / ".venv" / "bin" / "python"),
-                                              "VENV_VLLM": str(REPO_ROOT / ".venv" / "bin" / "vllm"),
-                                              "PATH": "/usr/bin:/bin"},
+        capture_output=True,
+        text=True,
+        env={
+            "VENV_PY": py_path,
+            "VENV_VLLM": str(REPO_ROOT / ".venv" / "bin" / "vllm"),
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        },
     )
     assert proc.returncode == 0, f"dry-run failed: {proc.stderr}"
     out = proc.stdout

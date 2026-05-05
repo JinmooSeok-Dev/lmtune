@@ -39,7 +39,9 @@ _VLLM_METRIC_WHITELIST = {
 }
 
 
-_LINE = re.compile(r'^(?P<name>[a-zA-Z_:][\w:]*)(\{(?P<labels>[^}]*)\})?\s+(?P<value>[-+0-9.eE]+)\s*(?P<ts>\d+)?$')
+_LINE = re.compile(
+    r"^(?P<name>[a-zA-Z_:][\w:]*)(\{(?P<labels>[^}]*)\})?\s+(?P<value>[-+0-9.eE]+)\s*(?P<ts>\d+)?$"
+)
 
 
 def _parse_labels(s: str | None) -> dict[str, str]:
@@ -74,7 +76,9 @@ def scrape_metrics_endpoint(url: str, timeout: float = 3.0) -> list[PromSample]:
             value = float(m.group("value"))
         except ValueError:
             continue
-        samples.append(PromSample(ts=now, metric=name, labels=_parse_labels(m.group("labels")), value=value))
+        samples.append(
+            PromSample(ts=now, metric=name, labels=_parse_labels(m.group("labels")), value=value)
+        )
     return samples
 
 
@@ -118,5 +122,7 @@ class PrometheusCollector:
                         )
                     self.samples_written += len(samples)
                 except Exception as e:  # noqa: BLE001
-                    fh.write(json.dumps({"ts": datetime.now(tz=UTC).isoformat(), "error": str(e)}) + "\n")
+                    fh.write(
+                        json.dumps({"ts": datetime.now(tz=UTC).isoformat(), "error": str(e)}) + "\n"
+                    )
                 self._stop.wait(self.interval)

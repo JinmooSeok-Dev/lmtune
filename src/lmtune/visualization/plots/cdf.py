@@ -14,7 +14,9 @@ from lmtune.visualization.plots import register_plot
 
 
 @register_plot("cdf")
-def plot_cdf(rows: Iterable[RequestRow], out_path: str | Path, metric: str = "ttft_ms", **opts) -> Path:
+def plot_cdf(
+    rows: Iterable[RequestRow], out_path: str | Path, metric: str = "ttft_ms", **opts
+) -> Path:
     values = [getattr(r, metric, None) for r in rows]
     values = [v for v in values if v is not None]
     if not values:

@@ -31,8 +31,8 @@ class AxisAnova:
     groups: dict[str, list[float]] = field(default_factory=dict)
     f_stat: float | None = None
     p_value: float | None = None
-    recommendation: str = "keep"   # keep | freeze | drop
-    best_value: Any = None         # populated when recommendation == freeze
+    recommendation: str = "keep"  # keep | freeze | drop
+    best_value: Any = None  # populated when recommendation == freeze
 
 
 def _group_key(value: Any) -> str:
@@ -53,7 +53,7 @@ def _bin_continuous(values: list[float], n_bins: int = 4) -> list[str]:
     out: list[str] = []
     for v in values:
         idx = int(np.searchsorted(qs[1:-1], v, side="right"))
-        out.append(f"q{idx}:{qs[idx]:.4g}-{qs[idx+1]:.4g}")
+        out.append(f"q{idx}:{qs[idx]:.4g}-{qs[idx + 1]:.4g}")
     return out
 
 
@@ -89,9 +89,7 @@ def anova_per_axis(
 
         usable = {k: v for k, v in groups.items() if len(v) >= min_group_size}
         if len(usable) < 2:
-            results.append(
-                AxisAnova(axis=axis, groups=groups, recommendation="keep")
-            )
+            results.append(AxisAnova(axis=axis, groups=groups, recommendation="keep"))
             continue
 
         f, p = f_oneway(*usable.values())

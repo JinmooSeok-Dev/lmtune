@@ -6,6 +6,7 @@
 - RandomController, MockController : 단위
 - HTTPController : embedded mock_server 기동 후 실제 HTTP round-trip
 """
+
 from __future__ import annotations
 
 import json
@@ -23,8 +24,8 @@ from lmtune.search.controller import (
 )
 from lmtune.search.space import Axis
 
-
 # ---- 공통 fixture: 4-axis test space ---------------------------------------
+
 
 def _axes() -> list[Axis]:
     return [
@@ -42,7 +43,10 @@ def test_random_ask_returns_all_axes():
     c = RandomController(seed=42)
     p = c.ask(_axes())
     assert set(p.keys()) == {
-        "max_num_seqs", "enable_prefix_caching", "block_size", "gpu_memory_utilization"
+        "max_num_seqs",
+        "enable_prefix_caching",
+        "block_size",
+        "gpu_memory_utilization",
     }
 
 
@@ -79,9 +83,9 @@ def test_random_implements_abc():
 def test_mock_returns_first_value_default():
     c = MockController()
     p = c.ask(_axes())
-    assert p["max_num_seqs"] == 32          # values[0]
+    assert p["max_num_seqs"] == 32  # values[0]
     assert p["enable_prefix_caching"] is False
-    assert p["block_size"] == 16            # low
+    assert p["block_size"] == 16  # low
     assert p["gpu_memory_utilization"] == 0.80
 
 
@@ -120,6 +124,7 @@ def test_mock_records_tells():
 
 class _StubHandler(BaseHTTPRequestHandler):
     """Test 용 stub server — RandomController 흉내."""
+
     request_log: list[dict] = []
 
     def _read_json(self):
@@ -137,9 +142,7 @@ class _StubHandler(BaseHTTPRequestHandler):
                     params[a["name"]] = a["values"][0]
                 elif a["kind"] == "bool":
                     params[a["name"]] = False
-                elif a["kind"] == "int":
-                    params[a["name"]] = a["low"]
-                elif a["kind"] in ("float", "log_uniform"):
+                elif a["kind"] == "int" or a["kind"] in ("float", "log_uniform"):
                     params[a["name"]] = a["low"]
             payload = json.dumps({"params": params}).encode()
             self.send_response(200)
@@ -178,13 +181,16 @@ def test_http_ask_round_trip(stub_server):
     httpx = pytest.importorskip("httpx")  # noqa: F841
     c = HTTPController(url=f"http://127.0.0.1:{stub_server}", study_id="st-test")
     p = c.ask(_axes())
-    assert p["max_num_seqs"] == 32     # stub 이 first-value 반환
+    assert p["max_num_seqs"] == 32  # stub 이 first-value 반환
     assert p["enable_prefix_caching"] is False
     # request body 가 active_axes 와 study_id 를 포함했는지
     req = _StubHandler.request_log[0]["body"]
     assert req["study_id"] == "st-test"
     assert {a["name"] for a in req["active_axes"]} == {
-        "max_num_seqs", "enable_prefix_caching", "block_size", "gpu_memory_utilization",
+        "max_num_seqs",
+        "enable_prefix_caching",
+        "block_size",
+        "gpu_memory_utilization",
     }
 
 
@@ -208,10 +214,13 @@ def test_http_implements_abc():
 # ---- 폴리모피즘 — 같은 코드가 4 종 controller 모두 처리 -------------------
 
 
-@pytest.mark.parametrize("ctrl", [
-    RandomController(seed=1),
-    MockController(),
-])
+@pytest.mark.parametrize(
+    "ctrl",
+    [
+        RandomController(seed=1),
+        MockController(),
+    ],
+)
 def test_swappable_uniform_interface(ctrl):
     """진짜 plug-in 이려면 호출자가 구현체를 몰라도 동작해야 함."""
     assert isinstance(ctrl, Controller)

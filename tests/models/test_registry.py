@@ -38,9 +38,15 @@ def test_normalize_derives_head_dim():
 
 def test_normalize_dense_active_params_equals_total():
     spec = normalize_model_spec(
-        name="x", total_params_b=10.0, num_layers=2, hidden_size=128,
-        num_attention_heads=4, num_kv_heads=4, intermediate_size=256,
-        context_length=2048, vocab_size=1024,
+        name="x",
+        total_params_b=10.0,
+        num_layers=2,
+        hidden_size=128,
+        num_attention_heads=4,
+        num_kv_heads=4,
+        intermediate_size=256,
+        context_length=2048,
+        vocab_size=1024,
     )
     assert spec.active_params_b == 10.0
 
@@ -48,9 +54,16 @@ def test_normalize_dense_active_params_equals_total():
 def test_normalize_moe_active_params_derived():
     moe = MoESpec(num_experts=8, active_experts=2, shared_experts=0)
     spec = normalize_model_spec(
-        name="x", total_params_b=141.0, num_layers=2, hidden_size=128,
-        num_attention_heads=4, num_kv_heads=4, intermediate_size=256,
-        context_length=2048, vocab_size=1024, moe=moe,
+        name="x",
+        total_params_b=141.0,
+        num_layers=2,
+        hidden_size=128,
+        num_attention_heads=4,
+        num_kv_heads=4,
+        intermediate_size=256,
+        context_length=2048,
+        vocab_size=1024,
+        moe=moe,
     )
     # 141 * (2+0)/8 = 35.25
     assert spec.active_params_b == 35.25
@@ -93,6 +106,7 @@ def test_list_models_returns_copy():
 
 def test_modelspec_is_frozen():
     import dataclasses
+
     assert dataclasses.fields(ModelSpec)
     try:
         LLAMA_8B.name = "changed"  # type: ignore[misc]

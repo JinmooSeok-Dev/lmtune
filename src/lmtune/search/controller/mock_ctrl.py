@@ -8,6 +8,7 @@
 
 scripted_params=None 이면 axis 의 첫 값으로 모두 채운 default params 반복.
 """
+
 from __future__ import annotations
 
 import logging
@@ -59,7 +60,11 @@ class MockController(Controller):
         return {a.name: _axis_default(a) for a in active_axes}
 
     def tell(self, params, *, value, status, metadata=None) -> None:
-        self.tells.append({
-            "params": dict(params), "value": value, "status": status,
-            "metadata": dict(metadata or {}),
-        })
+        self.tells.append(
+            {
+                "params": dict(params),
+                "value": value,
+                "status": status,
+                "metadata": dict(metadata or {}),
+            }
+        )
