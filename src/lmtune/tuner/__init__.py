@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from lmtune.tuner.base import Pruner, Sampler
 
-__all__ = ["Pruner", "Sampler"]
+__all__ = ["Pruner", "Sampler", "make_sampler"]
 
 
 def __getattr__(name: str):
-    # Optuna 어댑터는 lazy — Optuna 미설치 환경 에서도 tuner.Sampler /
+    # Optuna 어댑터 + factory 는 lazy — Optuna 미설치 환경에서도 tuner.Sampler /
     # tuner.Pruner 만 import 하면 동작.
     if name in ("OptunaSamplerAdapter", "OptunaPrunerAdapter"):
         from lmtune.tuner.optuna_adapter import OptunaPrunerAdapter, OptunaSamplerAdapter
@@ -23,4 +23,8 @@ def __getattr__(name: str):
             "OptunaSamplerAdapter": OptunaSamplerAdapter,
             "OptunaPrunerAdapter": OptunaPrunerAdapter,
         }[name]
+    if name == "make_sampler":
+        from lmtune.tuner.factory import make_sampler
+
+        return make_sampler
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
