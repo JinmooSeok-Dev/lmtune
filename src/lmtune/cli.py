@@ -120,14 +120,33 @@ def cmd_run(
             console.print(f"  prom samples: {prom_collector.samples_written}")
 
     store = DuckDBStore(db or _default_db_path())
+    profile_yaml_text = profile.read_text(encoding="utf-8")
+    git_sha = _git_sha()
     store.record_run(
         artifact,
         profile_obj,
         endpoint_obj,
-        profile_yaml_text=profile.read_text(encoding="utf-8"),
-        git_sha=_git_sha(),
+        profile_yaml_text=profile_yaml_text,
+        git_sha=git_sha,
     )
     store.close()
+
+    # R0 contract snapshot — raw_dir/<run_id>/result.json 로 BenchmarkResult 덤프.
+    # 후속 PR (OD) 가 ArtifactStore 경유로 적재 시 본 JSON 이 source of truth.
+    from lmtune.contracts import to_records  # noqa: F401  (호환성 import 검증용)
+    from lmtune.runners.result_emit import runartifact_to_result
+
+    result = runartifact_to_result(
+        artifact,
+        profile_obj,
+        endpoint_obj,
+        profile_yaml=profile_yaml_text,
+        git_sha=git_sha,
+        tool_versions={artifact.runner_kind: artifact.tool_version},
+    )
+    (raw_dir / run_id / "result.json").write_text(
+        result.model_dump_json(indent=2, exclude_none=True), encoding="utf-8"
+    )
 
     console.print(f"[bold green]done[/bold green] status={artifact.status}")
     if artifact.metrics:
