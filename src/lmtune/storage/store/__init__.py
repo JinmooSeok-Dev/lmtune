@@ -10,5 +10,11 @@ from __future__ import annotations
 from lmtune.storage.store.base import ArtifactStore
 from lmtune.storage.store.duckdb_adapter import DuckDBArtifactStore
 from lmtune.storage.store.in_memory import InMemoryArtifactStore
+from lmtune.storage.store.local import LocalArtifactStore
 
-__all__ = ["ArtifactStore", "InMemoryArtifactStore", "DuckDBArtifactStore"]
+__all__ = [
+    "ArtifactStore",
+    "InMemoryArtifactStore",
+    "DuckDBArtifactStore",
+    "LocalArtifactStore",
+]
