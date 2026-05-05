@@ -133,8 +133,9 @@ def cmd_run(
 
     # R0 contract snapshot — raw_dir/<run_id>/result.json 로 BenchmarkResult 덤프.
     # 후속 PR (OD) 가 ArtifactStore 경유로 적재 시 본 JSON 이 source of truth.
-    from lmtune.contracts import to_records  # noqa: F401  (호환성 import 검증용)
+    from lmtune.contracts import to_records
     from lmtune.runners.result_emit import runartifact_to_result
+    from lmtune.storage.store import LocalArtifactStore
 
     result = runartifact_to_result(
         artifact,
@@ -147,6 +148,9 @@ def cmd_run(
     (raw_dir / run_id / "result.json").write_text(
         result.model_dump_json(indent=2, exclude_none=True), encoding="utf-8"
     )
+    # LocalArtifactStore — records 를 kind 별 jsonl 로 raw_dir/<run_id>/records/.
+    # DuckDB 미설치 환경 / git archive / S3 sync 시 동일 데이터 보유.
+    LocalArtifactStore(raw_dir / run_id / "records").put(to_records(result))
 
     console.print(f"[bold green]done[/bold green] status={artifact.status}")
     if artifact.metrics:

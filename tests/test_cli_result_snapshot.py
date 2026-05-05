@@ -183,3 +183,92 @@ model: m
     res = BenchmarkResult.model_validate(payload)
     assert res.run_id == fake_run_id
     assert res.kind == "BenchmarkResult"
+
+
+def test_cmd_run_writes_local_artifact_store_records(tmp_path):
+    """`bench run` 이 raw_dir/<run_id>/records/ 에 LocalArtifactStore jsonl 적재."""
+    from lmtune.contracts import QuerySpec
+    from lmtune.storage.store import LocalArtifactStore
+
+    profile_yaml = tmp_path / "p.yaml"
+    profile_yaml.write_text(
+        """\
+apiVersion: lmtune/v1alpha1
+slug: las-test
+name: LAS
+stage: 1
+runner: guidellm
+mode: concurrency
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 64
+  output_tokens_mean: 32
+  concurrency: 1
+  request_count: 1
+""",
+        encoding="utf-8",
+    )
+    endpoint_yaml = tmp_path / "e.yaml"
+    endpoint_yaml.write_text(
+        """\
+apiVersion: lmtune/v1alpha1
+slug: las-ep
+name: ep
+url: http://localhost:8000/v1
+model: m
+""",
+        encoding="utf-8",
+    )
+    db_path = tmp_path / "db.duckdb"
+    raw_dir = tmp_path / "raw"
+    fake_run_id = "01TESTLASRECORDS000000000"
+
+    runner = CliRunner()
+    with (
+        patch("lmtune.cli.ULID", return_value=fake_run_id),
+        patch("lmtune.cli.get_runner") as mock_get_runner,
+        patch("lmtune.cli._git_sha", return_value="lasgit"),
+    ):
+        mr = mock_get_runner.return_value
+        mr.kind = "guidellm"
+        mr.run.return_value = _make_artifact(fake_run_id, raw_dir / fake_run_id)
+        (raw_dir / fake_run_id).mkdir(parents=True, exist_ok=True)
+
+        out = runner.invoke(
+            app,
+            [
+                "run",
+                "-p",
+                str(profile_yaml),
+                "-e",
+                str(endpoint_yaml),
+                "--db",
+                str(db_path),
+                "--raw-dir",
+                str(raw_dir),
+            ],
+        )
+
+    assert out.exit_code == 0, out.output
+
+    records_dir = raw_dir / fake_run_id / "records"
+    assert records_dir.is_dir(), f"records dir missing: {records_dir}"
+    # run.jsonl 은 항상 1건 (BenchmarkResult.to_records 가 RunRecord 1 건 emit)
+    assert (records_dir / "run.jsonl").exists()
+    # metric.jsonl 도 _make_artifact 의 metrics dict 가 풀려서 emit 됨
+    assert (records_dir / "metric.jsonl").exists()
+
+    # LocalArtifactStore 로 다시 읽어 동일한 run_id 가 살아있는지 round-trip
+    store = LocalArtifactStore(records_dir)
+    runs = store.query(QuerySpec(record_kind="run"))
+    assert len(runs) == 1
+    assert runs[0].run_id == fake_run_id
+    assert runs[0].profile_slug == "las-test"
+    assert runs[0].endpoint_slug == "las-ep"
+
+    metrics = store.query(QuerySpec(record_kind="metric"))
+    # _make_artifact 의 metrics: ttft.p99=200, throughput_tok.avg=130 → 2 건
+    assert len(metrics) == 2
+    metric_keys = {(m.metric, m.p) for m in metrics}
+    assert ("ttft", "p99") in metric_keys
+    assert ("throughput_tok", "avg") in metric_keys
