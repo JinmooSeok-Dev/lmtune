@@ -121,5 +121,10 @@ Outer loop (시각화/분석):
   - **#49 S1-factory** — `tuner.factory.make_sampler` 통합 dispatch
   - **#50 R0-roundtrip** — DuckDB PK-less 테이블 INSERT 분리 + BenchmarkResult round-trip 통합 검증
   - **#51 SS-tz** — DuckDBArtifactStore datetime UTC round-trip (tz-aware 일관성)
+  - **#53 SS+Local** — LocalArtifactStore (JSONL per kind, primary_key dedup) — 3-way (Mem/Local/Duck) query 동등성 검증
+  - **#54 SS-cli** — `bench run` 이 raw_dir/<run_id>/records/ 에 LocalArtifactStore mirror 적재 (result.json + records 양립)
+  - **#55 SS-cli2** — `lmtune contracts records-from-result` — BenchmarkResult JSON → records/<kind>.jsonl 변환 도구 (archive/migration)
+  - **#56 SS-migrate** — `lmtune storage migrate` — local↔duckdb backend 무관 일괄 복사 (`list-backends` 포함, PLUG 진입로)
   - 부수: **#41 fix(ci)** — vllm_restart venv fallback + ruff format 일괄 적용 (post-rename)
-- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module), PLUG (LLMOracleSampler/PostgresStore stub)
+  - 부수: **#52 docs** — REFACTOR-PLAN CHANGELOG 13 PR 누적 정리
+- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module), PLUG (LLMOracleSampler / PostgresStore stub)
