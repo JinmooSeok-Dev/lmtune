@@ -23,7 +23,6 @@ from lmtune.search.controller import (
 )
 from lmtune.search.space import Axis
 
-
 # ---- 공통 fixture: 4-axis test space ---------------------------------------
 
 def _axes() -> list[Axis]:
@@ -137,9 +136,7 @@ class _StubHandler(BaseHTTPRequestHandler):
                     params[a["name"]] = a["values"][0]
                 elif a["kind"] == "bool":
                     params[a["name"]] = False
-                elif a["kind"] == "int":
-                    params[a["name"]] = a["low"]
-                elif a["kind"] in ("float", "log_uniform"):
+                elif a["kind"] == "int" or a["kind"] in ("float", "log_uniform"):
                     params[a["name"]] = a["low"]
             payload = json.dumps({"params": params}).encode()
             self.send_response(200)

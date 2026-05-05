@@ -9,8 +9,10 @@
 """
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -104,11 +106,19 @@ def test_vllm_restart_dry_run_emits_kebab_flags(endpoint_yaml, tmp_path):
         "async_scheduling": True,
         "enforce_eager": False,  # boolean false → flag 미출력 (스크립트 규약)
     })
+    # VENV_PY 우선 (로컬 .venv), 없으면 sys.executable 로 fallback (CI 환경).
+    # VENV_VLLM 은 dry-run 에서 검증 안 됨.
+    py_path = str(REPO_ROOT / ".venv" / "bin" / "python")
+    if not os.access(py_path, os.X_OK):
+        py_path = sys.executable
     proc = subprocess.run(
         ["bash", str(RESTART_SH), str(endpoint_yaml), "--dry-run"],
-        capture_output=True, text=True, env={"VENV_PY": str(REPO_ROOT / ".venv" / "bin" / "python"),
-                                              "VENV_VLLM": str(REPO_ROOT / ".venv" / "bin" / "vllm"),
-                                              "PATH": "/usr/bin:/bin"},
+        capture_output=True, text=True,
+        env={
+            "VENV_PY": py_path,
+            "VENV_VLLM": str(REPO_ROOT / ".venv" / "bin" / "vllm"),
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        },
     )
     assert proc.returncode == 0, f"dry-run failed: {proc.stderr}"
     out = proc.stdout

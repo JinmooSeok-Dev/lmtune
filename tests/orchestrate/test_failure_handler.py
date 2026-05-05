@@ -13,7 +13,6 @@ from lmtune.orchestrate.failure_handler import (
     suggest_recovery,
 )
 
-
 # ---- classify_outcome -----------------------------------------------------
 
 def test_classify_completed_is_success():
