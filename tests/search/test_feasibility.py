@@ -198,3 +198,84 @@ def test_evaluate_skips_undefined_axis():
     rep = evaluate({"x": 1}, environment=Environment.b200_dual_node(),
                    constraints=c)
     assert rep.feasible
+
+
+# --- gpt-oss-120b on B200 16-GPU scenarios (사용자 production 환경) ---
+
+
+def test_gpt_oss_120b_default_tp8_dp2_dual_node_feasible(constraints):
+    """현재 production: TP=8 × DP=2 = 16 GPU on dual-node B200 — feasible.
+
+    chart values (decode.parallelism.tensor=8 + decode.replicas=2) 와 정렬.
+    """
+    p = _make_params(tensor_parallel_size=8, pipeline_parallel_size=1,
+                     data_parallel_size=2, expert_parallel_size=1,
+                     ep_strategy="standard")
+    env = Environment.b200_dual_node()
+    rep = evaluate(p, environment=env, constraints=constraints,
+                   model=by_name("gpt-oss-120b"))
+    assert rep.feasible, rep.reason()
+
+
+def test_gpt_oss_120b_tp16_cross_node_rejected(constraints):
+    """TP=16 → npus_per_server(8) 초과 → c2_tp_single_node fail. NCCL all-reduce
+    가 cross-node 가는 토폴로지는 비효율 (NVLink 900Gbps → IB 400Gbps drop).
+    """
+    p = _make_params(tensor_parallel_size=16, pipeline_parallel_size=1,
+                     data_parallel_size=1)
+    env = Environment.b200_dual_node()
+    rep = evaluate(p, environment=env, constraints=constraints,
+                   model=by_name("gpt-oss-120b"))
+    assert not rep.feasible
+    assert any(f["id"] == "c2_tp_single_node" for f in rep.failures), rep.reason()
+
+
+def test_gpt_oss_120b_tp_must_divide_64_attention_heads(constraints):
+    """gpt-oss-120b 의 num_attention_heads=64. TP ∈ {1,2,4,8} 만 허용.
+    TP=3 같은 비-divisor 는 c4_heads_div_tp 로 reject.
+    """
+    p = _make_params(tensor_parallel_size=3, pipeline_parallel_size=1)
+    env = Environment.b200_dual_node()
+    rep = evaluate(p, environment=env, constraints=constraints,
+                   model=by_name("gpt-oss-120b"))
+    assert not rep.feasible
+    assert any(f["id"] == "c4_heads_div_tp" for f in rep.failures), rep.reason()
+
+
+def test_gpt_oss_120b_ep_must_divide_128_experts(constraints):
+    """gpt-oss-120b MoE 128 experts. EP ∈ {1,2,4,8,16,32,64,128} 만 허용.
+    EP=3 같은 비-divisor 는 c5_experts_div_ep 로 reject.
+    """
+    p = _make_params(tensor_parallel_size=4, pipeline_parallel_size=1,
+                     data_parallel_size=1, expert_parallel_size=3,
+                     ep_strategy="standard")
+    env = Environment.b200_dual_node()
+    rep = evaluate(p, environment=env, constraints=constraints,
+                   model=by_name("gpt-oss-120b"))
+    assert not rep.feasible
+    assert any(f["id"] == "c5_experts_div_ep" for f in rep.failures), rep.reason()
+
+
+def test_gpt_oss_120b_wide_ep_dp16_dual_node_feasible(constraints):
+    """Wide-EP 시나리오: DP=16 EP=16 TP=1 — wide-ep-lws path 의 본격 활용 형태."""
+    p = _make_params(tensor_parallel_size=1, pipeline_parallel_size=1,
+                     data_parallel_size=16, expert_parallel_size=16,
+                     ep_strategy="wide")
+    env = Environment.b200_dual_node()
+    rep = evaluate(p, environment=env, constraints=constraints,
+                   model=by_name("gpt-oss-120b"))
+    assert rep.feasible, rep.reason()
+
+
+def test_gpt_oss_120b_pp2_cross_node_requires_fabric(constraints):
+    """PP=2 + cross_node_type='none' → c10_multi_node fail. PP 가 노드를 가로지르려면
+    IB/RoCE 가 필요.
+    """
+    p = _make_params(tensor_parallel_size=8, pipeline_parallel_size=2,
+                     data_parallel_size=1, cross_node_type="none")
+    env = Environment.b200_dual_node()
+    rep = evaluate(p, environment=env, constraints=constraints,
+                   model=by_name("gpt-oss-120b"))
+    assert not rep.feasible
+    failure_ids = {f["id"] for f in rep.failures}
+    assert "c9_pp_cross_node" in failure_ids or "c10_multi_node" in failure_ids, rep.reason()

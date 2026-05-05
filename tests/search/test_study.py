@@ -78,3 +78,66 @@ def test_study_warmstart_seeds_top_trial(tmp_path: Path):
     ts = study.run(CallableObjective(lambda p: float(p["x"])), max_trials=5)
     # The first trial's optuna-known best should include 16 because we enqueued it.
     assert any(t.params["x"] == 16 for t in ts)
+
+
+def test_study_feasibility_skips_infeasible_candidates(tmp_path: Path):
+    """Feasibility wiring — infeasible 후보 (TP=16 single-node) 는 helmfile
+    redeploy 0회로 즉시 prune. 결과 trial 들은 모두 feasible (TP ≤ 8)."""
+    from lmtune.search.feasibility import Environment
+
+    sp = SearchSpace(
+        name="b3-mini",
+        axes=[
+            Axis("tensor_parallel_size", "categorical", values=[1, 2, 4, 8, 16]),
+        ],
+        feasibility_constraints=[
+            {
+                "id": "c2_tp_single_node",
+                "rule": "tensor_parallel_size <= environment.npus_per_server",
+                "message": "TP must fit single node",
+            },
+        ],
+    )
+    store = _store(tmp_path)
+    cfg = StudyConfig(
+        name="feas",
+        strategy="grid",
+        space=sp,
+        seed=0,
+        context={"environment": Environment.b200_single_node()},
+    )
+    study = Study(cfg, store)
+    ts = study.run(
+        CallableObjective(lambda p: float(p["tensor_parallel_size"])),
+        max_trials=8,
+    )
+    # All completed trials are feasible (TP ≤ 8).
+    assert ts, "expected at least one feasible trial"
+    for t in ts:
+        assert t.params["tensor_parallel_size"] <= 8, t.params
+    # The infeasible TP=16 was pruned by ask() before objective ran.
+    assert study._infeasible_count >= 1
+
+
+def test_study_feasibility_disabled_when_no_environment(tmp_path: Path):
+    """No environment in context → feasibility checker NOT installed → 모든
+    grid 조합이 그대로 실행 (안전한 default 동작)."""
+    sp = SearchSpace(
+        name="b3-mini",
+        axes=[Axis("tensor_parallel_size", "categorical", values=[1, 8, 16])],
+        feasibility_constraints=[
+            {
+                "id": "c2_tp_single_node",
+                "rule": "tensor_parallel_size <= environment.npus_per_server",
+            },
+        ],
+    )
+    store = _store(tmp_path)
+    cfg = StudyConfig(name="no-env", strategy="grid", space=sp)
+    study = Study(cfg, store)
+    ts = study.run(
+        CallableObjective(lambda p: float(p["tensor_parallel_size"])),
+        max_trials=10,
+    )
+    assert {t.params["tensor_parallel_size"] for t in ts} == {1, 8, 16}
+    assert study._infeasible_count == 0

@@ -62,6 +62,12 @@ class SearchSpace:
     name: str
     axes: list[Axis]
     api_version: str = "lmtune/search/v1alpha1"
+    # feasibility_constraints — declarative cross-axis rules (vllm-config-puzzle
+    # validation.ts 1:1). Sampler 가 sample 한 (params, environment, model) 에
+    # 대해 src/lmtune/search/feasibility.py 가 evaluator. infeasible → study.ask()
+    # 가 retry, retry 한도 초과 시 그 trial PRUNED 로 기록 (helmfile redeploy 0회).
+    # 본 dataclass 는 의존성 회피 위해 dict 로 보유 (Constraint 객체는 lazy load).
+    feasibility_constraints: list[dict[str, Any]] = field(default_factory=list)
 
     def axis_by_name(self, name: str) -> Axis:
         for a in self.axes:
@@ -90,15 +96,15 @@ class SearchSpace:
         return n
 
     def to_yaml(self) -> str:
-        return yaml.safe_dump(
-            {
-                "apiVersion": self.api_version,
-                "kind": "SearchSpace",
-                "name": self.name,
-                "axes": {a.name: _axis_to_dict(a) for a in self.axes},
-            },
-            sort_keys=False,
-        )
+        payload: dict[str, Any] = {
+            "apiVersion": self.api_version,
+            "kind": "SearchSpace",
+            "name": self.name,
+            "axes": {a.name: _axis_to_dict(a) for a in self.axes},
+        }
+        if self.feasibility_constraints:
+            payload["feasibility_constraints"] = list(self.feasibility_constraints)
+        return yaml.safe_dump(payload, sort_keys=False)
 
 
 def _axis_to_dict(a: Axis) -> dict:
@@ -145,4 +151,5 @@ def parse_space(raw: dict) -> SearchSpace:
         name=raw.get("name") or "unnamed",
         axes=axes,
         api_version=raw.get("apiVersion", "lmtune/search/v1alpha1"),
+        feasibility_constraints=list(raw.get("feasibility_constraints") or []),
     )

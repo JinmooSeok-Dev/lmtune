@@ -121,6 +121,31 @@ Error: k8s-job backend 은 Phase S4 에서 활성화됩니다
 - Code: `b200/scripts/util/pf.sh::current_model` — `/v1/models` 응답에서 model id 추출, mismatch 자동 감지
 - Test: `b200/scripts/tests/test_env_util.sh` (값 매핑), `test_pf_util.sh` (model id 추출)
 
+## R8 — TP/EP/DP infeasible 후보가 helmfile redeploy 후에야 reject (3분 낭비)
+
+**증상**
+- `lmtune search start --space b200/search-spaces/b3_parallelism.yaml` 가 sampler 에서 `(tp=16, ep=3)` 같은 명백히 infeasible 한 후보를 sample
+- helmfile apply (3분) → vLLM startup → engine 이 `Number of attention heads (64) % tensor_parallel_size (16) != 0` 같은 에러로 crash → SLO timeout 으로 reject
+- 한 trial 당 3-5분 낭비, study 전체 wallclock 폭발
+
+**진단**
+sampler (TPE/Random/NSGA-II) 가 search-space 의 axis 개별 분포만 보고 sample. axis 간 cross-constraint (`model.numAttentionHeads % tp == 0`, `model.numExperts % ep == 0`, `tp <= npus_per_server` 등) 는 axis 정의에 표현 불가 — sample 한 후 별도 evaluator 가 reject 해야 한다.
+
+vllm-config-puzzle simulator (TypeScript) 가 같은 문제를 `validation.ts` 의 10 룰로 풀고 있음. 우리는 그 알고리즘을 1:1 port 해서 본 프로젝트의 search loop 에 wire-up.
+
+**영속화 위치**
+- Code: `src/lmtune/search/feasibility.py` — Constraint AST evaluator (whitelist-only, eval 안전). 12 룰 declarative loader.
+- Code: `b200/search-spaces/b3_parallelism.yaml::feasibility_constraints` — vllm-config-puzzle/validation.ts:31~162 의 10 룰 + 2 보조 (warning/dp-pair) 1:1
+- Code: `src/lmtune/models/registry.py` — gpt-oss-120b/Llama/Qwen/MoE 메타 카탈로그 (constraint 의 `model.*` 참조)
+- Code: `src/lmtune/search/study.py::Study.ask()` — sample 후 `_FeasibilityChecker.is_feasible()` 호출, infeasible 시 `optuna.tell(state=PRUNED)` 후 retry (max 30회). helmfile redeploy 0회.
+- Code: `src/lmtune/search/space.py::SearchSpace.feasibility_constraints` — YAML 의 `feasibility_constraints` 블록을 SearchSpace 에 carry, `to_yaml()` 에서도 round-trip
+- Test: `tests/search/test_feasibility.py` — 12 룰 + gpt-oss-120b 5 시나리오 (TP=8/DP=2 feasible, TP=16 reject, TP=3 reject by heads%TP, EP=3 reject by experts%EP, wide-EP DP=16 feasible, PP=2 cross_node=none reject)
+- Test: `tests/search/test_study.py::test_study_feasibility_skips_infeasible_candidates` — Study.run() 이 infeasible 후보를 helmfile 호출 없이 prune 하는지 검증
+- Test: `tests/search/test_study.py::test_study_feasibility_disabled_when_no_environment` — context 에 environment 없으면 checker 미설치 (안전한 default)
+
+**활성 조건**
+`StudyConfig.context['environment']` 에 `Environment` 객체 (b200_dual_node / b200_single_node / local_single_gpu) 를 명시 주입해야 활성. `model_id` 도 같이 넣으면 model.* 참조도 평가. 둘 중 하나라도 없으면 checker 미설치 — 모든 candidate 가 그대로 실행 (회귀 안전).
+
 ---
 
 ## 신규 결함 entry 추가 절차
