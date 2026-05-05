@@ -167,6 +167,15 @@ axes:
     active_if: {model_family: moe}
     # eplb = Expert Parallelism Load Balancer (B2 의 enable_eplb 와 페어링)
 
+  # ─────────── (7) Context length — single-value axis (명시적 표현) ───────────
+  # max_model_len 을 axis 로 두면 yaml 만 봐도 사용 컨텍스트 명시적 + sweep 확장
+  # 한 줄. 모델별로 default 값 다름 — gpt-oss-120b/Llama 130K, Mixtral 65K, Gemma
+  # 8K. 본 정본 search-space 에선 보수적으로 32K, 후속 study 가 model-specific
+  # min.yaml 에서 override 권장.
+  max_model_len:
+    type: categorical
+    values: [32768]
+
 
 # ─────────── Feasibility constraints (vllm-config-puzzle/validation.ts:31-162 1:1) ───────────
 # Sampler 가 sample 한 후 src/lmtune/search/feasibility.py 가 evaluator.
