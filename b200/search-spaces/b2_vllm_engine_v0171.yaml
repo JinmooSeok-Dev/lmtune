@@ -20,9 +20,12 @@ axes:
     type: categorical
     values: [2048, 4096, 8192, 16384]
 
-  # max_model_len 은 axis 에서 제거 — endpoint YAML 의 baseline (131072) 을 그대로
-  # 사용. gpt-oss-120b native max = 131072. KV cache 압박은 max_num_seqs ×
-  # max_num_batched_tokens 와 parallelism (별도 search-space) 으로 다룸.
+  # max_model_len — gpt-oss-120b native max = 131072. 단일 값 axis 로 두어
+  # yaml 만 봐도 사용 컨텍스트가 명시적이고, sweep 확장 (e.g. [32768, 65536,
+  # 131072]) 이 한 줄. lmtune 흐름에서 axis 우선, endpoint baseline 은 fallback.
+  max_model_len:
+    type: categorical
+    values: [131072]
 
   enable_chunked_prefill:
     type: bool
