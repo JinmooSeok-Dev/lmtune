@@ -10,7 +10,9 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 Direction = Literal["lower_better", "higher_better", "neutral"]
-Category = Literal["latency", "throughput", "cost", "energy", "quality", "resource", "agent", "other"]
+Category = Literal[
+    "latency", "throughput", "cost", "energy", "quality", "resource", "agent", "other"
+]
 Source = Literal["request", "session", "prom", "derived"]
 
 
@@ -56,7 +58,9 @@ def direction_of(name: str) -> Direction:
 register(MetricDef("ttft", "ms", "lower_better", "latency", description="Time to First Token"))
 register(MetricDef("itl", "ms", "lower_better", "latency", description="Inter-Token Latency"))
 register(MetricDef("tpot", "ms", "lower_better", "latency", description="Time Per Output Token"))
-register(MetricDef("e2e", "ms", "lower_better", "latency", description="End-to-End request latency"))
+register(
+    MetricDef("e2e", "ms", "lower_better", "latency", description="End-to-End request latency")
+)
 
 # Throughput (높을수록 좋음)
 register(MetricDef("throughput_req", "req/s", "higher_better", "throughput"))
@@ -78,13 +82,31 @@ register(MetricDef("cached_tokens", "tok", "higher_better", "agent"))
 register(MetricDef("thinking_tokens", "tok", "neutral", "agent"))
 register(MetricDef("prefix_hit_rate", "ratio", "higher_better", "agent", source="derived"))
 register(MetricDef("input_output_ratio", "ratio", "neutral", "agent", source="derived"))
-register(MetricDef("eutb", "ratio", "higher_better", "quality", source="derived",
-                   description="Effectiveness under Token Budget (SWE-Effi arXiv:2509.09853)"))
-register(MetricDef("variance_cv", "ratio", "lower_better", "quality", source="derived",
-                   description="Coefficient of Variation across repeat runs"))
+register(
+    MetricDef(
+        "eutb",
+        "ratio",
+        "higher_better",
+        "quality",
+        source="derived",
+        description="Effectiveness under Token Budget (SWE-Effi arXiv:2509.09853)",
+    )
+)
+register(
+    MetricDef(
+        "variance_cv",
+        "ratio",
+        "lower_better",
+        "quality",
+        source="derived",
+        description="Coefficient of Variation across repeat runs",
+    )
+)
 
 # Resource (Prometheus)
 register(MetricDef("vllm:gpu_cache_usage_perc", "ratio", "neutral", "resource", source="prom"))
-register(MetricDef("vllm:prefix_cache_hit_rate", "ratio", "higher_better", "resource", source="prom"))
+register(
+    MetricDef("vllm:prefix_cache_hit_rate", "ratio", "higher_better", "resource", source="prom")
+)
 register(MetricDef("vllm:num_requests_running", "count", "neutral", "resource", source="prom"))
 register(MetricDef("vllm:num_requests_waiting", "count", "lower_better", "resource", source="prom"))

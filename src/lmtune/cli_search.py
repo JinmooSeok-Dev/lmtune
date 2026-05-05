@@ -1,8 +1,8 @@
 """`bench search ...` subcommands — Phase S1 inline executor.
 
-    bench search start  --space <yaml> --strategy <grid|random|lhc> ...
-    bench search status <study_id>
-    bench search resume <study_id>  (S1: logs warning; resume needs backend=k8s, S3)
+bench search start  --space <yaml> --strategy <grid|random|lhc> ...
+bench search status <study_id>
+bench search resume <study_id>  (S1: logs warning; resume needs backend=k8s, S3)
 """
 
 from __future__ import annotations
@@ -37,15 +37,25 @@ def _default_db_path() -> Path:
 
 @app.command("start")
 def cmd_start(
-    space: Annotated[Path, typer.Option(..., "--space", exists=True, readable=True, help="SearchSpace YAML")],
+    space: Annotated[
+        Path, typer.Option(..., "--space", exists=True, readable=True, help="SearchSpace YAML")
+    ],
     strategy: Annotated[str, typer.Option("--strategy", help="grid | random | lhc")] = "random",
     endpoint: Annotated[
         Path | None,
-        typer.Option("--endpoint", "-e", exists=True, readable=True, help="Endpoint YAML (ScoreObjective 용)"),
+        typer.Option(
+            "--endpoint", "-e", exists=True, readable=True, help="Endpoint YAML (ScoreObjective 용)"
+        ),
     ] = None,
     profile: Annotated[
         list[Path] | None,
-        typer.Option("--profile", "-p", exists=True, readable=True, help="Workload profile YAML (여러개 가능)"),
+        typer.Option(
+            "--profile",
+            "-p",
+            exists=True,
+            readable=True,
+            help="Workload profile YAML (여러개 가능)",
+        ),
     ] = None,
     max_trials: Annotated[int, typer.Option("--max-trials", help="최대 trial 수")] = 20,
     name: Annotated[str | None, typer.Option("--name")] = None,
@@ -55,25 +65,40 @@ def cmd_start(
     n_samples: Annotated[int | None, typer.Option("--n-samples", help="lhc 전용")] = None,
     warmstart_db: Annotated[
         Path | None,
-        typer.Option("--warmstart-db", exists=True, readable=True, help="과거 DuckDB (archive) 에서 seed 추출"),
+        typer.Option(
+            "--warmstart-db",
+            exists=True,
+            readable=True,
+            help="과거 DuckDB (archive) 에서 seed 추출",
+        ),
     ] = None,
     warmstart_top_k: Annotated[int, typer.Option("--warmstart-top-k")] = 5,
     dry_run: Annotated[
         bool,
-        typer.Option("--dry-run", help="CallableObjective(constant=0) 로 구조만 검증. vLLM 없어도 동작"),
+        typer.Option(
+            "--dry-run", help="CallableObjective(constant=0) 로 구조만 검증. vLLM 없어도 동작"
+        ),
     ] = False,
     adapter: Annotated[
         str,
-        typer.Option("--adapter", help="none | local-vllm | llmd-k8s. none 이면 params 를 endpoint 에 적용 안 함 (S1 호환)"),
+        typer.Option(
+            "--adapter",
+            help="none | local-vllm | llmd-k8s. none 이면 params 를 endpoint 에 적용 안 함 (S1 호환)",
+        ),
     ] = "none",
     backend: Annotated[
         str,
-        typer.Option("--backend", help="inline | process-pool (S3 dev, workers=1 권장) | k8s-job (S4)"),
+        typer.Option(
+            "--backend", help="inline | process-pool (S3 dev, workers=1 권장) | k8s-job (S4)"
+        ),
     ] = "inline",
     workers: Annotated[
         int,
-        typer.Option("--workers", help="동시 실행 수. process-pool + 단일 GPU/DuckDB 에서는 1 만 안전. "
-                                        "실제 병렬은 k8s-job backend(S4) 에서."),
+        typer.Option(
+            "--workers",
+            help="동시 실행 수. process-pool + 단일 GPU/DuckDB 에서는 1 만 안전. "
+            "실제 병렬은 k8s-job backend(S4) 에서.",
+        ),
     ] = 1,
     budget_hours: Annotated[
         float | None,
@@ -84,8 +109,8 @@ def cmd_start(
         typer.Option(
             "--objectives",
             help="Multi-objective: 쉼표 구분 'metric:workload:direction' 리스트. "
-                 "예: 'throughput_tok_avg:short:maximize,ttft_p99:short:minimize'. "
-                 "지정 시 NSGA-II/III 등 multi-obj 샘플러 권장.",
+            "예: 'throughput_tok_avg:short:maximize,ttft_p99:short:minimize'. "
+            "지정 시 NSGA-II/III 등 multi-obj 샘플러 권장.",
         ),
     ] = None,
     repeats: Annotated[
@@ -97,7 +122,7 @@ def cmd_start(
         typer.Option(
             "--cluster-env",
             help="Feasibility 활성용 환경 preset. b200-dual-node | b200-single-node | "
-                 "local-single-gpu. 미지정 시 feasibility evaluator 미설치 (회귀 안전).",
+            "local-single-gpu. 미지정 시 feasibility evaluator 미설치 (회귀 안전).",
         ),
     ] = None,
     ttft_slo_ms: Annotated[
@@ -117,6 +142,7 @@ def cmd_start(
     directions_list: list[str] | None = None
     if objectives:
         from lmtune.search.objective_pareto import ObjectiveKey
+
         for spec in objectives.split(","):
             parts = [p.strip() for p in spec.split(":")]
             if len(parts) != 3:
@@ -135,9 +161,11 @@ def cmd_start(
     adapter_obj = None
     if adapter == "local-vllm":
         from lmtune.deploy import LocalVLLMAdapter
+
         adapter_obj = LocalVLLMAdapter()
     elif adapter == "llmd-k8s":
         from lmtune.deploy import LLMDK8sAdapter
+
         # endpoint YAML 의 deployment.helmfile_overrides 블록을 읽어 adapter 구성.
         # bare ctor 는 (selector=name=ms-phase1, env=dev) 같은 peer-repo 디폴트라
         # b200/helmfile/inference-scheduling/helmfile-mini.yaml.gotmpl 등 다른
@@ -157,6 +185,7 @@ def cmd_start(
     # infeasible 후보를 helmfile 호출 0회로 prune.
     if cluster_env:
         from lmtune.search.feasibility import Environment as _Env
+
         env_map = {
             "b200-dual-node": _Env.b200_dual_node,
             "b200-single-node": _Env.b200_single_node,
@@ -201,7 +230,9 @@ def cmd_start(
     store = DuckDBStore(db_path)
     study = Study(cfg, store)
 
-    console.print(f"[bold cyan]study_id[/]: {study.study_id}  strategy={strategy}  axes={len(sp.active_axes())}")
+    console.print(
+        f"[bold cyan]study_id[/]: {study.study_id}  strategy={strategy}  axes={len(sp.active_axes())}"
+    )
 
     # Warm-start
     if warmstart_db:
@@ -213,7 +244,8 @@ def cmd_start(
             store.suspend()
         try:
             seeds = warmstart_from_archive(
-                warmstart_db, sp,
+                warmstart_db,
+                sp,
                 endpoint_slug=cfg.endpoint_slug,
                 profile_slugs=profile_slugs or None,
                 top_k=warmstart_top_k,
@@ -243,17 +275,18 @@ def cmd_start(
         )
         if obj_keys:
             from lmtune.search.objective_pareto import ParetoObjective
+
             objective = ParetoObjective(base_objective, obj_keys)
             obj_summary = ", ".join(
                 f"{k.metric}|{k.workload or 'agg'}:{k.direction}" for k in obj_keys
             )
-            console.print(
-                f"[green]multi-objective[/]: {len(obj_keys)} objectives ({obj_summary})"
-            )
+            console.print(f"[green]multi-objective[/]: {len(obj_keys)} objectives ({obj_summary})")
         else:
             objective = base_objective
         if adapter_obj is not None:
-            console.print(f"[green]adapter[/]: {adapter_obj.adapter_label} (params will be applied to endpoint each trial)")
+            console.print(
+                f"[green]adapter[/]: {adapter_obj.adapter_label} (params will be applied to endpoint each trial)"
+            )
 
     if backend == "inline" or dry_run:
         trials = study.run(objective, max_trials=max_trials)
@@ -264,9 +297,11 @@ def cmd_start(
             raise typer.BadParameter("process-pool 백엔드는 endpoint 와 profile 필수")
         from lmtune.orchestrate.backend_process_pool import ProcessPoolBackend
         from lmtune.orchestrate.driver import run_distributed
+
         pool = ProcessPoolBackend(workers=workers)
         trials = run_distributed(
-            study, pool,
+            study,
+            pool,
             endpoint_path=endpoint,
             profile_paths=[Path(p) for p in profile],
             max_trials=max_trials,
@@ -295,8 +330,20 @@ def cmd_status(
 
     # 인덱스: study_id, name, strategy, space_yaml, endpoint_slug, profile_slugs,
     #        metric_name, direction, status, created_at, finished_at, notes
-    (_, name, strategy, _space_yaml, ep_slug, prof_slugs_json,
-     metric_name, direction, status, created_at, finished_at, _notes) = hdr
+    (
+        _,
+        name,
+        strategy,
+        _space_yaml,
+        ep_slug,
+        prof_slugs_json,
+        metric_name,
+        direction,
+        status,
+        created_at,
+        finished_at,
+        _notes,
+    ) = hdr
 
     console.print(f"[bold]{name}[/]  strategy={strategy}  direction={direction}  status={status}")
     console.print(f"  study_id={study_id}  endpoint={ep_slug}  profiles={prof_slugs_json}")
@@ -306,7 +353,9 @@ def cmd_status(
     counts: dict[str, int] = {}
     for t in trials:
         counts[t[3]] = counts.get(t[3], 0) + 1
-    console.print(f"  trials: total={len(trials)}  " + "  ".join(f"{k}={v}" for k, v in counts.items()))
+    console.print(
+        f"  trials: total={len(trials)}  " + "  ".join(f"{k}={v}" for k, v in counts.items())
+    )
 
     rows = store.top_trials(study_id, direction=direction, k=top)
     if not rows:
@@ -346,8 +395,11 @@ def cmd_resume(
 
     sp = load_space_from_text(space_yaml)
     cfg = StudyConfig(
-        name=hdr[1], strategy=strategy, space=sp,
-        metric_name=metric_name, direction=direction,
+        name=hdr[1],
+        strategy=strategy,
+        space=sp,
+        metric_name=metric_name,
+        direction=direction,
         endpoint_slug=ep_slug,
         profile_slugs=json.loads(prof_slugs_json) if prof_slugs_json else [],
     )
@@ -370,7 +422,9 @@ def cmd_resume(
         console.print(f"[green]seeded[/]: {len(seeds)} past trials")
 
     objective = CallableObjective(lambda _p: 0.0)
-    console.print("[yellow]objective=dummy. 실제 재개는 start 에서 --warmstart-db 로 DB 지정하는 것을 권장[/]")
+    console.print(
+        "[yellow]objective=dummy. 실제 재개는 start 에서 --warmstart-db 로 DB 지정하는 것을 권장[/]"
+    )
     study.run(objective, max_trials=max_trials)
 
 
@@ -379,9 +433,13 @@ def cmd_prune(
     study_id: Annotated[str, typer.Argument()],
     p_freeze: Annotated[float, typer.Option("--p-freeze")] = 0.01,
     p_drop: Annotated[float, typer.Option("--p-drop")] = 0.05,
-    imp_drop: Annotated[float, typer.Option("--imp-drop", help="importance threshold for drop")] = 0.05,
+    imp_drop: Annotated[
+        float, typer.Option("--imp-drop", help="importance threshold for drop")
+    ] = 0.05,
     top_frac: Annotated[float, typer.Option("--top-frac")] = 0.25,
-    apply: Annotated[bool, typer.Option("--apply", help="write a narrowed SearchSpace YAML next to the original")] = False,
+    apply: Annotated[
+        bool, typer.Option("--apply", help="write a narrowed SearchSpace YAML next to the original")
+    ] = False,
 ):
     """Run ANOVA + RF importance + bound-tighten on a study's completed trials."""
     import json as _json
@@ -413,10 +471,7 @@ def cmd_prune(
     # Analyses
     anova = anova_per_axis(trials, p_freeze=p_freeze, p_drop=p_drop)
     importance = axis_importance(trials, drop_threshold=imp_drop)
-    axes_spec = [
-        {"name": a.name, "kind": a.kind, "low": a.low, "high": a.high}
-        for a in sp.axes
-    ]
+    axes_spec = [{"name": a.name, "kind": a.kind, "low": a.low, "high": a.high} for a in sp.axes]
     shrink = tighten_bounds(trials, axes_spec, top_frac=top_frac)
 
     # Emit JSON report
@@ -431,7 +486,8 @@ def cmd_prune(
                 "f_stat": a.f_stat,
                 "recommendation": a.recommendation,
                 "best_value": a.best_value,
-            } for a in anova
+            }
+            for a in anova
         ],
         "importance": importance,
         "bound_tighten": shrink,
@@ -513,7 +569,9 @@ def cmd_pareto(
         return
 
     nd = non_dominated(points, directions)
-    front = [{"seq": labels[i], "throughput_tok_avg": points[i][0], "ttft_p99": points[i][1]} for i in nd]
+    front = [
+        {"seq": labels[i], "throughput_tok_avg": points[i][0], "ttft_p99": points[i][1]} for i in nd
+    ]
     console.print_json(data={"n_trials": len(points), "pareto_size": len(nd), "front": front})
     plot_pareto(points, directions, labels=labels, out_path=out)
     console.print(f"[green]saved[/]: {out}")
@@ -555,11 +613,17 @@ def cmd_sensitivity(
         console.print("[yellow]not enough continuous axes / completed trials for Sobol[/]")
         return
 
-    report = [{
-        "axis": r.axis, "S1": r.S1, "ST": r.ST,
-        "S1_conf": r.S1_conf, "ST_conf": r.ST_conf,
-        "interaction_gap": r.interaction_gap,
-    } for r in results]
+    report = [
+        {
+            "axis": r.axis,
+            "S1": r.S1,
+            "ST": r.ST,
+            "S1_conf": r.S1_conf,
+            "ST_conf": r.ST_conf,
+            "interaction_gap": r.interaction_gap,
+        }
+        for r in results
+    ]
     console.print_json(data={"study_id": study_id, "n_axes": len(results), "sobol": report})
     plot_sobol(results, out_path=out)
     console.print(f"[green]saved[/]: {out}")
@@ -614,8 +678,11 @@ def cmd_ask(
 
     sp = load_space_from_text(space_yaml)
     cfg = StudyConfig(
-        name=hdr[1], strategy=strategy, space=sp,
-        metric_name=metric_name, direction=direction,
+        name=hdr[1],
+        strategy=strategy,
+        space=sp,
+        metric_name=metric_name,
+        direction=direction,
         endpoint_slug=ep_slug,
         profile_slugs=json.loads(prof_slugs_json) if prof_slugs_json else [],
     )
@@ -661,7 +728,10 @@ def cmd_tell(
         Path | None,
         typer.Option("--metrics-json", exists=True, readable=True, help="JSON 파일 (없으면 stdin)"),
     ] = None,
-    score: Annotated[float | None, typer.Option("--score", help="명시적 score 값 — metrics 의 'total_score' 키 우선")] = None,
+    score: Annotated[
+        float | None,
+        typer.Option("--score", help="명시적 score 값 — metrics 의 'total_score' 키 우선"),
+    ] = None,
 ):
     """Phase S6 — 외부 LLM 에이전트가 측정 결과를 study 에 기록.
 
@@ -689,6 +759,7 @@ def cmd_tell(
         data = json.loads(metrics_json.read_text())
     else:
         import sys
+
         data = json.loads(sys.stdin.read())
 
     final_score = data.get("total_score") or score or 0.0
@@ -716,30 +787,42 @@ def cmd_tell(
 
     status = "completed" if accepted else "pruned"
     store.record_trial(
-        trial_id=trial_id, study_id=study_id, seq=seq, params=params,
-        status=status, score=final_score, backend=backend or "external",
+        trial_id=trial_id,
+        study_id=study_id,
+        seq=seq,
+        params=params,
+        status=status,
+        score=final_score,
+        backend=backend or "external",
         completed=True,
     )
     if metrics_for_db:
         store.record_trial_metrics(trial_id, metrics_for_db)
 
-    console.print(
-        f"[green]recorded[/]: trial={trial_id} status={status} score={final_score:.2f}"
-    )
+    console.print(f"[green]recorded[/]: trial={trial_id} status={status} score={final_score:.2f}")
 
 
 @app.command("export")
 def cmd_export(
     study_id: Annotated[str, typer.Argument(help="study_id (bench search start 가 출력)")],
     out_dir: Annotated[Path, typer.Option("--out", help="결과 디렉토리 (winner/ 가 그 아래 생성)")],
-    winner: Annotated[str, typer.Option(
-        "--winner",
-        help="top-N 또는 top-1 (기본). 향후 'pareto' 추가 가능.",
-    )] = "top-1",
-    endpoint: Annotated[Path | None, typer.Option(
-        "--endpoint", "-e", exists=True, readable=True,
-        help="endpoint YAML — adapter 추정 + helmfile_overrides 추출",
-    )] = None,
+    winner: Annotated[
+        str,
+        typer.Option(
+            "--winner",
+            help="top-N 또는 top-1 (기본). 향후 'pareto' 추가 가능.",
+        ),
+    ] = "top-1",
+    endpoint: Annotated[
+        Path | None,
+        typer.Option(
+            "--endpoint",
+            "-e",
+            exists=True,
+            readable=True,
+            help="endpoint YAML — adapter 추정 + helmfile_overrides 추출",
+        ),
+    ] = None,
 ):
     """Export winner trial to a self-contained recipe directory.
 
@@ -816,6 +899,7 @@ def cmd_ls(
 
 # helpers --------------------------------------------------------------------
 
+
 def _print_top(store: DuckDBStore, study_id: str, direction: str, k: int = 5):
     rows = store.top_trials(study_id, direction=direction, k=k)
     if not rows:
@@ -832,4 +916,5 @@ def _print_top(store: DuckDBStore, study_id: str, direction: str, k: int = 5):
 
 def load_space_from_text(text: str):
     from lmtune.search.space import parse_space
+
     return parse_space(yaml.safe_load(text))

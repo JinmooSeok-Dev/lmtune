@@ -43,20 +43,22 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 @dataclass(slots=True)
 class StudyConfig:
     name: str
-    strategy: str                      # grid | random | lhc | tpe | cma_es | ucb | nsga2 | botorch
+    strategy: str  # grid | random | lhc | tpe | cma_es | ucb | nsga2 | botorch
     space: SearchSpace
     metric_name: str = "total_score"
-    direction: str = "maximize"        # maximize | minimize (single-objective)
+    direction: str = "maximize"  # maximize | minimize (single-objective)
     directions: list[str] | None = None  # multi-objective; e.g. ["maximize","minimize"]
     endpoint_slug: str | None = None
     profile_slugs: list[str] = field(default_factory=list)
     seed: int | None = None
-    n_samples: int | None = None       # lhc only
+    n_samples: int | None = None  # lhc only
     context: dict[str, Any] | None = None
     study_id: str | None = None
     notes: str | None = None
-    pruner: str | None = None          # none | sh | hyperband
-    breaker: CircuitBreakerConfig | None = None  # None → use defaults; pass disabled-config to opt out
+    pruner: str | None = None  # none | sh | hyperband
+    breaker: CircuitBreakerConfig | None = (
+        None  # None → use defaults; pass disabled-config to opt out
+    )
 
 
 class Study:
@@ -72,6 +74,7 @@ class Study:
             n_samples=config.n_samples,
         )
         from lmtune.search.pruners import make_pruner
+
         pruner = make_pruner(config.pruner) if config.pruner else None
         if config.directions:
             self._optuna_study = optuna.create_study(
@@ -156,7 +159,9 @@ class Study:
             self._infeasible_count += 1
             log.debug(
                 "study %s: infeasible candidate seq~%d params=%s reason=%s",
-                self.study_id, self._seq + 1, params,
+                self.study_id,
+                self._seq + 1,
+                params,
                 self._feasibility.last_reason(),
             )
             try:
@@ -184,8 +189,12 @@ class Study:
             _optuna_trial=ot,
         )
         self.storage.record_trial(
-            trial.trial_id, trial.study_id, trial.seq, trial.params,
-            status=trial.status.value, backend=trial.backend,
+            trial.trial_id,
+            trial.study_id,
+            trial.seq,
+            trial.params,
+            status=trial.status.value,
+            backend=trial.backend,
         )
         return trial
 
@@ -228,10 +237,16 @@ class Study:
                 raise
 
         self.storage.record_trial(
-            trial.trial_id, trial.study_id, trial.seq, trial.params,
-            status=trial.status.value, score=trial.score,
-            backend=trial.backend, worker_id=trial.worker_id,
-            error=trial.error, completed=True,
+            trial.trial_id,
+            trial.study_id,
+            trial.seq,
+            trial.params,
+            status=trial.status.value,
+            score=trial.score,
+            backend=trial.backend,
+            worker_id=trial.worker_id,
+            error=trial.error,
+            completed=True,
         )
         self.storage.record_trial_metrics(trial.trial_id, trial.metrics)
 
@@ -243,8 +258,12 @@ class Study:
         on_trial: Callable[[Trial, ObjectiveResult], None] | None = None,
     ) -> list[Trial]:
         self.persist_header()
-        log.info("study %s: start strategy=%s max_trials=%d", self.study_id,
-                 self.cfg.strategy, max_trials)
+        log.info(
+            "study %s: start strategy=%s max_trials=%d",
+            self.study_id,
+            self.cfg.strategy,
+            max_trials,
+        )
         out: list[Trial] = []
         for i in range(int(max_trials)):
             if self._exhausted:
@@ -271,14 +290,20 @@ class Study:
             self.tell(trial, result)
             log.info(
                 "study %s trial %d: status=%s score=%s dt=%.1fs",
-                self.study_id, trial.seq, trial.status.value, trial.score, dt,
+                self.study_id,
+                trial.seq,
+                trial.status.value,
+                trial.score,
+                dt,
             )
             if on_trial:
                 on_trial(trial, result)
             out.append(trial)
 
             outcome = classify_outcome(
-                trial.status.value, error=trial.error, notes=trial.error,
+                trial.status.value,
+                error=trial.error,
+                notes=trial.error,
             )
             self.breaker.record(outcome)
             halt, reason = self.breaker.should_halt()
@@ -286,7 +311,10 @@ class Study:
                 self._halt_reason = reason
                 log.error(
                     "study %s: HALTED at seq=%d — %s; breaker=%s",
-                    self.study_id, trial.seq, reason, self.breaker.summary(),
+                    self.study_id,
+                    trial.seq,
+                    reason,
+                    self.breaker.summary(),
                 )
                 break
 
@@ -323,6 +351,7 @@ def _distributions_for(axes, params: dict) -> dict:
 
 def load_space_from_path(path: str | Path) -> SearchSpace:
     from lmtune.search.space import load_space as _ls
+
     return _ls(path)
 
 
@@ -348,7 +377,9 @@ class _FeasibilityChecker:
 
         model = by_name(self._model_name) if self._model_name else None
         rep = _eval(
-            params, environment=self._environment, model=model,
+            params,
+            environment=self._environment,
+            model=model,
             constraints=self._constraints,
         )
         self._last_reason = rep.reason()
@@ -374,6 +405,7 @@ def _build_feasibility(cfg: StudyConfig) -> _FeasibilityChecker | None:
     if env is None:
         return None
     from lmtune.search.feasibility import Constraint
+
     constraints = [
         Constraint(
             id=str(e.get("id") or f"c_{i}"),
@@ -388,5 +420,7 @@ def _build_feasibility(cfg: StudyConfig) -> _FeasibilityChecker | None:
         return None
     model_name = ctx.get("model_id") or ctx.get("model")
     return _FeasibilityChecker(
-        constraints=constraints, environment=env, model_name=model_name,
+        constraints=constraints,
+        environment=env,
+        model_name=model_name,
     )

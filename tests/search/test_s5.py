@@ -12,12 +12,16 @@ from lmtune.visualization.plots.search_trace import plot_search_trace
 
 # ------------------ Native samplers ------------------
 
+
 def _mixed() -> SearchSpace:
-    return SearchSpace(name="m", axes=[
-        Axis("x", "categorical", values=[1, 2, 4, 8]),
-        Axis("p", "bool"),
-        Axis("lr", "float", low=0.01, high=0.5),
-    ])
+    return SearchSpace(
+        name="m",
+        axes=[
+            Axis("x", "categorical", values=[1, 2, 4, 8]),
+            Axis("p", "bool"),
+            Axis("lr", "float", low=0.01, high=0.5),
+        ],
+    )
 
 
 def _obj(p):
@@ -57,19 +61,20 @@ def test_native_tpe_beats_random_on_synthetic():
     # Top-5 mean should favor TPE by a clear margin.
     r_top = sum(sorted(r, reverse=True)[:5]) / 5
     t_top = sum(sorted(t, reverse=True)[:5]) / 5
-    assert t_top > r_top * 1.2   # ≥20% better
+    assert t_top > r_top * 1.2  # ≥20% better
 
 
 # ------------------ Pareto (non-dominated) ------------------
+
 
 def test_pareto_front_identifies_dominated_points():
     # directions: maximize obj1, minimize obj2
     pts = [[10, 5], [5, 3], [8, 2], [3, 8]]
     nd = non_dominated(pts, directions=["maximize", "minimize"])
     # (8,2) dominates (5,3) and (10,5) is non-dominated; (3,8) is clearly dominated.
-    assert 2 in nd       # (8, 2)
-    assert 0 in nd       # (10, 5)
-    assert 3 not in nd   # (3, 8)
+    assert 2 in nd  # (8, 2)
+    assert 0 in nd  # (10, 5)
+    assert 3 not in nd  # (3, 8)
 
 
 def test_pareto_plot_writes_file(tmp_path: Path):
@@ -81,6 +86,7 @@ def test_pareto_plot_writes_file(tmp_path: Path):
 
 # ------------------ NSGA-II ------------------
 
+
 def test_nsga2_sampler_constructs():
     s = make_nsga2(seed=0, population_size=8)
     assert s is not None
@@ -88,12 +94,14 @@ def test_nsga2_sampler_constructs():
 
 # ------------------ Sobol ------------------
 
+
 def test_sobol_recovers_dominant_axis():
     """Synthetic: y = 10*a + 0.01*b + noise. Sobol should put a >> b."""
     from lmtune.search.analysis.sobol import sobol_from_history
 
     trials = []
     import random
+
     rng = random.Random(0)
     for _ in range(200):
         a = rng.uniform(0, 1)
@@ -112,6 +120,7 @@ def test_sobol_recovers_dominant_axis():
 
 def test_sobol_returns_empty_on_categorical_only():
     from lmtune.search.analysis.sobol import sobol_from_history
+
     trials = [
         {"params": {"x": "A"}, "score": 1.0, "status": "completed"},
         {"params": {"x": "B"}, "score": 2.0, "status": "completed"},
@@ -121,6 +130,7 @@ def test_sobol_returns_empty_on_categorical_only():
 
 
 # ------------------ search trace plot ------------------
+
 
 def test_search_trace_plot(tmp_path: Path):
     p = plot_search_trace(

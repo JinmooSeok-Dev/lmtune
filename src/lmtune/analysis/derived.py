@@ -87,7 +87,7 @@ BUILTIN_FORMULAS: dict[str, str] = {
     "tool_call_ratio": "tool_call_count / turn_count",
     "tokens_per_usd": "(input_tokens + output_tokens) / cost_usd",
     "energy_per_token": "energy_wh / (input_tokens + output_tokens)",
-    "cost_per_task": "total_cost_usd",            # sessions.total_cost_usd 에서 바로 조회
+    "cost_per_task": "total_cost_usd",  # sessions.total_cost_usd 에서 바로 조회
     # EuTB: success_rate / total_input_tokens (SWE-Effi)
     "eutb": "success_rate / total_input_tokens",
 }

@@ -1,4 +1,5 @@
 """Phase W — LLM domain prior (hand-curated YAML) unit tests."""
+
 from __future__ import annotations
 
 import textwrap
@@ -17,14 +18,17 @@ def _write_priors(tmp: Path, body: str) -> Path:
 
 
 def test_load_minimal(tmp_path):
-    path = _write_priors(tmp_path, """
+    path = _write_priors(
+        tmp_path,
+        """
         apiVersion: lmtune/autoresearch/v1alpha1
         kind: AxisPriors
         default_priorities:
           a: high
           b: medium
           c: low
-    """)
+    """,
+    )
     p = LLMDomainPrior.from_yaml(path)
     assert p.get_priority("a") == "high"
     assert p.get_priority("b") == "medium"
@@ -33,16 +37,21 @@ def test_load_minimal(tmp_path):
 
 
 def test_load_invalid_kind(tmp_path):
-    path = _write_priors(tmp_path, """
+    path = _write_priors(
+        tmp_path,
+        """
         kind: WrongKind
         default_priorities: {a: high}
-    """)
+    """,
+    )
     with pytest.raises(ValueError):
         LLMDomainPrior.from_yaml(path)
 
 
 def test_contextual_override_wins_over_default(tmp_path):
-    path = _write_priors(tmp_path, """
+    path = _write_priors(
+        tmp_path,
+        """
         kind: AxisPriors
         default_priorities:
           enable_prefix_caching: medium
@@ -50,7 +59,8 @@ def test_contextual_override_wins_over_default(tmp_path):
           - applies_when: {workload_class: coding-agent}
             priorities:
               enable_prefix_caching: high
-    """)
+    """,
+    )
     p = LLMDomainPrior.from_yaml(path)
     # default
     assert p.get_priority("enable_prefix_caching") == "medium"
@@ -116,7 +126,7 @@ def test_warmstart_seeds_respects_active_if():
     seeds = p.to_warmstart_seeds(space, {"adapter": "local-vllm"}, n=2)
     for s in seeds:
         assert "a" in s
-        assert "b" not in s   # active_if 매칭 실패 → 제외
+        assert "b" not in s  # active_if 매칭 실패 → 제외
 
 
 def test_matches_helper():
