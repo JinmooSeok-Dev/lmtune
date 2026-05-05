@@ -30,11 +30,12 @@ from scipy.stats import gaussian_kde
 from scipy.stats.qmc import LatinHypercube
 
 from lmtune.search.space import Axis, SearchSpace
+from lmtune.tuner.base import Sampler
 
 # --- Random ----------------------------------------------------------------
 
 
-class NativeRandomSampler:
+class NativeRandomSampler(Sampler):
     def __init__(self, space: SearchSpace, seed: int | None = None):
         self._space = space
         self._rng = random.Random(seed)
@@ -50,7 +51,7 @@ class NativeRandomSampler:
 # --- Latin Hypercube -------------------------------------------------------
 
 
-class NativeLHCSampler:
+class NativeLHCSampler(Sampler):
     def __init__(
         self,
         space: SearchSpace,
@@ -83,7 +84,7 @@ class NativeLHCSampler:
 # --- TPE --------------------------------------------------------------------
 
 
-class NativeTPESampler:
+class NativeTPESampler(Sampler):
     """Minimal TPE that handles continuous and categorical axes independently.
 
     For a categorical axis we compute P_good(c) / P_bad(c) as empirical ratios
@@ -113,7 +114,13 @@ class NativeTPESampler:
         self._history: list[tuple[dict, float]] = []
         self._direction = direction
 
-    def tell(self, params: dict, score: float | None):
+    def tell(
+        self,
+        params: dict,
+        score: float | None,
+        metrics: dict[str, dict[str, float]] | None = None,
+    ) -> None:
+        del metrics
         if score is not None and math.isfinite(score):
             self._history.append((dict(params), float(score)))
 
