@@ -235,3 +235,101 @@ def cmd_describe(
         annot = f": {p['annotation']}" if p["annotation"] else ""
         default = f" = {p['default']}" if p["default"] is not None else ""
         console.print(f"    - {p['name']}{annot}{default}")
+
+
+# ─── make-config ──────────────────────────────────────────────────────
+
+
+@app.command("make-config")
+def cmd_make_config(
+    kind: Annotated[
+        str,
+        typer.Argument(help="sampler / pruner kind (예: median_native, llm_oracle)"),
+    ],
+    fmt: Annotated[
+        str,
+        typer.Option("--format", "-f", help="출력 형식: yaml | json"),
+    ] = "yaml",
+    flat: Annotated[
+        bool,
+        typer.Option(
+            "--flat",
+            help="블록 wrapper 없이 kwargs 만 출력 (paste 시 직접 사용)",
+        ),
+    ] = False,
+) -> None:
+    """``kind`` 의 default kwargs 가 채워진 SearchSpace YAML/JSON 블록 출력.
+
+    SearchSpace YAML 의 ``pruner:`` / ``sampler:`` 슬롯에 직접 paste 가능.
+    ``--flat`` 으로 wrapper 제거 시 kwargs dict 만 출력 — 다른 도구가 dict
+    deserialize 시 편함.
+
+    Optuna 빌트인 (SH / Hyperband 등) 은 introspect 불가 — describe 와 동일
+    fallback 정책 (kind + 안내문만 출력).
+    """
+    resolved = _resolve_kind(kind)
+
+    if resolved is None:
+        # Optuna 빌트인 — kwargs 정확한 default 모름. kind 만 출력.
+        from lmtune.cli_tuner import _OPTUNA_SAMPLER_STRATEGIES
+        from lmtune.tuner.factory import _OPTUNA_PRUNER_KINDS
+
+        if kind not in _OPTUNA_PRUNER_KINDS and kind not in _OPTUNA_SAMPLER_STRATEGIES:
+            raise typer.BadParameter(
+                f"unknown kind: {kind!r}. "
+                "use 'lmtune tuner list-samplers' / 'list-pruners' to see valid kinds."
+            )
+        axis = "pruner" if kind in _OPTUNA_PRUNER_KINDS else "sampler"
+        kwargs: dict[str, object] = {}
+        comment = (
+            f"# {kind} ({axis}, optuna) — Optuna 빌트인. "
+            "see https://optuna.readthedocs.io for hyperparameters."
+        )
+    else:
+        axis, _group, cls = resolved
+        sig = inspect.signature(cls.__init__)
+        kwargs = {}
+        for name, param in sig.parameters.items():
+            if name == "self":
+                continue
+            if param.default is inspect.Parameter.empty:
+                # 필수 인자 — null 로 표시 (사용자가 채워야 함)
+                kwargs[name] = None
+            else:
+                kwargs[name] = param.default
+        comment = ""
+
+    block = {"kind": kind, **kwargs}
+
+    if fmt.lower() == "json":
+        payload = block if flat else {axis: block}
+        print(json.dumps(payload, separators=(",", ":")))
+        return
+
+    if fmt.lower() != "yaml":
+        raise typer.BadParameter(f"unknown format: {fmt!r}. valid: yaml | json")
+
+    # yaml 출력 — PyYAML 의존성 회피, 단순 dict 라 직접 렌더
+    lines: list[str] = []
+    if comment:
+        lines.append(comment)
+    indent = "" if flat else "  "
+    if not flat:
+        lines.append(f"{axis}:")
+    for k, v in block.items():
+        lines.append(f"{indent}{k}: {_yaml_scalar(v)}")
+    print("\n".join(lines))
+
+
+def _yaml_scalar(v: object) -> str:
+    """단순 YAML scalar 렌더 — bool/int/float/str/None 만."""
+    if v is None:
+        return "null"
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, str):
+        # quoting 단순화 — 알파넘 + 일부 기호만 unquoted, 나머지 single-quote
+        if v.replace("_", "").replace("-", "").replace(".", "").isalnum():
+            return v
+        return f"'{v}'"
+    return str(v)
