@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -66,7 +67,11 @@ _APPEND_ONLY_KINDS: set[str] = {
 
 
 def _serialize_row(record: RecordSpec) -> dict[str, Any]:
-    """RecordSpec → dict (JSON 컬럼은 str 직렬화, kind/api_version 제외)."""
+    """RecordSpec → dict (JSON 컬럼은 str 직렬화, kind/api_version 제외).
+
+    datetime 처리: DuckDB TIMESTAMP 는 tz-naive 이므로, tz-aware datetime 은
+    UTC 로 변환 후 tzinfo 제거. naive 는 그대로 통과 (UTC 가정).
+    """
     data = record.model_dump()
     kind = data.pop("kind")
     data.pop("api_version", None)
@@ -75,11 +80,18 @@ def _serialize_row(record: RecordSpec) -> dict[str, Any]:
         v = data.get(col)
         if v is not None and not isinstance(v, str):
             data[col] = json.dumps(v)
+    for col, v in list(data.items()):
+        if isinstance(v, datetime) and v.tzinfo is not None:
+            data[col] = v.astimezone(UTC).replace(tzinfo=None)
     return data
 
 
 def _deserialize_row(kind: str, row: dict[str, Any]) -> RecordSpec:
-    """dict (DuckDB row) → RecordSpec."""
+    """dict (DuckDB row) → RecordSpec.
+
+    DuckDB 의 naive datetime 은 UTC 가정으로 tzinfo=UTC 부착. timezone 환경
+    (CI=UTC vs 로컬=KST) 차이를 무력화.
+    """
     cls = kind_to_class(kind)
     data = dict(row)
     data["kind"] = kind
@@ -89,6 +101,9 @@ def _deserialize_row(kind: str, row: dict[str, Any]) -> RecordSpec:
         if isinstance(v, str):
             with contextlib.suppress(json.JSONDecodeError):
                 data[col] = json.loads(v)
+    for col, v in list(data.items()):
+        if isinstance(v, datetime) and v.tzinfo is None:
+            data[col] = v.replace(tzinfo=UTC)
     return cls.model_validate(data)
 
 

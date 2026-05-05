@@ -161,12 +161,10 @@ def test_artifact_to_result_to_records_to_duckdb_roundtrip(tmp_path, profile, en
     assert r.ttft_ms == 42.0
     assert r.e2e_ms == 580.0
     assert r.started_at is not None
-    # DuckDB TIMESTAMP 는 naive 로 보관 — round-trip 후엔 tzinfo=None.
-    # tz-aware 보관 경로는 후속 PR (TIMESTAMPTZ migration) 에서.
-    # naive datetime 의 표시값은 환경 timezone (CI=UTC vs 로컬=KST) 에 따라
-    # 다르게 디코드 — 정확한 epoch 비교는 후속 PR 에서.
-    assert r.started_at.tzinfo is None
-    assert r.started_at.year == 2024
+    # DuckDB TIMESTAMP 는 naive 로 보관되지만, _serialize_row 가 UTC 변환 후
+    # 저장하고, _deserialize_row 가 UTC tzinfo 를 다시 부착 → round-trip 동등.
+    assert r.started_at.tzinfo is not None
+    assert r.started_at.timestamp() == pytest.approx(1714000000.0, abs=1.0)
 
     # ── session ──────────────────────────────────────────────────────
     sessions = store.query(QuerySpec(record_kind="session"))
