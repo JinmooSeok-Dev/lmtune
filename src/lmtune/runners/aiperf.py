@@ -25,8 +25,20 @@ _METRIC_KEY_MAP = {
 
 # 0.7.0 는 percentile 셋이 확장됨 (p1/p5/p10/p25/std 추가, p999 삭제).
 _PERCENTILE_KEYS = {
-    "p1", "p5", "p10", "p25", "p50", "p75", "p90", "p95", "p99", "p999",
-    "avg", "min", "max", "std",
+    "p1",
+    "p5",
+    "p10",
+    "p25",
+    "p50",
+    "p75",
+    "p90",
+    "p95",
+    "p99",
+    "p999",
+    "avg",
+    "min",
+    "max",
+    "std",
 }
 
 
@@ -52,39 +64,59 @@ class AIPerfRunner(Runner):
     ) -> list[str]:
         w = profile.workload
         cmd: list[str] = [
-            self.binary, "profile",
-            "--model", endpoint.model,
-            "--url", endpoint.base_url.removesuffix("/v1"),
-            "--endpoint-type", "chat" if endpoint.api_type == "openai" else "completions",
+            self.binary,
+            "profile",
+            "--model",
+            endpoint.model,
+            "--url",
+            endpoint.base_url.removesuffix("/v1"),
+            "--endpoint-type",
+            "chat" if endpoint.api_type == "openai" else "completions",
             "--streaming",
-            "--tokenizer", endpoint.tokenizer or endpoint.model,
-            "--synthetic-input-tokens-mean", str(w.synthetic_input_tokens_mean),
-            "--output-tokens-mean", str(w.output_tokens_mean),
-            "--random-seed", str(w.random_seed),
-            "--output-artifact-dir", str(raw_dir / "aiperf"),
+            "--tokenizer",
+            endpoint.tokenizer or endpoint.model,
+            "--synthetic-input-tokens-mean",
+            str(w.synthetic_input_tokens_mean),
+            "--output-tokens-mean",
+            str(w.output_tokens_mean),
+            "--random-seed",
+            str(w.random_seed),
+            "--output-artifact-dir",
+            str(raw_dir / "aiperf"),
         ]
         if w.synthetic_input_tokens_stddev:
             cmd += ["--synthetic-input-tokens-stddev", str(w.synthetic_input_tokens_stddev)]
         if w.output_tokens_stddev:
             cmd += ["--output-tokens-stddev", str(w.output_tokens_stddev)]
         if w.shared_system_prompt_length:
-            cmd += ["--num-prefix-prompts", "1",
-                    "--prefix-prompt-length", str(w.shared_system_prompt_length)]
+            cmd += [
+                "--num-prefix-prompts",
+                "1",
+                "--prefix-prompt-length",
+                str(w.shared_system_prompt_length),
+            ]
         if profile.goodput_spec:
             cmd += ["--goodput", profile.goodput_spec]
 
         if profile.mode == "concurrency":
             cmd += [
-                "--concurrency", str(w.concurrency),
-                "--request-count", str(w.request_count),
+                "--concurrency",
+                str(w.concurrency),
+                "--request-count",
+                str(w.request_count),
             ]
         elif profile.mode == "user_centric":
             cmd += [
-                "--conversation-num", str(w.conversation_num),
-                "--conversation-turn-mean", str(w.conversation_turn_mean),
-                "--conversation-turn-stddev", str(w.conversation_turn_stddev),
-                "--num-users", str(w.num_users),
-                "--user-centric-rate", str(w.user_centric_rate),
+                "--conversation-num",
+                str(w.conversation_num),
+                "--conversation-turn-mean",
+                str(w.conversation_turn_mean),
+                "--conversation-turn-stddev",
+                str(w.conversation_turn_stddev),
+                "--num-users",
+                str(w.num_users),
+                "--user-centric-rate",
+                str(w.user_centric_rate),
             ]
             if w.user_turn_delay_ms is not None:
                 cmd += ["--session-turn-delay-mean", str(w.user_turn_delay_ms)]
@@ -111,7 +143,9 @@ class AIPerfRunner(Runner):
             node = _walk(records, aiperf_key)
             if node is None:
                 continue
-            extracted = {k: float(v) for k, v in node.items() if k in _PERCENTILE_KEYS and _is_number(v)}
+            extracted = {
+                k: float(v) for k, v in node.items() if k in _PERCENTILE_KEYS and _is_number(v)
+            }
             if extracted:
                 metrics[bench_key] = extracted
 

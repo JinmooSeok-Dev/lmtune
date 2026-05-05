@@ -1,4 +1,5 @@
 """`bench dashboard` — static HTML dashboard build/serve."""
+
 from __future__ import annotations
 
 import http.server
@@ -63,7 +64,9 @@ def cmd_build(
 
 @app.command("serve")
 def cmd_serve(
-    out_dir: Annotated[Path, typer.Option("--out", help="대시보드 디렉토리")] = Path("b200/dashboards"),
+    out_dir: Annotated[Path, typer.Option("--out", help="대시보드 디렉토리")] = Path(
+        "b200/dashboards"
+    ),
     port: Annotated[int, typer.Option("--port", "-p")] = 8765,
     bind: Annotated[str, typer.Option("--bind")] = "127.0.0.1",
 ):
@@ -73,9 +76,7 @@ def cmd_serve(
         raise typer.Exit(1)
 
     def handler(*a, **kw):
-        return http.server.SimpleHTTPRequestHandler(
-            *a, directory=str(out_dir.resolve()), **kw
-        )
+        return http.server.SimpleHTTPRequestHandler(*a, directory=str(out_dir.resolve()), **kw)
 
     with socketserver.TCPServer((bind, port), handler) as httpd:
         url = f"http://{bind}:{port}/"

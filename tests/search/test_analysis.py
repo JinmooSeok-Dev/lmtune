@@ -10,11 +10,13 @@ def _trials_x_dominates(n_per_group: int = 6):
     out = []
     for x_val, base in [("A", 10.0), ("B", 100.0), ("C", 50.0)]:
         for i in range(n_per_group):
-            out.append({
-                "params": {"x": x_val, "noise": i % 2},
-                "score": base + i * 0.1,
-                "status": "completed",
-            })
+            out.append(
+                {
+                    "params": {"x": x_val, "noise": i % 2},
+                    "score": base + i * 0.1,
+                    "status": "completed",
+                }
+            )
     return out
 
 
@@ -48,11 +50,13 @@ def test_bound_tighten_shrinks_around_best():
     # top trials cluster tightly around lr=0.1; sigma is small.
     trials = []
     for i in range(20):
-        trials.append({
-            "params": {"lr": 0.10 + (i % 5) * 0.002, "x": "A"},
-            "score": 100.0 - abs((0.10 + (i % 5) * 0.002) - 0.10) * 500,
-            "status": "completed",
-        })
+        trials.append(
+            {
+                "params": {"lr": 0.10 + (i % 5) * 0.002, "x": "A"},
+                "score": 100.0 - abs((0.10 + (i % 5) * 0.002) - 0.10) * 500,
+                "status": "completed",
+            }
+        )
     axes = [
         {"name": "lr", "kind": "float", "low": 0.0, "high": 1.0},
         {"name": "x", "kind": "categorical", "low": None, "high": None},

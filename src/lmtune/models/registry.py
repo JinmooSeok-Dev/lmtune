@@ -16,6 +16,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class MoESpec:
     """Mixture-of-Experts 메타. dense 모델은 None."""
+
     num_experts: int
     active_experts: int  # top-k routing
     shared_experts: int = 0
@@ -24,8 +25,9 @@ class MoESpec:
 @dataclass(frozen=True)
 class MLASpec:
     """Multi-head Latent Attention (DeepSeek-V3) 메타. 일반 모델은 None."""
-    kv_latent_dim: int     # kv_lora_rank (DSV3 = 512)
-    rope_head_dim: int     # qk_rope_head_dim (DSV3 = 64)
+
+    kv_latent_dim: int  # kv_lora_rank (DSV3 = 512)
+    rope_head_dim: int  # qk_rope_head_dim (DSV3 = 64)
 
 
 @dataclass(frozen=True)
@@ -34,8 +36,9 @@ class ModelSpec:
 
     feasibility constraint 의 `model.*` 가 본 dataclass 의 attribute 를 직접 참조.
     """
+
     name: str
-    total_params_b: float          # in billions
+    total_params_b: float  # in billions
     num_layers: int
     hidden_size: int
     num_attention_heads: int
@@ -43,7 +46,7 @@ class ModelSpec:
     intermediate_size: int
     context_length: int
     vocab_size: int
-    dtype_bytes: int = 2           # bf16 default
+    dtype_bytes: int = 2  # bf16 default
     head_dim: int | None = None
     kv_cache_dtype_bytes: int = 2
     active_params_b: float | None = None  # MoE 시 활성 expert 만, dense=total
@@ -71,10 +74,8 @@ class ModelSpec:
         if not self.moe:
             return 0.0
         # Coarse estimate: experts dominate when intermediate × num_experts >> attention
-        attn = 4 * self.hidden_size ** 2 * self.num_layers
-        ffn = (
-            3 * self.hidden_size * self.intermediate_size * self.num_experts * self.num_layers
-        )
+        attn = 4 * self.hidden_size**2 * self.num_layers
+        ffn = 3 * self.hidden_size * self.intermediate_size * self.num_experts * self.num_layers
         return ffn / max(1, attn + ffn)
 
 
@@ -131,63 +132,132 @@ def normalize_model_spec(
 # 1:1 port of vllm-config-puzzle/models.ts (9 models). 새 모델 추가는 본 리스트에만.
 
 LLAMA_8B = normalize_model_spec(
-    name="Llama-3.1-8B", total_params_b=8.0, num_layers=32, hidden_size=4096,
-    num_attention_heads=32, num_kv_heads=8, intermediate_size=14336,
-    context_length=131072, vocab_size=128256,
+    name="Llama-3.1-8B",
+    total_params_b=8.0,
+    num_layers=32,
+    hidden_size=4096,
+    num_attention_heads=32,
+    num_kv_heads=8,
+    intermediate_size=14336,
+    context_length=131072,
+    vocab_size=128256,
 )
 LLAMA_70B = normalize_model_spec(
-    name="Llama-3.1-70B", total_params_b=70.0, num_layers=80, hidden_size=8192,
-    num_attention_heads=64, num_kv_heads=8, intermediate_size=28672,
-    context_length=131072, vocab_size=128256,
+    name="Llama-3.1-70B",
+    total_params_b=70.0,
+    num_layers=80,
+    hidden_size=8192,
+    num_attention_heads=64,
+    num_kv_heads=8,
+    intermediate_size=28672,
+    context_length=131072,
+    vocab_size=128256,
 )
 LLAMA_405B = normalize_model_spec(
-    name="Llama-3.1-405B", total_params_b=405.0, num_layers=126, hidden_size=16384,
-    num_attention_heads=128, num_kv_heads=8, intermediate_size=53248,
-    context_length=131072, vocab_size=128256,
+    name="Llama-3.1-405B",
+    total_params_b=405.0,
+    num_layers=126,
+    hidden_size=16384,
+    num_attention_heads=128,
+    num_kv_heads=8,
+    intermediate_size=53248,
+    context_length=131072,
+    vocab_size=128256,
 )
 QWEN2_5_7B = normalize_model_spec(
-    name="Qwen2.5-7B", total_params_b=7.6, num_layers=28, hidden_size=3584,
-    num_attention_heads=28, num_kv_heads=4, intermediate_size=18944,
-    context_length=131072, vocab_size=152064,
+    name="Qwen2.5-7B",
+    total_params_b=7.6,
+    num_layers=28,
+    hidden_size=3584,
+    num_attention_heads=28,
+    num_kv_heads=4,
+    intermediate_size=18944,
+    context_length=131072,
+    vocab_size=152064,
 )
 QWEN2_5_72B = normalize_model_spec(
-    name="Qwen2.5-72B", total_params_b=72.0, num_layers=80, hidden_size=8192,
-    num_attention_heads=64, num_kv_heads=8, intermediate_size=29568,
-    context_length=131072, vocab_size=152064,
+    name="Qwen2.5-72B",
+    total_params_b=72.0,
+    num_layers=80,
+    hidden_size=8192,
+    num_attention_heads=64,
+    num_kv_heads=8,
+    intermediate_size=29568,
+    context_length=131072,
+    vocab_size=152064,
 )
 QWEN3_235B_A22B = normalize_model_spec(
-    name="Qwen3-235B-A22B", total_params_b=235.0, num_layers=94, hidden_size=4096,
-    num_attention_heads=64, num_kv_heads=4, intermediate_size=12288,
-    context_length=128000, vocab_size=151936,
+    name="Qwen3-235B-A22B",
+    total_params_b=235.0,
+    num_layers=94,
+    hidden_size=4096,
+    num_attention_heads=64,
+    num_kv_heads=4,
+    intermediate_size=12288,
+    context_length=128000,
+    vocab_size=151936,
     moe=MoESpec(num_experts=128, active_experts=8, shared_experts=0),
     active_params_b=22.0,
 )
 GEMMA_2_27B = normalize_model_spec(
-    name="Gemma-2-27B", total_params_b=27.0, num_layers=46, hidden_size=4608,
-    num_attention_heads=32, num_kv_heads=16, intermediate_size=36864,
-    context_length=8192, vocab_size=256128,
+    name="Gemma-2-27B",
+    total_params_b=27.0,
+    num_layers=46,
+    hidden_size=4608,
+    num_attention_heads=32,
+    num_kv_heads=16,
+    intermediate_size=36864,
+    context_length=8192,
+    vocab_size=256128,
 )
 COMMAND_R_PLUS = normalize_model_spec(
-    name="Command-R+ 104B", total_params_b=104.0, num_layers=64, hidden_size=12288,
-    num_attention_heads=96, num_kv_heads=8, intermediate_size=33792,
-    context_length=131072, vocab_size=256000,
+    name="Command-R+ 104B",
+    total_params_b=104.0,
+    num_layers=64,
+    hidden_size=12288,
+    num_attention_heads=96,
+    num_kv_heads=8,
+    intermediate_size=33792,
+    context_length=131072,
+    vocab_size=256000,
 )
 MIXTRAL_8X22B = normalize_model_spec(
-    name="Mixtral-8x22B", total_params_b=141.0, active_params_b=39.0,
-    num_layers=56, hidden_size=6144, num_attention_heads=48, num_kv_heads=8,
-    intermediate_size=16384, context_length=65536, vocab_size=32000,
+    name="Mixtral-8x22B",
+    total_params_b=141.0,
+    active_params_b=39.0,
+    num_layers=56,
+    hidden_size=6144,
+    num_attention_heads=48,
+    num_kv_heads=8,
+    intermediate_size=16384,
+    context_length=65536,
+    vocab_size=32000,
     moe=MoESpec(num_experts=8, active_experts=2, shared_experts=0),
 )
 DBRX = normalize_model_spec(
-    name="DBRX-132B", total_params_b=132.0, active_params_b=36.0,
-    num_layers=40, hidden_size=6144, num_attention_heads=48, num_kv_heads=8,
-    intermediate_size=10752, context_length=32768, vocab_size=100352,
+    name="DBRX-132B",
+    total_params_b=132.0,
+    active_params_b=36.0,
+    num_layers=40,
+    hidden_size=6144,
+    num_attention_heads=48,
+    num_kv_heads=8,
+    intermediate_size=10752,
+    context_length=32768,
+    vocab_size=100352,
     moe=MoESpec(num_experts=16, active_experts=4, shared_experts=0),
 )
 DEEPSEEK_V3 = normalize_model_spec(
-    name="DeepSeek-V3", total_params_b=685.0, active_params_b=37.0,
-    num_layers=61, hidden_size=7168, num_attention_heads=128, num_kv_heads=128,
-    intermediate_size=18432, context_length=128000, vocab_size=129280,
+    name="DeepSeek-V3",
+    total_params_b=685.0,
+    active_params_b=37.0,
+    num_layers=61,
+    hidden_size=7168,
+    num_attention_heads=128,
+    num_kv_heads=128,
+    intermediate_size=18432,
+    context_length=128000,
+    vocab_size=129280,
     moe=MoESpec(num_experts=256, active_experts=8, shared_experts=1),
     mla=MLASpec(kv_latent_dim=512, rope_head_dim=64),
 )
@@ -195,15 +265,29 @@ DEEPSEEK_V3 = normalize_model_spec(
 # spec [추정] — public model card 기반 best-effort. feasibility/active_if 가 model.is_moe
 # 분기 정도만 사용하므로 정밀치는 critical 하지 않음. 정확치 확인 시 갱신.
 GPT_OSS_20B = normalize_model_spec(
-    name="gpt-oss-20b", total_params_b=20.0, active_params_b=3.6,
-    num_layers=24, hidden_size=2880, num_attention_heads=64, num_kv_heads=8,
-    intermediate_size=2880, context_length=131072, vocab_size=201088,
+    name="gpt-oss-20b",
+    total_params_b=20.0,
+    active_params_b=3.6,
+    num_layers=24,
+    hidden_size=2880,
+    num_attention_heads=64,
+    num_kv_heads=8,
+    intermediate_size=2880,
+    context_length=131072,
+    vocab_size=201088,
     moe=MoESpec(num_experts=32, active_experts=4, shared_experts=0),
 )
 GPT_OSS_120B = normalize_model_spec(
-    name="gpt-oss-120b", total_params_b=117.0, active_params_b=5.1,
-    num_layers=36, hidden_size=2880, num_attention_heads=64, num_kv_heads=8,
-    intermediate_size=2880, context_length=131072, vocab_size=201088,
+    name="gpt-oss-120b",
+    total_params_b=117.0,
+    active_params_b=5.1,
+    num_layers=36,
+    hidden_size=2880,
+    num_attention_heads=64,
+    num_kv_heads=8,
+    intermediate_size=2880,
+    context_length=131072,
+    vocab_size=201088,
     moe=MoESpec(num_experts=128, active_experts=4, shared_experts=0),
 )
 

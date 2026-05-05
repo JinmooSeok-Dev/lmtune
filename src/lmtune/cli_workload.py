@@ -50,9 +50,7 @@ def cmd_generate(
     """lm-workloads 호출 → WorkloadSpec yaml 작성."""
     from lmtune.workload.providers.lm_workloads import LMWorkloadsProvider
 
-    provider = LMWorkloadsProvider(
-        source_uri=source, cluster_id=cluster_id, store_path=store_path
-    )
+    provider = LMWorkloadsProvider(source_uri=source, cluster_id=cluster_id, store_path=store_path)
     spec = provider.provide()
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(

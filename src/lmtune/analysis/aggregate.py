@@ -18,15 +18,26 @@ _DEFAULT_AGGS = ("p50", "p95", "p99", "avg", "min", "max", "count")
 def requests_to_dataframe(rows: Iterable[RequestRow]) -> pd.DataFrame:
     records = [
         {
-            "req_id": r.req_id, "turn_idx": r.turn_idx, "conversation_id": r.conversation_id,
-            "input_tokens": r.input_tokens, "output_tokens": r.output_tokens,
-            "cached_tokens": r.cached_tokens, "thinking_tokens": r.thinking_tokens,
-            "tool_call_count": r.tool_call_count, "tool_result_tokens": r.tool_result_tokens,
-            "phase": r.phase, "role": r.role,
-            "energy_wh": r.energy_wh, "cost_usd": r.cost_usd,
-            "ttft_ms": r.ttft_ms, "itl_mean_ms": r.itl_mean_ms, "e2e_ms": r.e2e_ms,
-            "started_at": r.started_at, "completed_at": r.completed_at,
-            "status": r.status, "error": r.error,
+            "req_id": r.req_id,
+            "turn_idx": r.turn_idx,
+            "conversation_id": r.conversation_id,
+            "input_tokens": r.input_tokens,
+            "output_tokens": r.output_tokens,
+            "cached_tokens": r.cached_tokens,
+            "thinking_tokens": r.thinking_tokens,
+            "tool_call_count": r.tool_call_count,
+            "tool_result_tokens": r.tool_result_tokens,
+            "phase": r.phase,
+            "role": r.role,
+            "energy_wh": r.energy_wh,
+            "cost_usd": r.cost_usd,
+            "ttft_ms": r.ttft_ms,
+            "itl_mean_ms": r.itl_mean_ms,
+            "e2e_ms": r.e2e_ms,
+            "started_at": r.started_at,
+            "completed_at": r.completed_at,
+            "status": r.status,
+            "error": r.error,
         }
         for r in rows
     ]
@@ -75,7 +86,9 @@ def aggregate(
     else:
         # 전체 집계 → 1-row DataFrame
         grouped = work.agg(agg_funcs)
-    grouped.columns = ["__".join([c for c in col if c]).rstrip("_") for col in grouped.columns.values]
+    grouped.columns = [
+        "__".join([c for c in col if c]).rstrip("_") for col in grouped.columns.values
+    ]
     return grouped.reset_index()
 
 
@@ -83,6 +96,7 @@ def _agg_fn(name: str):
     name = name.lower()
     if name in ("p50", "p95", "p99"):
         q = float(name[1:]) / 100.0
+
         def qfn(x, _q=q):
             xs = [v for v in x if v is not None and not (isinstance(v, float) and math.isnan(v))]
             if not xs:
@@ -90,6 +104,7 @@ def _agg_fn(name: str):
             xs = sorted(xs)
             idx = int(_q * (len(xs) - 1))
             return xs[idx]
+
         qfn.__name__ = name
         return qfn
     if name == "avg":

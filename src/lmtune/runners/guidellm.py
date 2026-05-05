@@ -47,14 +47,22 @@ class GuideLLMRunner(Runner):
             "output_tokens": w.output_tokens_mean,
         }
         cmd = [
-            self.binary, "benchmark",
-            "--target", endpoint.base_url.removesuffix("/v1"),
-            "--model", endpoint.model,
-            "--processor", endpoint.tokenizer or endpoint.model,
-            "--data", json.dumps(data_spec),
-            "--rate-type", rate_type,
-            "--output-path", str(output),
-            "--random-seed", str(w.random_seed),
+            self.binary,
+            "benchmark",
+            "--target",
+            endpoint.base_url.removesuffix("/v1"),
+            "--model",
+            endpoint.model,
+            "--processor",
+            endpoint.tokenizer or endpoint.model,
+            "--data",
+            json.dumps(data_spec),
+            "--rate-type",
+            rate_type,
+            "--output-path",
+            str(output),
+            "--random-seed",
+            str(w.random_seed),
         ]
         if rate_type == "concurrent" and w.concurrency is not None:
             cmd += ["--rate", str(w.concurrency)]

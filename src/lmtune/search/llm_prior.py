@@ -10,6 +10,7 @@ TPE/NSGA-II 의 sampling weight + warmstart seed 로 활용.
     seeds = prior.to_warmstart_seeds(space, ctx, n=3)
     # → 3 개 seed trial. high-priority axis 는 plausible value, 나머지는 random
 """
+
 from __future__ import annotations
 
 import random
@@ -136,6 +137,7 @@ def _suggest_value(axis: Axis, priority: str, rng: random.Random) -> Any:
         return _coerce(axis.kind, rng.uniform(lo, hi))
     if axis.kind == "log_uniform":
         import math
+
         log_lo, log_hi = math.log(axis.low), math.log(axis.high)
         return math.exp(rng.uniform(log_lo, log_hi))
     return None

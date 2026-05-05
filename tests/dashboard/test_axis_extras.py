@@ -259,12 +259,12 @@ def test_matrix_page_built(seeded_db_with_axes, tmp_path):
     assert "Model × HW matrix" in html
     # cell metric toggles
     assert "metric-toggle" in html
-    assert "data-metric=\"score\"" in html
-    assert "data-metric=\"throughput\"" in html
-    assert "data-metric=\"ttft_p99\"" in html
+    assert 'data-metric="score"' in html
+    assert 'data-metric="throughput"' in html
+    assert 'data-metric="ttft_p99"' in html
     # the seeded study has model_id inferred from "b200-vllm" → unknown,
     # but the table itself must render at least once
-    assert "<table id=\"matrix-table\"" in html
+    assert '<table id="matrix-table"' in html
 
 
 def test_compare_page_includes_convergence_and_pareto_blocks(seeded_db_with_axes, tmp_path):
@@ -292,25 +292,42 @@ def test_study_page_shows_infeasible_count(tmp_path):
     db = tmp_path / "lmtune.duckdb"
     store = DuckDBStore(db)
     import yaml as _y
+
     space_yaml = _y.safe_dump({"axes": {"x": {"type": "int", "low": 0, "high": 5}}})
     store.record_study(
-        study_id="st-INF", name="infeas-test", strategy="random",
-        metric_name="score", direction="maximize", space_yaml=space_yaml,
-        endpoint_slug="b200-vllm", profile_slugs=["short"], notes="",
+        study_id="st-INF",
+        name="infeas-test",
+        strategy="random",
+        metric_name="score",
+        direction="maximize",
+        space_yaml=space_yaml,
+        endpoint_slug="b200-vllm",
+        profile_slugs=["short"],
+        notes="",
     )
     # 5 completed + 3 pruned (2 infeasible, 1 generic)
-    for i, (status, score, err) in enumerate([
-        ("completed", 10.0, None), ("completed", 20.0, None),
-        ("completed", 15.0, None), ("completed", 30.0, None),
-        ("completed", 25.0, None),
-        ("pruned", None, "FAIL: c4_heads_div_tp"),
-        ("pruned", None, "FAIL: c2_tp_single_node | WARN: c11_pcp_intra_pref"),
-        ("pruned", None, "duplicate trial"),
-    ]):
+    for i, (status, score, err) in enumerate(
+        [
+            ("completed", 10.0, None),
+            ("completed", 20.0, None),
+            ("completed", 15.0, None),
+            ("completed", 30.0, None),
+            ("completed", 25.0, None),
+            ("pruned", None, "FAIL: c4_heads_div_tp"),
+            ("pruned", None, "FAIL: c2_tp_single_node | WARN: c11_pcp_intra_pref"),
+            ("pruned", None, "duplicate trial"),
+        ]
+    ):
         tid = f"tr-{i:03d}"
         store.record_trial(
-            trial_id=tid, study_id="st-INF", seq=i, params={"x": i},
-            status=status, score=score, backend="inline", completed=True,
+            trial_id=tid,
+            study_id="st-INF",
+            seq=i,
+            params={"x": i},
+            status=status,
+            score=score,
+            backend="inline",
+            completed=True,
             error=err,
         )
     out = tmp_path / "dash"

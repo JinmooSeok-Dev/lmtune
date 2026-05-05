@@ -36,7 +36,8 @@ def run_trial_locally(payload: TrialPayload) -> TrialResult:
         )
         result = obj(payload.params)
         status = (
-            "completed" if (result.accepted and not result.error)
+            "completed"
+            if (result.accepted and not result.error)
             else ("pruned" if result.error and "slo" in (result.error or "").lower() else "crash")
         )
         return TrialResult(
@@ -66,7 +67,7 @@ def _main_k8s() -> int:
     Used for K8s Job plumbing smokes where we don't want to actually run vLLM
     inside the cluster (the llm-d helmfile deployment is a separate concern).
     """
-    if (dummy := os.environ.get("BENCH_DUMMY_RESULT")):
+    if dummy := os.environ.get("BENCH_DUMMY_RESULT"):
         # Validate shape, then pass through.
         data = json.loads(dummy)
         data.setdefault("trial_id", os.environ.get("TRIAL_ID", "tr-dummy"))
@@ -88,15 +89,19 @@ def _main_k8s() -> int:
     )
     result = run_trial_locally(payload)
     # Marshal as JSON; tuple keys in metrics → "metric|workload" strings.
-    print(json.dumps({
-        "trial_id": result.trial_id,
-        "status": result.status,
-        "score": result.score,
-        "error": result.error,
-        "backend": "k8s-job",
-        "worker_id": result.worker_id,
-        "metrics": {f"{m}|{w or ''}": v for (m, w), v in result.metrics.items()},
-    }))
+    print(
+        json.dumps(
+            {
+                "trial_id": result.trial_id,
+                "status": result.status,
+                "score": result.score,
+                "error": result.error,
+                "backend": "k8s-job",
+                "worker_id": result.worker_id,
+                "metrics": {f"{m}|{w or ''}": v for (m, w), v in result.metrics.items()},
+            }
+        )
+    )
     return 0 if result.status == "completed" else 1
 
 

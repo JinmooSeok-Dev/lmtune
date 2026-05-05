@@ -7,7 +7,7 @@
 | # | Contract | apiVersion | Master | 문서 |
 |:--|:---|:---|:---|:---|
 | 1 | WorkloadSpec | `workloads/v1alpha1` | **lm-workloads** | [workload-spec.md](workload-spec.md) |
-| 2 | ClusterSpec | `ariadne/cluster/v1alpha1` | **ariadne** | [cluster-spec.md](cluster-spec.md) |
+| 2 | ClusterSpec | `ariadne/cluster/v1alpha1` | **ariadne** | (lmtune#CS 에서 추가) |
 | 3 | EndpointSpec | `lmtune/endpoint/v1alpha1` | lmtune | (후속 PR) |
 | 4 | ProfileSpec | `lmtune/profile/v1alpha1` | lmtune | (후속 PR) |
 | 5 | SearchSpace | `lmtune/search/v1alpha1` | lmtune | (후속 PR) |

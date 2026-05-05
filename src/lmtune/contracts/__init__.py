@@ -23,5 +23,6 @@ __all__ = ["WorkloadSpec"]
 def __getattr__(name: str):
     if name == "WorkloadSpec":
         from lmtune.contracts.workload_spec import WorkloadSpec
+
         return WorkloadSpec
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -6,6 +6,7 @@
 
 field 명은 `tests/dashboard/test_inferencex_schema.py` 가 lock-in 함 — 임의 변경 금지.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -19,6 +20,7 @@ class _Strict(BaseModel):
 
 class TrialPoint(_Strict):
     """One trial of a study, projected for dashboard plots."""
+
     trial_id: str
     seq: int
     score: float | None = None
@@ -29,6 +31,7 @@ class TrialPoint(_Strict):
 
 class StudyCard(_Strict):
     """One study card on the dashboard's main matrix view (studies_index.json)."""
+
     study_id: str
     name: str
     strategy: str
@@ -45,11 +48,13 @@ class StudyCard(_Strict):
 
 class StudiesIndex(_Strict):
     """Top-level wrapper for studies_index.json."""
+
     studies: list[StudyCard] = Field(default_factory=list)
 
 
 class ThroughputVsLatency(_Strict):
     """Per-study throughput-vs-latency curve (throughput_vs_latency.json)."""
+
     study_id: str
     model_id: str | None = None
     framework: str | None = None
@@ -60,6 +65,7 @@ class ThroughputVsLatency(_Strict):
 
 class PerfHistoryEntry(_Strict):
     """Single perf-changelog.yaml entry as a timeline event."""
+
     config_keys: list[str] = Field(default_factory=list)
     description: list[str] = Field(default_factory=list)
     pr_link: str | None = None
@@ -69,4 +75,5 @@ class PerfHistoryEntry(_Strict):
 
 class PerfHistory(_Strict):
     """Top-level wrapper for perf_history.json."""
+
     entries: list[PerfHistoryEntry] = Field(default_factory=list)

@@ -159,15 +159,14 @@ SAMPLE_NDJSON = WORKLOADS_REPO / "examples" / "vllm_request_log" / "sample.ndjso
 
 
 @needs_workloads
-@pytest.mark.skipif(not SAMPLE_NDJSON.exists(),
-                    reason="lm-workloads examples fixture 필요")
+@pytest.mark.skipif(not SAMPLE_NDJSON.exists(), reason="lm-workloads examples fixture 필요")
 def test_lm_workloads_e2e(tmp_path: Path):
     """LMWorkloadsProvider → WorkloadSpec → yaml round-trip."""
     from lmtune.workload.providers.lm_workloads import LMWorkloadsProvider
 
-    p = LMWorkloadsProvider(f"vllm-log:{SAMPLE_NDJSON}",
-                            store_path=tmp_path / "store.duckdb",
-                            out_dir=tmp_path / "out")
+    p = LMWorkloadsProvider(
+        f"vllm-log:{SAMPLE_NDJSON}", store_path=tmp_path / "store.duckdb", out_dir=tmp_path / "out"
+    )
     spec = p.provide()
     assert spec.apiVersion == "workloads/v1alpha1"
     assert spec.kind == "WorkloadSpec"

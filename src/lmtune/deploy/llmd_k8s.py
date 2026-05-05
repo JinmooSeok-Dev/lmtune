@@ -49,9 +49,7 @@ DEFAULT_LMTUNE_REPO_ROOT = Path(
 # helmfile templates root — b200/helmfile/* 가 lmtune repo 안에 self-contained 이므로
 # 디폴트는 lmtune repo root. peer-repo (llm-distributed-inference) 가 필요한 경우만 override.
 # 우선순위: 명시 인자 > endpoint YAML helmfile_overrides.helmfile_root > LMTUNE_HELMFILE_ROOT env > 자동
-DEFAULT_HELMFILE_ROOT = Path(
-    _os.environ.get("LMTUNE_HELMFILE_ROOT") or DEFAULT_LMTUNE_REPO_ROOT
-)
+DEFAULT_HELMFILE_ROOT = Path(_os.environ.get("LMTUNE_HELMFILE_ROOT") or DEFAULT_LMTUNE_REPO_ROOT)
 
 
 # Well-lit-path 디스패치 테이블. b200/helmfile/<key>/ 가 기준 (self-contained).
@@ -208,7 +206,9 @@ class LLMDK8sAdapter(DeploymentAdapter):
         self._dry_run = bool(dry_run)
 
     @classmethod
-    def from_endpoint(cls, endpoint_data: Mapping[str, Any], *, dry_run: bool = False) -> LLMDK8sAdapter:
+    def from_endpoint(
+        cls, endpoint_data: Mapping[str, Any], *, dry_run: bool = False
+    ) -> LLMDK8sAdapter:
         """Construct from endpoint YAML's `deployment.helmfile_overrides` block.
 
         Accepts (all optional):
@@ -250,7 +250,8 @@ class LLMDK8sAdapter(DeploymentAdapter):
 
         data = merge_params_into_endpoint(ep, params_clean)
         overlay = render_values_overlay(
-            data, release_names=self._release_names,
+            data,
+            release_names=self._release_names,
         )
 
         # Path-aware routing: if a well_lit_path was sampled, override the static
@@ -262,7 +263,8 @@ class LLMDK8sAdapter(DeploymentAdapter):
                 return ApplyResult(
                     ok=False,
                     health=HealthReport(ready=False, detail=str(e)),
-                    endpoint_path=ep, adapter=self.adapter_label,
+                    endpoint_path=ep,
+                    adapter=self.adapter_label,
                     notes="unsupported well_lit_path",
                 )
         else:
@@ -278,25 +280,33 @@ class LLMDK8sAdapter(DeploymentAdapter):
             return ApplyResult(
                 ok=True,
                 health=HealthReport(ready=True, detail=f"dry-run; overlay at {overlay_path}"),
-                endpoint_path=ep, adapter=self.adapter_label,
+                endpoint_path=ep,
+                adapter=self.adapter_label,
                 notes="dry-run skipped helmfile/rollout/probe",
             )
 
         if not helmfile_root.exists():
             return ApplyResult(
                 ok=False,
-                health=HealthReport(ready=False, detail=f"helmfile root not found: {helmfile_root}"),
-                endpoint_path=ep, adapter=self.adapter_label,
+                health=HealthReport(
+                    ready=False, detail=f"helmfile root not found: {helmfile_root}"
+                ),
+                endpoint_path=ep,
+                adapter=self.adapter_label,
                 notes="repo unavailable",
             )
 
         # 1. helmfile apply
         cmd = [
             "helmfile",
-            "--environment", self._env,
-            "--selector", self._selector,
-            "--state-values-file", str(overlay_path),
-            "-f", str(helmfile_root / helmfile_file),
+            "--environment",
+            self._env,
+            "--selector",
+            self._selector,
+            "--state-values-file",
+            str(overlay_path),
+            "-f",
+            str(helmfile_root / helmfile_file),
             "apply",
         ]
         log.info("LLMDK8sAdapter: %s", " ".join(cmd))
@@ -305,7 +315,8 @@ class LLMDK8sAdapter(DeploymentAdapter):
             return ApplyResult(
                 ok=False,
                 health=HealthReport(ready=False, detail=(proc.stderr or proc.stdout)[-800:]),
-                endpoint_path=ep, adapter=self.adapter_label,
+                endpoint_path=ep,
+                adapter=self.adapter_label,
                 notes=f"helmfile apply rc={proc.returncode}",
             )
 
@@ -325,9 +336,8 @@ class LLMDK8sAdapter(DeploymentAdapter):
             if not rr.ok:
                 # crash classification 을 notes 에 packaging.
                 # logs_tail 은 truncate 해서 DuckDB notes 컬럼 폭주 방지.
-                notes = (
-                    f"rollout {rr.crash_class}: {rr.detail}"
-                    + (f" | logs: ...{rr.logs_tail[-400:]}" if rr.logs_tail else "")
+                notes = f"rollout {rr.crash_class}: {rr.detail}" + (
+                    f" | logs: ...{rr.logs_tail[-400:]}" if rr.logs_tail else ""
                 )
                 return ApplyResult(
                     ok=False,
@@ -349,9 +359,11 @@ class LLMDK8sAdapter(DeploymentAdapter):
             return ApplyResult(
                 ok=False,
                 health=HealthReport(ready=False, detail="no url"),
-                endpoint_path=ep, adapter=self.adapter_label,
+                endpoint_path=ep,
+                adapter=self.adapter_label,
             )
         import time as _time
+
         probe_budget_s = max(60, self._rollout_timeout_s)
         deadline = _time.time() + probe_budget_s
         health = HealthReport(ready=False, detail="probe not started")
@@ -366,13 +378,16 @@ class LLMDK8sAdapter(DeploymentAdapter):
             return ApplyResult(
                 ok=False,
                 health=health,
-                endpoint_path=ep, adapter=self.adapter_label,
+                endpoint_path=ep,
+                adapter=self.adapter_label,
                 notes=f"probe failed after {attempt} attempts within {probe_budget_s}s",
             )
         warmup_one_token(url, data.get("model", ""))
         return ApplyResult(
             ok=True,
-            health=health, endpoint_path=ep, adapter=self.adapter_label,
+            health=health,
+            endpoint_path=ep,
+            adapter=self.adapter_label,
         )
 
     def teardown(self, endpoint_path: str | Path) -> None:

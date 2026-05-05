@@ -61,13 +61,15 @@ def test_arrival_poisson_count_range():
 
 
 def test_arrival_diurnal_peak_gt_valley():
-    pat = ArrivalPattern(kind="diurnal", peak_rate=20, valley_rate=1, period_sec=10, duration_sec=10)
+    pat = ArrivalPattern(
+        kind="diurnal", peak_rate=20, valley_rate=1, period_sec=10, duration_sec=10
+    )
     times = list(ArrivalScheduler(pat, seed=0))
     rates = empirical_rate(times, window_sec=1.0)
     assert rates
     peak = max(r for _, r in rates)
     valley = min(r for _, r in rates)
-    assert peak > valley * 3          # 34.6x 까진 안 가도 차이 뚜렷
+    assert peak > valley * 3  # 34.6x 까진 안 가도 차이 뚜렷
 
 
 def test_arrival_burst_alternates():
@@ -96,10 +98,7 @@ def test_trace_burstgpt_csv_roundtrip(tmp_path):
 
 def test_trace_servegen_jsonl(tmp_path):
     jsonl = tmp_path / "trace.jsonl"
-    jsonl.write_text(
-        '{"t": 100, "in": 50, "out": 20}\n'
-        '{"t": 100.5, "in": 200, "out": 80}\n'
-    )
+    jsonl.write_text('{"t": 100, "in": 50, "out": 20}\n{"t": 100.5, "in": 200, "out": 80}\n')
     records = list(TraceReplay(jsonl, fmt="servegen"))
     assert records[0].offset_sec == 0.0
     assert records[1].offset_sec == 0.5
@@ -145,36 +144,58 @@ def test_dataset_loader_graceful_missing_datasets(monkeypatch):
 
 
 def test_profile_accepts_arrival_and_distributions():
-    p = ProfileSpec.model_validate({
-        "slug": "diurnal", "name": "diurnal", "stage": 1,
-        "runner": "raw_openai", "mode": "concurrency",
-        "workload": {
-            "synthetic_input_tokens_mean": 2000,
-            "output_tokens_mean": 100,
-            "concurrency": 8, "request_count": 200,
-            "arrival": {"kind": "diurnal", "peak_rate": 50, "valley_rate": 5, "period_sec": 600, "duration_sec": 1800},
-            "input_dist": {"kind": "zipf", "zipf_s": 1.3, "zipf_clip": 16000},
-            "output_dist": {"kind": "bimodal", "modes": [[100, 20], [1000, 100]], "mode_weight": 0.6},
-        },
-    })
+    p = ProfileSpec.model_validate(
+        {
+            "slug": "diurnal",
+            "name": "diurnal",
+            "stage": 1,
+            "runner": "raw_openai",
+            "mode": "concurrency",
+            "workload": {
+                "synthetic_input_tokens_mean": 2000,
+                "output_tokens_mean": 100,
+                "concurrency": 8,
+                "request_count": 200,
+                "arrival": {
+                    "kind": "diurnal",
+                    "peak_rate": 50,
+                    "valley_rate": 5,
+                    "period_sec": 600,
+                    "duration_sec": 1800,
+                },
+                "input_dist": {"kind": "zipf", "zipf_s": 1.3, "zipf_clip": 16000},
+                "output_dist": {
+                    "kind": "bimodal",
+                    "modes": [[100, 20], [1000, 100]],
+                    "mode_weight": 0.6,
+                },
+            },
+        }
+    )
     assert p.workload.arrival.kind == "diurnal"
     assert p.workload.input_dist.kind == "zipf"
     assert p.workload.output_dist.modes == [[100, 20], [1000, 100]]
 
 
 def test_trace_workload_fields():
-    p = ProfileSpec.model_validate({
-        "slug": "rep", "name": "rep", "stage": 1,
-        "runner": "raw_openai", "mode": "concurrency",
-        "workload": {
-            "source": "trace",
-            "trace_path": "/data/burstgpt.csv",
-            "trace_format": "burstgpt",
-            "replay_speed": 5.0,
-            "sample_count": 100,
-            "concurrency": 4, "request_count": 100,
-        },
-    })
+    p = ProfileSpec.model_validate(
+        {
+            "slug": "rep",
+            "name": "rep",
+            "stage": 1,
+            "runner": "raw_openai",
+            "mode": "concurrency",
+            "workload": {
+                "source": "trace",
+                "trace_path": "/data/burstgpt.csv",
+                "trace_format": "burstgpt",
+                "replay_speed": 5.0,
+                "sample_count": 100,
+                "concurrency": 4,
+                "request_count": 100,
+            },
+        }
+    )
     assert isinstance(p.workload, TraceWorkload)
     assert p.workload.replay_speed == 5.0
     assert p.workload.trace_format == "burstgpt"

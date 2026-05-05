@@ -18,9 +18,9 @@ import yaml
 from lmtune.workload.providers.base import WorkloadProvider
 
 DEFAULT_TTL_SECONDS = 3600  # 1h
-DEFAULT_CACHE_ROOT = Path(os.environ.get(
-    "LMTUNE_CACHE_ROOT", str(Path.home() / ".lmtune" / "cache")
-))
+DEFAULT_CACHE_ROOT = Path(
+    os.environ.get("LMTUNE_CACHE_ROOT", str(Path.home() / ".lmtune" / "cache"))
+)
 
 
 def cache_path(provider: WorkloadProvider, *, root: Path | None = None) -> Path:
@@ -28,8 +28,9 @@ def cache_path(provider: WorkloadProvider, *, root: Path | None = None) -> Path:
     return root / "workload" / f"{provider.fingerprint()}.yaml"
 
 
-def load_cached(provider: WorkloadProvider, *, ttl_sec: int = DEFAULT_TTL_SECONDS,
-                root: Path | None = None):
+def load_cached(
+    provider: WorkloadProvider, *, ttl_sec: int = DEFAULT_TTL_SECONDS, root: Path | None = None
+):
     """Cached WorkloadSpec 반환. 없거나 stale 이면 None."""
     p = cache_path(provider, root=root)
     if not p.exists():
@@ -54,9 +55,13 @@ def save_cache(provider: WorkloadProvider, spec, *, root: Path | None = None) ->
     return p
 
 
-def provide_with_cache(provider: WorkloadProvider, *, refresh: bool = False,
-                       ttl_sec: int = DEFAULT_TTL_SECONDS,
-                       root: Path | None = None):
+def provide_with_cache(
+    provider: WorkloadProvider,
+    *,
+    refresh: bool = False,
+    ttl_sec: int = DEFAULT_TTL_SECONDS,
+    root: Path | None = None,
+):
     """Cache lookup → fallback to provider.provide() → cache 갱신."""
     if not refresh:
         cached = load_cached(provider, ttl_sec=ttl_sec, root=root)

@@ -3,6 +3,7 @@
 kubectl 호출은 mocking 하지 않고 classify_crash 의 패턴 매칭만 검증.
 Smart waiter 자체는 minikube 통합 테스트에서 검증 (별도).
 """
+
 from __future__ import annotations
 
 from lmtune.deploy.rollout_watcher import classify_crash
@@ -70,7 +71,7 @@ def test_classify_infeasible_dynamo_data_dependent_assert():
 
 def test_classify_infeasible_kv_cache_dtype_assert_only():
     """assertion line 단독으로도 infeasible 분류 가능."""
-    logs = "assert self.kv_cache_dtype in {\"fp8\", \"fp8_e4m3\"}"
+    logs = 'assert self.kv_cache_dtype in {"fp8", "fp8_e4m3"}'
     assert classify_crash(logs) == "infeasible"
 
 

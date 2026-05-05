@@ -26,6 +26,7 @@ def plot_ttft_vs_input_len(rows: Iterable[RequestRow], out_path: str | Path, **o
     ax.scatter(xs, ys, alpha=0.4, s=20)
     if len(xs) >= 2:
         import numpy as np
+
         coef = np.polyfit(xs, ys, 1)
         xline = np.linspace(min(xs), max(xs), 50)
         ax.plot(xline, coef[0] * xline + coef[1], "r-", label=f"fit: {coef[0]:.3f}x+{coef[1]:.1f}")
