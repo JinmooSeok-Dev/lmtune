@@ -10,7 +10,14 @@ from __future__ import annotations
 
 from lmtune.tuner.base import Pruner, Sampler
 
-__all__ = ["Pruner", "Sampler", "make_pruner", "make_sampler"]
+__all__ = [
+    "NativeMedianPruner",
+    "NativePercentilePruner",
+    "Pruner",
+    "Sampler",
+    "make_pruner",
+    "make_sampler",
+]
 
 
 def __getattr__(name: str):
@@ -31,4 +38,13 @@ def __getattr__(name: str):
         from lmtune.tuner.factory import make_pruner
 
         return make_pruner
+    # Native pruner — stdlib only, 외부 SDK 0
+    if name == "NativeMedianPruner":
+        from lmtune.tuner.median_pruner import NativeMedianPruner
+
+        return NativeMedianPruner
+    if name == "NativePercentilePruner":
+        from lmtune.tuner.percentile_pruner import NativePercentilePruner
+
+        return NativePercentilePruner
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
