@@ -28,6 +28,13 @@ from lmtune.contracts.record_spec import (
     TrialRecord,
     kind_to_class,
 )
+from lmtune.contracts.result_spec import (
+    BenchmarkResult,
+    RequestEntry,
+    SessionEntry,
+    TrajectoryEntry,
+)
+from lmtune.contracts.result_to_records import to_records
 
 __all__ = [
     # record
@@ -50,4 +57,10 @@ __all__ = [
     "SortKey",
     "AggregateSpec",
     "CompareOp",
+    # result
+    "BenchmarkResult",
+    "RequestEntry",
+    "SessionEntry",
+    "TrajectoryEntry",
+    "to_records",
 ]
