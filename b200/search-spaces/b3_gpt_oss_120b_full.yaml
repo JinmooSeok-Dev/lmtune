@@ -1,0 +1,142 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b3-gpt-oss-120b-full
+
+# B3 [Track B-I] — gpt-oss-120b 16-GPU TP/DP autotune full search-space.
+#
+# 본 파일 = b3_gpt_oss_120b_extended.yaml (11 axis) + DCP (decode context parallel).
+#
+# DCP (decode_context_parallel_size) 추가 근거:
+#   - vllm 0.17.1 verified: --decode-context-parallel-size / -dcp (engine arg_utils.py).
+#   - GPU 추가 미필요: tp 안에서 KV cache 만 분산 (ring attention). docs:
+#     "the dcp size does not increase the number of GPUs needed to launch, but
+#      just reduces the KV cache duplication"
+#     → chart 의 nvidia.com/gpu: tp hardcode 와 호환.
+#   - 제약: tp % dcp == 0 (validation.ts:131 1:1, ring attention 이 TP group 안).
+#   - long-context decode 메모리 부담 ↓, 64K-130K context 시 효과.
+#
+# 본 PR 의 비-목표 (별도 후속 PR):
+#   - PCP (prefill_context_parallel_size) — vllm 0.17.1 에 -pcp flag 존재 verified
+#     이지만 perReplicaNpus = tp × pp × pcp (vllm-config-puzzle config.ts:17) 라
+#     chart 의 `nvidia.com/gpu: {{ $tp }}` hardcode 와 충돌. PCP=2 시 GPU/pod
+#     = tp × pcp 로 chart wiring 수정 필요. 그 PR 에서 함께 처리.
+#   - intra/cross_node_type, mla_*, ep_strategy, node_split_strategy, sequence_parallel
+#     — chart wiring 없음 또는 PP=2+ 영역 (multinode chart 필요).
+#   - PP=2+ — multinode chart (wide-ep-lws / P/D path) 영역.
+#
+# 사용:
+#   lmtune search start \
+#     --space b200/search-spaces/b3_gpt_oss_120b_full.yaml \
+#     --endpoint b200/endpoints/b200_gpt-oss-120b.yaml \
+#     --adapter llmd-k8s --cluster-env b200-dual-node \
+#     --strategy tpe --max-trials 60 --seed 13 \
+#     --warmstart-db data/db/lmtune.duckdb --warmstart-top-k 12 \
+#     --name b3-gpt-oss-120b-full \
+#     --repeats 3 --ttft-slo-ms 2000 \
+#     -p configs/profiles/autotune/short.yaml \
+#     -p configs/profiles/autotune/medium.yaml \
+#     -p configs/profiles/autotune/long.yaml
+
+axes:
+  # ─── Parallelism (b3_extended 와 동일, chart 호환 확인됨) ───
+  tp:
+    type: categorical
+    values: [2, 4, 8]
+
+  pp:
+    type: categorical
+    values: [1]
+    # PP=1 강제 (inference-scheduling chart 한정, multinode false). b3_extended 와 동일.
+
+  dp:
+    type: categorical
+    values: [1, 2, 4, 8]
+
+  ep:
+    type: bool
+
+  # ─── Context Parallelism (신규) ───
+  decode_context_parallel_size:
+    type: categorical
+    values: [1, 2, 4]
+    # DCP — vllm 0.17.1 verified. GPU 추가 없이 KV cache 만 분산 (ring attention
+    # within TP group). axis 가 unknown_keys fall-through → engine_args 로 들어가
+    # chart 가 --decode-context-parallel-size <v> 로 자동 emit.
+    #
+    # 제약: tp % dcp == 0 (c8_dcp_tp_div). 위반 trial 은 feasibility 가 prune.
+    #   - tp=2, dcp ∈ {1, 2}
+    #   - tp=4, dcp ∈ {1, 2, 4}
+    #   - tp=8, dcp ∈ {1, 2, 4}  (8 도 허용이나 tp >= dcp×2 권장 → values 4 까지만)
+
+  # ─── Scheduling / Batching (b2 verified, b3_extended 와 동일) ───
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256, 512]
+
+  max_num_batched_tokens:
+    type: categorical
+    values: [2048, 4096, 8192, 16384]
+
+  max_model_len:
+    type: categorical
+    values: [65536, 131072]
+    # DCP 효과는 long-context 에서 두드러짐 → b3_extended 와 동일 [65K, 130K] sweep
+    # 유지. DCP × max_model_len 의 cross-axis interaction 이 본 study 의 핵심.
+
+  # ─── KV / Compute (b3_extended 와 동일) ───
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  prefix_caching_hash_algo:
+    type: categorical
+    values: [builtin, sha256]
+    active_if: {enable_prefix_caching: true}
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+
+  block_size:
+    type: categorical
+    values: [16, 32]
+
+
+# ─── Feasibility constraints (b3_extended 7 + DCP-TP divisibility) ───
+# `--cluster-env b200-dual-node` 명시 시에만 활성, 미명시 시 회귀 안전.
+feasibility_constraints:
+  - id: c1_npu_count
+    rule: "tp * pp * dp <= environment.total_npus"
+    message: "tp × pp × dp must fit total NPUs (16 on B200 dual-node)"
+
+  - id: c2_tp_single_node
+    rule: "tp <= environment.npus_per_server"
+    message: "TP must fit in a single node (NCCL ring within NVLink)"
+
+  - id: c3_pp_layers
+    rule: "pp <= model.num_layers"
+    message: "PP stages cannot exceed model layers (gpt-oss-120b: 36 layers)"
+
+  - id: c4_heads_div_tp
+    rule: "model.num_attention_heads % tp == 0"
+    message: "TP must divide attention heads (gpt-oss-120b: 64 heads)"
+
+  - id: c6_gpu_memory
+    rule: "surrogate.simulated_total_gb <= environment.gpu_vram_gb * gpu_memory_utilization"
+    message: "Active params + KV must fit in GPU HBM (B200: 192 GB)"
+
+  - id: c7_tp_dp_balance
+    rule: "(tp * pp * dp >= 8) OR (environment.total_npus < 16)"
+    severity: warning
+    message: "16-GPU 환경에서 tp×pp×dp < 8 은 GPU 활용도 ↓ (warning, hard fail 아님)"
+
+  - id: c8_dcp_tp_div
+    rule: "(decode_context_parallel_size == 1) OR (tp % decode_context_parallel_size == 0)"
+    message: "DCP must divide TP (ring attention within TP group, validation.ts:131 1:1)"
+
+  - id: c11_inference_scheduling_pp1
+    rule: "pp == 1"
+    message: "inference-scheduling path 는 PP=1 만 지원 (chart multinode false)"
