@@ -238,27 +238,41 @@ lmtune search export <study_id> --winner top-1 --out b200/results/<study_id>/win
 
 새 backend 추가 시 변경되는 곳: ABC 구현체 1 파일 + factory 매핑 1줄. 외부 사용자 입장에선 `--src-kind X` / `--strategy X` 만 추가하면 즉시 사용 가능. 자세한 step-by-step 은 `docs/architecture/REFACTOR-PLAN.md` PLUG 섹션과 `tests/storage/test_postgres_store_stub.py` / `tests/tuner/test_llm_oracle_stub.py` 의 acceptance 케이스 참조.
 
-## Storage 변환 — DuckDB ↔ Local jsonl
+## Storage 운영 도구
+
+`lmtune storage` 서브커맨드는 모두 `ArtifactStore` ABC 의 `put` / `query` / `count` 만 사용 — 신규 backend (`postgres` 등) 합류 시 코드 수정 0.
 
 \`\`\`bash
-# 운영 DB 를 git 친화 jsonl 디렉토리로 export
+# 1. backend 간 변환 — local↔duckdb 양방향
 lmtune storage migrate \
   --src-kind duckdb --src data/db/lmtune.duckdb \
   --dst-kind local  --dst data/archive/2026-05-06/
 
-# 외부 archive (jsonl) 를 다시 DuckDB 로 import
 lmtune storage migrate \
   --src-kind local  --src data/archive/2026-05-06/ \
   --dst-kind duckdb --dst data/db/imported.duckdb
 
-# 등록된 backend 목록 (PLUG 합류 시 자동 노출)
+# 2. record kind 별 count 보고 — monitoring
+lmtune storage info --kind duckdb --path data/db/lmtune.duckdb
+lmtune storage info --kind duckdb --path data/db/lmtune.duckdb --json | jq .total
+
+# 3. record schema validity 검증 — 외부 archive 신뢰성
+lmtune storage validate --kind local --path data/archive/2026-05-06/
+lmtune storage validate --kind duckdb --path data/db/lmtune.duckdb --json | jq .valid
+
+# 4. 등록된 backend 목록 (PLUG 합류 시 자동 노출)
 lmtune storage list-backends
 
-# BenchmarkResult result.json → records 디렉토리 (raw_dir 외부에서 받은 산출 archive)
+# 외부 result.json → ArtifactStore mirror 변환 (contracts 도구 — storage 와 별개)
 lmtune contracts records-from-result <result.json> --out <records-dir>
 \`\`\`
 
-위 4 명령은 모두 `ArtifactStore.put` / `query` 만 사용하므로 신규 backend (`postgres` 등) 가 합류해도 수정 0.
+| 명령 | 무엇을 하는가 | exit code |
+|:---|:---|:---:|
+| `migrate` | src store → dst store 일괄 복사 (RECORD_KINDS 순회) | 0 / 비어있으면 0 + warn |
+| `info` | record kind 별 count 보고 (사람용 + `--json`) | 0 |
+| `validate` | 모든 record 가 RecordSpec schema 통과하는지 query 시도 | 0 (valid) / 1 (invalid) |
+| `list-backends` | `_BACKENDS` 목록 출력 (PLUG 진입로) | 0 |
 
 ## User Contract — Inputs & Outputs
 
