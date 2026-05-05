@@ -76,9 +76,7 @@ def test_prom_sample_record_labels_in_pk():
 
 def test_detection_record_pk():
     ts = datetime(2026, 5, 6, 12, 0, tzinfo=UTC)
-    rec = DetectionRecord(
-        run_id="r1", detector="d1", severity="warning", created_at=ts
-    )
+    rec = DetectionRecord(run_id="r1", detector="d1", severity="warning", created_at=ts)
     pk = rec.primary_key()
     assert pk[0] == "r1" and pk[1] == "d1"
     assert "2026-05-06" in pk[2]
@@ -93,8 +91,12 @@ def test_study_record_defaults():
 
 def test_trial_record_with_params_dict():
     rec = TrialRecord(
-        trial_id="t1", study_id="st1", seq=1,
-        params={"max_num_seqs": 64, "tp": 1}, status="completed", score=42.5,
+        trial_id="t1",
+        study_id="st1",
+        seq=1,
+        params={"max_num_seqs": 64, "tp": 1},
+        status="completed",
+        score=42.5,
     )
     assert rec.params["max_num_seqs"] == 64
     assert rec.score == 42.5
@@ -109,9 +111,7 @@ def test_trial_metric_record_workload_default():
 
 
 def test_record_is_frozen():
-    rec = RunRecord(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner="x", status="ok"
-    )
+    rec = RunRecord(run_id="r1", profile_slug="p", endpoint_slug="e", runner="x", status="ok")
     with pytest.raises((ValidationError, TypeError)):
         rec.run_id = "different"  # type: ignore[misc]
 
@@ -122,8 +122,12 @@ def test_record_is_frozen():
 def test_extra_field_rejected():
     with pytest.raises(ValidationError):
         RunRecord(
-            run_id="r1", profile_slug="p", endpoint_slug="e",
-            runner="x", status="ok", _bogus="x",  # type: ignore[call-arg]
+            run_id="r1",
+            profile_slug="p",
+            endpoint_slug="e",
+            runner="x",
+            status="ok",
+            _bogus="x",  # type: ignore[call-arg]
         )
 
 

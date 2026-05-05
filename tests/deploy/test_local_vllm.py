@@ -13,17 +13,23 @@ from lmtune.deploy.local_vllm import LocalVLLMAdapter
 
 
 def _endpoint(path: Path, *, model: str = "Qwen/Qwen2.5-1.5B-Instruct") -> None:
-    path.write_text(yaml.safe_dump({
-        "apiVersion": "lmtune/v1alpha1",
-        "slug": "local-vllm",
-        "url": "http://localhost:8000/v1",
-        "model": model,
-        "deployment": {
-            "engine": "vllm",
-            "parallelism": {"tp": 1, "dp": 1, "pp": 1, "ep": False},
-            "engine_args": {"max_num_seqs": 128},
-        },
-    }, sort_keys=False), encoding="utf-8")
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "apiVersion": "lmtune/v1alpha1",
+                "slug": "local-vllm",
+                "url": "http://localhost:8000/v1",
+                "model": model,
+                "deployment": {
+                    "engine": "vllm",
+                    "parallelism": {"tp": 1, "dp": 1, "pp": 1, "ep": False},
+                    "engine_args": {"max_num_seqs": 128},
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
 
 
 def _fake_restart_script(path: Path) -> Path:

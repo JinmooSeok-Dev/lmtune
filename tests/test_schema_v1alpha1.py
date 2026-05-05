@@ -32,14 +32,18 @@ def test_synthetic_source_defaults():
 
 def test_dataset_workload_parses():
     raw = {
-        "slug": "dsx", "name": "dsx", "stage": 2,
-        "runner": "aiperf", "mode": "concurrency",
+        "slug": "dsx",
+        "name": "dsx",
+        "stage": 2,
+        "runner": "aiperf",
+        "mode": "concurrency",
         "workload": {
             "source": "dataset",
             "dataset_id": "gonglinyuan/safim",
             "dataset_subset": "block",
             "output_tokens_mean": 50,
-            "concurrency": 1, "request_count": 5,
+            "concurrency": 1,
+            "request_count": 5,
         },
     }
     p = ProfileSpec.model_validate(raw)
@@ -49,12 +53,16 @@ def test_dataset_workload_parses():
 
 def test_trace_workload_parses():
     raw = {
-        "slug": "trx", "name": "trx", "stage": 1,
-        "runner": "guidellm", "mode": "concurrency",
+        "slug": "trx",
+        "name": "trx",
+        "stage": 1,
+        "runner": "guidellm",
+        "mode": "concurrency",
         "workload": {
             "source": "trace",
             "trace_path": "/data/burstgpt.csv",
-            "concurrency": 2, "request_count": 100,
+            "concurrency": 2,
+            "request_count": 100,
         },
     }
     p = ProfileSpec.model_validate(raw)
@@ -64,11 +72,15 @@ def test_trace_workload_parses():
 
 def test_unknown_source_rejected():
     raw = {
-        "slug": "bad", "name": "bad", "stage": 1,
-        "runner": "aiperf", "mode": "concurrency",
+        "slug": "bad",
+        "name": "bad",
+        "stage": 1,
+        "runner": "aiperf",
+        "mode": "concurrency",
         "workload": {"source": "unknown-kind", "concurrency": 1, "request_count": 1},
     }
     from pydantic import ValidationError
+
     with pytest.raises(ValidationError):
         ProfileSpec.model_validate(raw)
 
@@ -100,11 +112,16 @@ def test_endpoint_without_deployment_ok():
 def test_runner_overrides_injected(tmp_path):
     profile = ProfileSpec.model_validate(
         {
-            "slug": "ov", "name": "ov", "stage": 1,
-            "runner": "aiperf", "mode": "concurrency",
+            "slug": "ov",
+            "name": "ov",
+            "stage": 1,
+            "runner": "aiperf",
+            "mode": "concurrency",
             "workload": {
-                "synthetic_input_tokens_mean": 100, "output_tokens_mean": 50,
-                "concurrency": 1, "request_count": 3,
+                "synthetic_input_tokens_mean": 100,
+                "output_tokens_mean": 50,
+                "concurrency": 1,
+                "request_count": 3,
             },
             "runner_overrides": {
                 "aiperf": {
@@ -119,9 +136,7 @@ def test_runner_overrides_injected(tmp_path):
     )
     endpoint = load_endpoint(ROOT / "configs/endpoints/local_vllm.yaml")
     runner = AIPerfRunner()
-    cmd = runner._apply_overrides(
-        runner.build_command(profile, endpoint, "r", tmp_path), profile
-    )
+    cmd = runner._apply_overrides(runner.build_command(profile, endpoint, "r", tmp_path), profile)
     assert "--warmup-requests" in cmd and "5" in cmd
     assert "--extra-http-header" in cmd
     assert "X-Foo: bar" in cmd
@@ -148,10 +163,12 @@ def test_slo_resolved_checks_includes_legacy_and_new():
 
 
 def test_slo_detector_respects_op_semantics():
-    slo = SLOSpec(checks=[
-        SLOCheck(metric="goodput", p="avg", op=">=", value=0.9, severity="critical"),
-        SLOCheck(metric="ttft", p="p99", op="<=", value=500),
-    ])
+    slo = SLOSpec(
+        checks=[
+            SLOCheck(metric="goodput", p="avg", op=">=", value=0.9, severity="critical"),
+            SLOCheck(metric="ttft", p="p99", op="<=", value=500),
+        ]
+    )
     metrics = {"goodput": {"avg": 0.75}, "ttft": {"p99": 450}}
     dets = detect_slo_violations(metrics, slo)
     # goodput 만 위반이어야 함

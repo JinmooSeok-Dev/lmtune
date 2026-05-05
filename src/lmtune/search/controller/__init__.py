@@ -22,6 +22,7 @@ from lmtune.search.controller.random_ctrl import RandomController
 # Random/Mock/HTTP plug-in 은 동작해야 한다.
 try:
     from lmtune.search.controller.optuna_ctrl import OptunaController  # noqa: F401
+
     _HAS_OPTUNA = True
 except ImportError:
     _HAS_OPTUNA = False
@@ -60,9 +61,15 @@ def make_controller(
                 "OptunaController requires optuna. install with `pip install lmtune[search]`"
             )
         return OptunaController.from_config(
-            space, strategy=strategy, seed=seed, context=context,
-            n_samples=n_samples, direction=direction, directions=directions,
-            study_name=study_name, pruner=pruner,
+            space,
+            strategy=strategy,
+            seed=seed,
+            context=context,
+            n_samples=n_samples,
+            direction=direction,
+            directions=directions,
+            study_name=study_name,
+            pruner=pruner,
         )
     if kind == "random":
         return RandomController(seed=seed)

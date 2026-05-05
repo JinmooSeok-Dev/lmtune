@@ -88,7 +88,7 @@ def run_distributed(
             try:
                 study.storage.resume()
                 try:
-                    trial = study.ask()   # ask writes the pending trial row
+                    trial = study.ask()  # ask writes the pending trial row
                 finally:
                     study.storage.suspend()
             except Exception as e:
@@ -127,13 +127,19 @@ def run_distributed(
                     study.storage.suspend()
                 log.info(
                     "study %s trial %d: status=%s score=%s dt=%.1fs",
-                    study.study_id, trial.seq, trial.status.value, trial.score, dt,
+                    study.study_id,
+                    trial.seq,
+                    trial.status.value,
+                    trial.score,
+                    dt,
                 )
                 completed.append(trial)
                 finished.append(tid)
 
                 outcome = classify_outcome(
-                    trial.status.value, error=trial.error, notes=trial.error,
+                    trial.status.value,
+                    error=trial.error,
+                    notes=trial.error,
                 )
                 study.breaker.record(outcome)
                 halt, reason = study.breaker.should_halt()
@@ -141,7 +147,10 @@ def run_distributed(
                     halt_reason = reason
                     log.error(
                         "study %s: HALTED at seq=%d — %s; breaker=%s",
-                        study.study_id, trial.seq, reason, study.breaker.summary(),
+                        study.study_id,
+                        trial.seq,
+                        reason,
+                        study.breaker.summary(),
                     )
             for tid in finished:
                 inflight.pop(tid, None)

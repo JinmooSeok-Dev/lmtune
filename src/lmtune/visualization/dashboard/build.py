@@ -10,6 +10,7 @@
 
 dependency: jinja2 (default dep, package-data 포함). Tailwind/Chart.js는 CDN.
 """
+
 from __future__ import annotations
 
 import json
@@ -93,7 +94,9 @@ def _flatten_metrics(metrics_by_workload: dict[str, dict[str, float]]) -> dict[s
     return flat
 
 
-def _pick_metric(metrics_flat: dict[str, float], metric: str, prefer_workloads: list[str]) -> float | None:
+def _pick_metric(
+    metrics_flat: dict[str, float], metric: str, prefer_workloads: list[str]
+) -> float | None:
     """Pick first available `<metric>.<workload>` from preference list, else any.
 
     Supports two name shapes:
@@ -116,7 +119,9 @@ def _pick_metric(metrics_flat: dict[str, float], metric: str, prefer_workloads: 
     return None
 
 
-def _resolve_throughput(metrics_flat: dict[str, float], prefer_workloads: list[str]) -> float | None:
+def _resolve_throughput(
+    metrics_flat: dict[str, float], prefer_workloads: list[str]
+) -> float | None:
     """Try canonical names, suffix names, and legacy aliases for throughput."""
     for name in ("throughput_tok_avg", "throughput_avg"):
         v = _pick_metric(metrics_flat, name, prefer_workloads)
@@ -296,13 +301,15 @@ def _compute_axis_diff(
             wv = (winner.params or {}).get(k)
             if wv != v:
                 diff[k] = (wv, v)
-        rows.append({
-            "seq": p.seq,
-            "trial_id": p.trial_id,
-            "score": p.score,
-            "is_winner": p.trial_id == winner.trial_id,
-            "diff": diff,
-        })
+        rows.append(
+            {
+                "seq": p.seq,
+                "trial_id": p.trial_id,
+                "score": p.score,
+                "is_winner": p.trial_id == winner.trial_id,
+                "diff": diff,
+            }
+        )
     return rows
 
 
@@ -314,6 +321,7 @@ class _StudyView:
     `throughput_avg` / `ttft_p99` / `e2e_p99` projected from the flat metrics dict,
     plus per-trial explainability annotations and axis-importance / Pareto front).
     """
+
     card: StudyCard
     tvl: ThroughputVsLatency
     point_status: dict[str, str] = field(default_factory=dict)  # trial_id -> status
@@ -325,7 +333,7 @@ class _StudyView:
     n_axes: int | None = None
     axis_importance: list[dict[str, Any]] | None = None
     pareto_front: list[dict[str, Any]] = field(default_factory=list)
-    n_infeasible: int = 0   # pruned-by-feasibility (subset of n_pruned)
+    n_infeasible: int = 0  # pruned-by-feasibility (subset of n_pruned)
 
     def _annotate_points(self) -> dict[str, dict[str, Any]]:
         """Compute reasoning tags per trial in seq order."""
@@ -336,7 +344,9 @@ class _StudyView:
         out: dict[str, dict[str, Any]] = {}
         running_best: float | None = None
         for p in ordered:
-            tag = _annotate_trial(p, running_best, self.card.direction, self.card.strategy, n_startup)
+            tag = _annotate_trial(
+                p, running_best, self.card.direction, self.card.strategy, n_startup
+            )
             out[p.trial_id] = tag
             if p.score is not None and (
                 running_best is None
@@ -384,8 +394,20 @@ def _build_study(store: DuckDBStore, study_id: str) -> _StudyView | None:
     hdr = store.get_study(study_id)
     if not hdr:
         return None
-    (sid, name, strategy, space_yaml, ep_slug, prof_slugs, metric, direction,
-     status, created_at, finished_at, _notes) = hdr
+    (
+        sid,
+        name,
+        strategy,
+        space_yaml,
+        ep_slug,
+        prof_slugs,
+        metric,
+        direction,
+        status,
+        created_at,
+        finished_at,
+        _notes,
+    ) = hdr
     # DuckDB stores profile_slugs as a JSON string or a native list depending on version
     if isinstance(prof_slugs, str):
         try:
@@ -413,13 +435,15 @@ def _build_study(store: DuckDBStore, study_id: str) -> _StudyView | None:
         params = json.loads(params_json) if params_json else {}
         m = store.get_trial_metrics(trial_id)
         flat = _flatten_metrics(m)
-        points.append(TrialPoint(
-            trial_id=trial_id,
-            seq=int(seq),
-            score=float(score) if score is not None else None,
-            params=params,
-            metrics=flat,
-        ))
+        points.append(
+            TrialPoint(
+                trial_id=trial_id,
+                seq=int(seq),
+                score=float(score) if score is not None else None,
+                params=params,
+                metrics=flat,
+            )
+        )
         point_status[trial_id] = str(t_status)
 
     top = store.top_trials(study_id, direction=direction, k=1)
@@ -451,9 +475,11 @@ def _build_study(store: DuckDBStore, study_id: str) -> _StudyView | None:
         points=points,
     )
     return _StudyView(
-        card=card, tvl=tvl,
+        card=card,
+        tvl=tvl,
         point_status=point_status,
-        top_params=top_params, n_pruned=len(pruned),
+        top_params=top_params,
+        n_pruned=len(pruned),
         n_infeasible=n_infeasible,
         metric_name=metric or "total_score",
         n_axes=_count_axes_in_space_yaml(space_yaml),
@@ -481,13 +507,15 @@ def _load_perf_history(perf_changelog_path: Path) -> PerfHistory:
         if not isinstance(entry, dict):
             continue
         ts = entry.get("landed_at") or entry.get("timestamp")
-        entries.append(PerfHistoryEntry(
-            config_keys=list(entry.get("config-keys") or entry.get("config_keys") or []),
-            description=list(entry.get("description") or []),
-            pr_link=entry.get("pr-link") or entry.get("pr_link"),
-            evals_only=bool(entry.get("evals-only", entry.get("evals_only", False))),
-            landed_at=str(ts) if ts is not None else None,
-        ))
+        entries.append(
+            PerfHistoryEntry(
+                config_keys=list(entry.get("config-keys") or entry.get("config_keys") or []),
+                description=list(entry.get("description") or []),
+                pr_link=entry.get("pr-link") or entry.get("pr_link"),
+                evals_only=bool(entry.get("evals-only", entry.get("evals_only", False))),
+                landed_at=str(ts) if ts is not None else None,
+            )
+        )
     return PerfHistory(entries=entries)
 
 
@@ -523,8 +551,15 @@ def dump_inferencex_json(
 def _summarize_axis(name: str, spec: Any) -> dict[str, Any]:
     """Best-effort summary of one axis entry. spec 은 dict 또는 None."""
     if not isinstance(spec, dict):
-        return {"name": name, "type": "?", "values": "?", "active_if": None, "cost_tier": None,
-                "apply_via": None, "doc": None}
+        return {
+            "name": name,
+            "type": "?",
+            "values": "?",
+            "active_if": None,
+            "cost_tier": None,
+            "apply_via": None,
+            "doc": None,
+        }
     kind = spec.get("type") or spec.get("kind") or "?"
     values: Any = "—"
     if kind in ("categorical",) and "values" in spec:
@@ -597,12 +632,14 @@ def _summarize_env_profile(path: Path) -> dict[str, Any] | None:
     if isinstance(tunable_raw, list):
         for entry in tunable_raw:
             if isinstance(entry, dict):
-                tunable.append({
-                    "name": entry.get("name"),
-                    "kind": entry.get("kind"),
-                    "values": entry.get("values"),
-                    "cost_tier": entry.get("cost_tier"),
-                })
+                tunable.append(
+                    {
+                        "name": entry.get("name"),
+                        "kind": entry.get("kind"),
+                        "values": entry.get("values"),
+                        "cost_tier": entry.get("cost_tier"),
+                    }
+                )
     return {
         "path": str(path),
         "name": spec.get("name") or path.stem,
@@ -659,17 +696,22 @@ def _build_matrix_view(views: list[_StudyView]) -> dict[str, Any]:
             "strategy": v.card.strategy,
         }
         existing = rows_by_model.setdefault(model, {}).get(hw)
-        if existing is None or (
-            v.card.top_score is not None and existing["score"] is not None
-            and v.card.top_score > existing["score"]
-        ) or (existing["score"] is None and v.card.top_score is not None):
+        if (
+            existing is None
+            or (
+                v.card.top_score is not None
+                and existing["score"] is not None
+                and v.card.top_score > existing["score"]
+            )
+            or (existing["score"] is None and v.card.top_score is not None)
+        ):
             rows_by_model[model][hw] = cell
 
     return {
         "models": models_seen,
         "hardware": hw_seen,
         "frameworks": framework_seen,
-        "cells": rows_by_model,    # cells[model][hw] = cell
+        "cells": rows_by_model,  # cells[model][hw] = cell
         "n_filled": sum(len(row) for row in rows_by_model.values()),
         "n_total": len(models_seen) * len(hw_seen),
     }
@@ -692,7 +734,7 @@ def _build_spaces_page(
             p = _summarize_env_profile(f)
             if p:
                 profiles.append(p)
-    profiles.sort(key=lambda p: (p.get("priority") if p.get("priority") is not None else 99))
+    profiles.sort(key=lambda p: p.get("priority") if p.get("priority") is not None else 99)
     total_axes = sum(s["n_axes"] for s in spaces)
     return {
         "spaces": spaces,
@@ -736,12 +778,14 @@ def build_dashboard(
     written: dict[str, Path] = {}
 
     # 1. JSON × 3 (InferenceX-compat)
-    written.update(dump_inferencex_json(
-        studies_index=studies_index,
-        throughput_vs_latency=tvl_list,
-        perf_history=perf,
-        out_dir=out / "data",
-    ))
+    written.update(
+        dump_inferencex_json(
+            studies_index=studies_index,
+            throughput_vs_latency=tvl_list,
+            perf_history=perf,
+            out_dir=out / "data",
+        )
+    )
 
     # 2. render context for templates (loose view that includes derived fields)
     studies_view = [v.to_dict() for v in views]
@@ -749,27 +793,36 @@ def build_dashboard(
 
     # spaces.html — search-space + env-profile 카탈로그 (옵션, 둘 다 None 이면 skip)
     auto_repo = Path.cwd()
-    ss_dir = Path(search_spaces_dir) if search_spaces_dir else (auto_repo / "b200" / "search-spaces")
-    ep_dir = Path(env_profiles_dir) if env_profiles_dir else (auto_repo / "configs" / "autoresearch" / "env_profiles")
+    ss_dir = (
+        Path(search_spaces_dir) if search_spaces_dir else (auto_repo / "b200" / "search-spaces")
+    )
+    ep_dir = (
+        Path(env_profiles_dir)
+        if env_profiles_dir
+        else (auto_repo / "configs" / "autoresearch" / "env_profiles")
+    )
     spaces_ctx = _build_spaces_page(search_spaces_dir=ss_dir, env_profiles_dir=ep_dir)
     has_spaces = spaces_ctx["n_spaces"] > 0 or spaces_ctx["n_profiles"] > 0
 
     # 3. index.html
-    index_html = _render("index.html.j2", {
-        "schema_version": SCHEMA_VERSION,
-        "n_studies": len(views),
-        "has_spaces": has_spaces,
-        "spaces_summary": {
-            "n_spaces": spaces_ctx["n_spaces"],
-            "n_profiles": spaces_ctx["n_profiles"],
-            "total_axes": spaces_ctx["total_axes"],
-        },
-        "data": {
+    index_html = _render(
+        "index.html.j2",
+        {
             "schema_version": SCHEMA_VERSION,
-            "studies": studies_view,
-            "perf_history": perf_view,
+            "n_studies": len(views),
+            "has_spaces": has_spaces,
+            "spaces_summary": {
+                "n_spaces": spaces_ctx["n_spaces"],
+                "n_profiles": spaces_ctx["n_profiles"],
+                "total_axes": spaces_ctx["total_axes"],
+            },
+            "data": {
+                "schema_version": SCHEMA_VERSION,
+                "studies": studies_view,
+                "perf_history": perf_view,
+            },
         },
-    })
+    )
     p = out / "index.html"
     p.write_text(index_html, encoding="utf-8")
     written["index.html"] = p
@@ -777,10 +830,13 @@ def build_dashboard(
     # 4. studies/<id>.html
     for v in views:
         ctx = v.to_dict()
-        study_html = _render("study.html.j2", {
-            "study": ctx,
-            "study_json": json.dumps(ctx, indent=2, default=str),
-        })
+        study_html = _render(
+            "study.html.j2",
+            {
+                "study": ctx,
+                "study_json": json.dumps(ctx, indent=2, default=str),
+            },
+        )
         sp = out / "studies" / f"{v.card.study_id}.html"
         sp.write_text(study_html, encoding="utf-8")
         written[f"studies/{v.card.study_id}.html"] = sp
@@ -800,10 +856,13 @@ def build_dashboard(
 
     # 7. matrix.html — InferenceX-style 모델 × HW heatmap
     matrix_ctx = _build_matrix_view(views)
-    matrix_html = _render("matrix.html.j2", {
-        "matrix": matrix_ctx,
-        "n_studies": len(views),
-    })
+    matrix_html = _render(
+        "matrix.html.j2",
+        {
+            "matrix": matrix_ctx,
+            "n_studies": len(views),
+        },
+    )
     mp = out / "matrix.html"
     mp.write_text(matrix_html, encoding="utf-8")
     written["matrix.html"] = mp

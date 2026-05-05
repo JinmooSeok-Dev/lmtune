@@ -11,6 +11,7 @@ Crash classification:
   - hard       : 분류 불가. score=0.
   - startup_timeout : crash 는 아니지만 시간 안에 ready 못 함.
 """
+
 from __future__ import annotations
 
 import json
@@ -76,9 +77,7 @@ class RolloutResult:
 
 
 def _kubectl_run(args: list[str], timeout: int = 30) -> tuple[int, str, str]:
-    proc = subprocess.run(
-        ["kubectl", *args], capture_output=True, text=True, timeout=timeout
-    )
+    proc = subprocess.run(["kubectl", *args], capture_output=True, text=True, timeout=timeout)
     return proc.returncode, proc.stdout, proc.stderr
 
 
@@ -86,9 +85,7 @@ def _get_deployment_selector(name: str, namespace: str) -> str:
     rc, out, _ = _kubectl_run(["-n", namespace, "get", "deployment", name, "-o", "json"])
     if rc != 0:
         return ""
-    spec = (
-        json.loads(out).get("spec", {}).get("selector", {}).get("matchLabels", {})
-    )
+    spec = json.loads(out).get("spec", {}).get("selector", {}).get("matchLabels", {})
     return ",".join(f"{k}={v}" for k, v in spec.items())
 
 
@@ -100,9 +97,7 @@ def _get_deployment_desired(name: str, namespace: str) -> int:
 
 
 def _get_pods(namespace: str, selector: str) -> list[dict]:
-    rc, out, _ = _kubectl_run(
-        ["-n", namespace, "get", "pods", "-l", selector, "-o", "json"]
-    )
+    rc, out, _ = _kubectl_run(["-n", namespace, "get", "pods", "-l", selector, "-o", "json"])
     if rc != 0:
         return []
     return json.loads(out).get("items", [])
@@ -134,7 +129,7 @@ def _crash_check(pod: dict, container_name: str) -> tuple[str, str] | None:
             continue
         waiting = (cs.get("state") or {}).get("waiting") or {}
         if waiting.get("reason") == "CrashLoopBackOff":
-            return (f"CrashLoopBackOff: {waiting.get('message','')}", pod_name)
+            return (f"CrashLoopBackOff: {waiting.get('message', '')}", pod_name)
         # 2회 이상 재시작은 hang/crash
         if cs.get("restartCount", 0) >= 2:
             return (f"restartCount={cs['restartCount']}", pod_name)
@@ -142,7 +137,7 @@ def _crash_check(pod: dict, container_name: str) -> tuple[str, str] | None:
         last = (cs.get("lastState") or {}).get("terminated") or {}
         if last and last.get("exitCode", 0) != 0 and cs.get("restartCount", 0) >= 1:
             return (
-                f"exit={last.get('exitCode')} reason={last.get('reason','')}",
+                f"exit={last.get('exitCode')} reason={last.get('reason', '')}",
                 pod_name,
             )
     return None
@@ -204,7 +199,10 @@ def wait_rollout_smart(
                 cls = classify_crash(logs)
                 log.warning(
                     "rollout fast-fail: dep=%s pod=%s class=%s reason=%s",
-                    deployment_name, pod_name, cls, reason,
+                    deployment_name,
+                    pod_name,
+                    cls,
+                    reason,
                 )
                 return RolloutResult(
                     ok=False,
@@ -230,9 +228,7 @@ def wait_rollout_smart(
     # timeout
     logs_tail = ""
     if last_pods:
-        logs = _logs_tail(
-            last_pods[0]["metadata"]["name"], namespace, container_name, 200
-        )
+        logs = _logs_tail(last_pods[0]["metadata"]["name"], namespace, container_name, 200)
         logs_tail = logs[-2000:]
     return RolloutResult(
         ok=False,

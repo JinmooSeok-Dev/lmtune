@@ -1,4 +1,5 @@
 """LLMDK8sAdapter overlay rendering tests (Phase W enabler)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -122,7 +123,7 @@ def test_adapter_dry_run_writes_overlay_without_running_helmfile(tmp_path: Path)
     ep_path.write_text(yaml.safe_dump(_endpoint_dict()))
 
     adapter = LLMDK8sAdapter(
-        helmfile_root=tmp_path,   # 어차피 dry_run 이라 호출 안 함
+        helmfile_root=tmp_path,  # 어차피 dry_run 이라 호출 안 함
         release_names=["ms-pd-prefill", "ms-pd-decode"],
         dry_run=True,
     )

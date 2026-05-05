@@ -25,7 +25,9 @@ from lmtune.runners.base import RequestRow
 from lmtune.storage import DuckDBStore
 from lmtune.visualization import render_run_report
 
-app = typer.Typer(no_args_is_help=True, add_completion=False, help="LLM endpoint 벤치마크 자동화 CLI")
+app = typer.Typer(
+    no_args_is_help=True, add_completion=False, help="LLM endpoint 벤치마크 자동화 CLI"
+)
 console = Console()
 
 # Phase S1: search subcommand group
@@ -48,6 +50,11 @@ from lmtune.cli_contracts import app as _contracts_app  # noqa: E402
 
 app.add_typer(_contracts_app, name="contracts")
 
+# lmtune#WS: workload spec/provider subcommand (WorkloadSpec contract)
+from lmtune.cli_workload import app as _workload_app  # noqa: E402
+
+app.add_typer(_workload_app, name="workload")
+
 
 def _default_db_path() -> Path:
     return Path(os.environ.get("LMTUNE_DB", "data/db/lmtune.duckdb"))
@@ -63,8 +70,12 @@ def cmd_run(
     endpoint: Annotated[Path, typer.Option(..., "--endpoint", "-e", exists=True, readable=True)],
     db: Annotated[Path, typer.Option("--db", help="DuckDB 경로")] = None,
     raw_dir: Annotated[Path, typer.Option("--raw-dir")] = None,
-    dry_run: Annotated[bool, typer.Option("--dry-run", help="명령만 조립하고 실행하지 않음")] = False,
-    json_summary: Annotated[bool, typer.Option("--json-summary", help="stdout 마지막 줄에 machine-readable JSON 요약")] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="명령만 조립하고 실행하지 않음")
+    ] = False,
+    json_summary: Annotated[
+        bool, typer.Option("--json-summary", help="stdout 마지막 줄에 machine-readable JSON 요약")
+    ] = False,
 ):
     profile_obj = load_profile(profile)
     endpoint_obj = load_endpoint(endpoint)
@@ -77,10 +88,13 @@ def cmd_run(
         cmd = runner.build_command(profile_obj, endpoint_obj, run_id, raw_dir / run_id)
         cmd = runner._apply_overrides(cmd, profile_obj)
         import shlex
+
         console.print(shlex.join(cmd))
         raise typer.Exit(0)
 
-    console.print(f"[bold]run_id[/bold]={run_id}  profile={profile_obj.slug}  endpoint={endpoint_obj.slug}  runner={runner.kind}")
+    console.print(
+        f"[bold]run_id[/bold]={run_id}  profile={profile_obj.slug}  endpoint={endpoint_obj.slug}  runner={runner.kind}"
+    )
 
     endpoint_obj.resolve_api_key()  # env var 누락 시 조기 실패
 
@@ -97,7 +111,9 @@ def cmd_run(
         )
         prom_collector.start()
     try:
-        artifact = runner.run(profile_obj, endpoint_obj, run_id, raw_dir, env_extra=env_extra or None)
+        artifact = runner.run(
+            profile_obj, endpoint_obj, run_id, raw_dir, env_extra=env_extra or None
+        )
     finally:
         if prom_collector is not None:
             prom_collector.stop()
@@ -127,8 +143,8 @@ def cmd_run(
 _OP_FUNCS = {
     "<=": lambda a, b: a <= b,
     ">=": lambda a, b: a >= b,
-    "<":  lambda a, b: a < b,
-    ">":  lambda a, b: a > b,
+    "<": lambda a, b: a < b,
+    ">": lambda a, b: a > b,
     "==": lambda a, b: a == b,
     "!=": lambda a, b: a != b,
 }
@@ -142,16 +158,34 @@ def _evaluate_slo(metrics: dict[str, dict[str, float]], slo: SLOSpec) -> tuple[b
         bucket = metrics.get(chk.metric) or {}
         observed = bucket.get(chk.p)
         if observed is None:
-            results.append({"metric": chk.metric, "p": chk.p, "op": chk.op, "value": chk.value,
-                            "observed": None, "passed": False, "reason": "missing"})
+            results.append(
+                {
+                    "metric": chk.metric,
+                    "p": chk.p,
+                    "op": chk.op,
+                    "value": chk.value,
+                    "observed": None,
+                    "passed": False,
+                    "reason": "missing",
+                }
+            )
             all_pass = False
             continue
         op_fn = _OP_FUNCS.get(chk.op)
         passed = bool(op_fn(observed, chk.value)) if op_fn else False
         if not passed:
             all_pass = False
-        results.append({"metric": chk.metric, "p": chk.p, "op": chk.op, "value": chk.value,
-                        "observed": observed, "passed": passed, "severity": chk.severity})
+        results.append(
+            {
+                "metric": chk.metric,
+                "p": chk.p,
+                "op": chk.op,
+                "value": chk.value,
+                "observed": observed,
+                "passed": passed,
+                "severity": chk.severity,
+            }
+        )
     return all_pass, results
 
 
@@ -196,7 +230,13 @@ def cmd_sweep(
         runner = get_runner(p.runner)
         console.print(f"[bold]running[/bold] {p.slug} run_id={run_id}")
         artifact = runner.run(p, endpoint_obj, run_id, raw_dir)
-        store.record_run(artifact, p, endpoint_obj, profile_yaml_text=_yaml_for(p, profile_dir), git_sha=_git_sha())
+        store.record_run(
+            artifact,
+            p,
+            endpoint_obj,
+            profile_yaml_text=_yaml_for(p, profile_dir),
+            git_sha=_git_sha(),
+        )
         console.print(f"  → status={artifact.status}")
         if artifact.status == "failed" and not continue_on_error:
             store.close()
@@ -211,10 +251,12 @@ def cmd_ls(
     last: Annotated[int, typer.Option("--last", "-n", help="최근 N건")] = 20,
     db: Annotated[Path, typer.Option("--db")] = None,
     plain: Annotated[
-        bool, typer.Option("--plain", help="copy-paste 친화 tab-separated (rich table 비활성)"),
+        bool,
+        typer.Option("--plain", help="copy-paste 친화 tab-separated (rich table 비활성)"),
     ] = False,
     ids_only: Annotated[
-        bool, typer.Option("--ids", help="run_id 만 줄별 출력 (스크립트용)"),
+        bool,
+        typer.Option("--ids", help="run_id 만 줄별 출력 (스크립트용)"),
     ] = False,
 ):
     store = DuckDBStore(db or _default_db_path())
@@ -244,7 +286,9 @@ def cmd_ls(
 @app.command("report")
 def cmd_report(
     run_id: str,
-    out: Annotated[Path, typer.Option("--out", "-o", help="리포트 출력 디렉토리")] = Path("data/reports"),
+    out: Annotated[Path, typer.Option("--out", "-o", help="리포트 출력 디렉토리")] = Path(
+        "data/reports"
+    ),
     db: Annotated[Path, typer.Option("--db")] = None,
 ):
     store = DuckDBStore(db or _default_db_path())
@@ -301,8 +345,12 @@ def cmd_compare(
 @app.command("detect")
 def cmd_detect(
     run_id: str,
-    profile: Annotated[Path | None, typer.Option("--profile", help="SLO 참조용 profile yaml")] = None,
-    baseline: Annotated[str | None, typer.Option("--baseline", help="회귀 비교용 baseline run_id")] = None,
+    profile: Annotated[
+        Path | None, typer.Option("--profile", help="SLO 참조용 profile yaml")
+    ] = None,
+    baseline: Annotated[
+        str | None, typer.Option("--baseline", help="회귀 비교용 baseline run_id")
+    ] = None,
     threshold_pct: Annotated[float, typer.Option("--threshold-pct")] = 10.0,
     db: Annotated[Path, typer.Option("--db")] = None,
     save: Annotated[bool, typer.Option("--save/--no-save", help="detections 테이블에 기록")] = True,
@@ -332,7 +380,9 @@ def cmd_detect(
     if baseline:
         baseline_metrics = store.get_metrics(baseline)
         if not baseline_metrics:
-            console.print(f"[yellow]baseline run {baseline} has no metrics, skipping regression check[/yellow]")
+            console.print(
+                f"[yellow]baseline run {baseline} has no metrics, skipping regression check[/yellow]"
+            )
         else:
             baseline_data = (baseline, baseline_metrics)
 
@@ -350,8 +400,12 @@ def cmd_detect(
         table = Table("severity", "detector", "metric", "observed", "threshold", "message")
         for d in dets:
             table.add_row(
-                d.severity, d.detector, d.metric or "—",
-                _fmt(d.observed), _fmt(d.threshold), d.message,
+                d.severity,
+                d.detector,
+                d.metric or "—",
+                _fmt(d.observed),
+                _fmt(d.threshold),
+                d.message,
             )
         console.print(table)
         if save:
@@ -364,7 +418,9 @@ def cmd_detect(
 def cmd_repeat(
     profile: Annotated[Path, typer.Option("--profile", "-p", exists=True)],
     endpoint: Annotated[Path, typer.Option("--endpoint", "-e", exists=True)],
-    count: Annotated[int, typer.Option("--count", "-n", help="반복 실행 횟수 (variance 측정용)")] = 10,
+    count: Annotated[
+        int, typer.Option("--count", "-n", help="반복 실행 횟수 (variance 측정용)")
+    ] = 10,
     db: Annotated[Path, typer.Option("--db")] = None,
     raw_dir: Annotated[Path, typer.Option("--raw-dir")] = None,
 ):
@@ -383,7 +439,9 @@ def cmd_repeat(
         console.print(f"[bold]run {i + 1}/{count}[/bold] run_id={rid}")
         art = runner.run(profile_obj, endpoint_obj, rid, raw_dir)
         store.record_run(
-            art, profile_obj, endpoint_obj,
+            art,
+            profile_obj,
+            endpoint_obj,
             profile_yaml_text=profile.read_text(encoding="utf-8"),
             git_sha=_git_sha(),
         )
@@ -413,9 +471,14 @@ def cmd_variance(
     console.print(f"[bold]{profile_slug} — {metric}[{p}] across {stats.n} runs[/bold]")
     table = Table("stat", "value")
     for name, v in [
-        ("mean", stats.mean), ("std", stats.std), ("cv", stats.cv),
-        ("min", stats.min_), ("p50", stats.p50), ("max", stats.max_),
-        ("iqr", stats.iqr), ("iqr/median", stats.iqr_ratio),
+        ("mean", stats.mean),
+        ("std", stats.std),
+        ("cv", stats.cv),
+        ("min", stats.min_),
+        ("p50", stats.p50),
+        ("max", stats.max_),
+        ("iqr", stats.iqr),
+        ("iqr/median", stats.iqr_ratio),
     ]:
         table.add_row(name, _fmt(v))
     console.print(table)
@@ -435,7 +498,11 @@ def cmd_nway(
     store = DuckDBStore(db or _default_db_path())
     run_metrics = {rid: store.get_metrics(rid) for rid in run_ids}
     table = build_nway_table(run_metrics, metrics=[metric] if metric else None)
-    console.print(nway_to_markdown(table, title=f"N-way: {', '.join(run_ids[:3])}{'...' if len(run_ids) > 3 else ''}"))
+    console.print(
+        nway_to_markdown(
+            table, title=f"N-way: {', '.join(run_ids[:3])}{'...' if len(run_ids) > 3 else ''}"
+        )
+    )
     store.close()
 
 
@@ -448,12 +515,8 @@ def cmd_export(
 ):
     """requests 테이블을 원하는 포맷으로 export."""
     store = DuckDBStore(db or _default_db_path())
-    req_rows = store.conn.execute(
-        "SELECT * FROM requests WHERE run_id = ?", [run_id]
-    ).fetchdf()
-    metrics_df = store.conn.execute(
-        "SELECT * FROM metrics WHERE run_id = ?", [run_id]
-    ).fetchdf()
+    req_rows = store.conn.execute("SELECT * FROM requests WHERE run_id = ?", [run_id]).fetchdf()
+    metrics_df = store.conn.execute("SELECT * FROM metrics WHERE run_id = ?", [run_id]).fetchdf()
     out = Path(out) / run_id
     out.mkdir(parents=True, exist_ok=True)
     if fmt == "csv":
@@ -468,7 +531,9 @@ def cmd_export(
     else:
         console.print(f"[red]unknown format: {fmt}[/red]")
         raise typer.Exit(1)
-    console.print(f"exported {len(req_rows)} requests + {len(metrics_df)} metrics to [bold]{out}[/bold]")
+    console.print(
+        f"exported {len(req_rows)} requests + {len(metrics_df)} metrics to [bold]{out}[/bold]"
+    )
     store.close()
 
 
@@ -491,7 +556,9 @@ def _print_metrics(metrics: dict[str, dict[str, float]]):
     table = Table("metric", "p50", "p95", "p99", "avg")
     for name in sorted(metrics):
         b = metrics[name]
-        table.add_row(name, _fmt(b.get("p50")), _fmt(b.get("p95")), _fmt(b.get("p99")), _fmt(b.get("avg")))
+        table.add_row(
+            name, _fmt(b.get("p50")), _fmt(b.get("p95")), _fmt(b.get("p99")), _fmt(b.get("avg"))
+        )
     console.print(table)
 
 
@@ -505,7 +572,10 @@ def _git_sha() -> str | None:
     try:
         out = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, timeout=2, check=False,
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
         )
         return (out.stdout or "").strip() or None
     except OSError:

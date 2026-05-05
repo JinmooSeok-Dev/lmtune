@@ -15,7 +15,7 @@ from lmtune.analysis.distributions import VarianceStats, variance_stats
 
 @dataclass
 class NWayTable:
-    df: pd.DataFrame            # index: (metric, p), columns: run_id 들
+    df: pd.DataFrame  # index: (metric, p), columns: run_id 들
     units: dict[str, str]
 
 

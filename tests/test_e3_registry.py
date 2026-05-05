@@ -85,7 +85,7 @@ def test_compute_derived_handles_zero_div():
     ctx = {"cached_tokens": 800, "input_tokens": 1000, "success_rate": 0.7, "total_input_tokens": 0}
     out = compute_derived(specs, ctx)
     assert out["prefix_hit_rate"] == 0.8
-    assert math.isnan(out["eutb"])      # division by zero → NaN
+    assert math.isnan(out["eutb"])  # division by zero → NaN
 
 
 def test_compute_derived_custom_formula():

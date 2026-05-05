@@ -15,6 +15,7 @@ def register_sink(name: str):
     def wrap(fn):
         _SINKS[name] = fn
         return fn
+
     return wrap
 
 
@@ -60,11 +61,11 @@ def _sink_md(df: pd.DataFrame, out: Path, title: str = "", **_):
 def _sink_html(df: pd.DataFrame, out: Path, title: str = "", **_):
     body = df.to_html(index=False, escape=True)
     doc = f"""<!doctype html>
-<html><head><meta charset="utf-8"><title>{title or 'bench report'}</title>
+<html><head><meta charset="utf-8"><title>{title or "bench report"}</title>
 <style>body{{font-family:sans-serif;max-width:1200px;margin:2em auto}}
 table{{border-collapse:collapse}} th,td{{border:1px solid #ddd;padding:4px 8px}}
 </style></head><body>
-<h1>{title or 'bench report'}</h1>
+<h1>{title or "bench report"}</h1>
 {body}
 </body></html>"""
     out.write_text(doc, encoding="utf-8")
@@ -76,17 +77,25 @@ def _sink_jupyter(df: pd.DataFrame, out: Path, title: str = "", **_):
     """간단한 ipynb 생성 (외부 nbformat 없이)."""
     cells = [
         {"cell_type": "markdown", "metadata": {}, "source": [f"# {title or 'bench report'}"]},
-        {"cell_type": "code", "metadata": {}, "execution_count": None, "outputs": [],
-         "source": [
-             "import pandas as pd\n",
-             f"df = pd.read_csv({json.dumps(str(out.with_suffix('.csv')))!s})\n",
-             "df.describe()\n",
-         ]},
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "execution_count": None,
+            "outputs": [],
+            "source": [
+                "import pandas as pd\n",
+                f"df = pd.read_csv({json.dumps(str(out.with_suffix('.csv')))!s})\n",
+                "df.describe()\n",
+            ],
+        },
     ]
     nb = {
         "cells": cells,
-        "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"}},
-        "nbformat": 4, "nbformat_minor": 5,
+        "metadata": {
+            "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"}
+        },
+        "nbformat": 4,
+        "nbformat_minor": 5,
     }
     df.to_csv(out.with_suffix(".csv"), index=False)
     out.write_text(json.dumps(nb, indent=2), encoding="utf-8")

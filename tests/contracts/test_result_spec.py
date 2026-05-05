@@ -38,9 +38,7 @@ def test_minimal_result_construction():
 
 
 def test_frozen():
-    r = BenchmarkResult(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g"
-    )
+    r = BenchmarkResult(run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g")
     with pytest.raises((ValidationError, TypeError)):
         r.run_id = "x"  # type: ignore[misc]
 
@@ -48,7 +46,10 @@ def test_frozen():
 def test_extra_field_rejected():
     with pytest.raises(ValidationError):
         BenchmarkResult(
-            run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g",
+            run_id="r1",
+            profile_slug="p",
+            endpoint_slug="e",
+            runner_kind="g",
             _bogus="x",  # type: ignore[call-arg]
         )
 
@@ -57,9 +58,7 @@ def test_extra_field_rejected():
 
 
 def test_to_records_minimal():
-    r = BenchmarkResult(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="guidellm"
-    )
+    r = BenchmarkResult(run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="guidellm")
     recs = to_records(r)
     assert len(recs) == 1
     assert isinstance(recs[0], RunRecord)
@@ -68,7 +67,10 @@ def test_to_records_minimal():
 
 def test_to_records_with_metrics():
     r = BenchmarkResult(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g",
+        run_id="r1",
+        profile_slug="p",
+        endpoint_slug="e",
+        runner_kind="g",
         metrics={
             "ttft": {"p50": 100.0, "p99": 500.0, "avg": 250.0},
             "throughput_tok": {"avg": 140.5},
@@ -90,15 +92,30 @@ def test_to_records_with_metrics():
 def test_to_records_with_requests():
     ts = datetime(2026, 5, 6, 12, 0, tzinfo=UTC)
     r = BenchmarkResult(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g",
+        run_id="r1",
+        profile_slug="p",
+        endpoint_slug="e",
+        runner_kind="g",
         requests=[
             RequestEntry(
-                req_id="req-1", turn_idx=0, input_tokens=256, output_tokens=64,
-                ttft_ms=42.0, e2e_ms=580.0, started_at=ts, status="ok",
+                req_id="req-1",
+                turn_idx=0,
+                input_tokens=256,
+                output_tokens=64,
+                ttft_ms=42.0,
+                e2e_ms=580.0,
+                started_at=ts,
+                status="ok",
             ),
             RequestEntry(
-                req_id="req-2", turn_idx=1, input_tokens=320, output_tokens=128,
-                ttft_ms=55.0, e2e_ms=720.0, started_at=ts, status="ok",
+                req_id="req-2",
+                turn_idx=1,
+                input_tokens=320,
+                output_tokens=128,
+                ttft_ms=55.0,
+                e2e_ms=720.0,
+                started_at=ts,
+                status="ok",
             ),
         ],
     )
@@ -114,11 +131,17 @@ def test_to_records_with_requests():
 
 def test_to_records_with_sessions():
     r = BenchmarkResult(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g",
+        run_id="r1",
+        profile_slug="p",
+        endpoint_slug="e",
+        runner_kind="g",
         sessions=[
             SessionEntry(
-                session_id="s-1", task_id="task-A", turn_count=3,
-                total_input_tokens=900, success=True,
+                session_id="s-1",
+                task_id="task-A",
+                turn_count=3,
+                total_input_tokens=900,
+                success=True,
             ),
         ],
     )
@@ -133,13 +156,16 @@ def test_to_records_with_sessions():
 def test_to_records_with_trajectory():
     ts = datetime(2026, 5, 6, 12, 0, tzinfo=UTC)
     r = BenchmarkResult(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g",
+        run_id="r1",
+        profile_slug="p",
+        endpoint_slug="e",
+        runner_kind="g",
         trajectory=[
             TrajectoryEntry(session_id="s-1", seq=0, event_type="user", ts=ts),
-            TrajectoryEntry(session_id="s-1", seq=1, event_type="assistant",
-                            ts=ts, tokens=42),
-            TrajectoryEntry(session_id="s-1", seq=2, event_type="tool_call",
-                            ts=ts, metadata={"tool": "shell"}),
+            TrajectoryEntry(session_id="s-1", seq=1, event_type="assistant", ts=ts, tokens=42),
+            TrajectoryEntry(
+                session_id="s-1", seq=2, event_type="tool_call", ts=ts, metadata={"tool": "shell"}
+            ),
         ],
     )
     recs = to_records(r)
@@ -152,12 +178,16 @@ def test_to_records_with_trajectory():
 def test_to_records_full_combo():
     """metrics + requests + sessions + trajectory 결합."""
     r = BenchmarkResult(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g",
+        run_id="r1",
+        profile_slug="p",
+        endpoint_slug="e",
+        runner_kind="g",
         metrics={"ttft": {"p50": 100.0, "p99": 500.0}},
         requests=[RequestEntry(req_id=f"req-{i}") for i in range(3)],
         sessions=[SessionEntry(session_id=f"s-{i}") for i in range(2)],
-        trajectory=[TrajectoryEntry(session_id="s-0", seq=i,
-                                     event_type="assistant") for i in range(4)],
+        trajectory=[
+            TrajectoryEntry(session_id="s-0", seq=i, event_type="assistant") for i in range(4)
+        ],
     )
     recs = to_records(r)
     # 1 run + 2 metric + 3 request + 2 session + 4 trajectory = 12
@@ -176,8 +206,12 @@ def test_to_records_full_combo():
 def test_to_records_run_record_carries_context():
     """RunRecord 가 trial_id, profile_yaml, tool_versions 등 모두 보유."""
     r = BenchmarkResult(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g",
-        trial_id="t-99", profile_yaml="kind: ProfileSpec\n",
+        run_id="r1",
+        profile_slug="p",
+        endpoint_slug="e",
+        runner_kind="g",
+        trial_id="t-99",
+        profile_yaml="kind: ProfileSpec\n",
         tool_versions={"vllm": "0.7.0", "guidellm": "0.6.0"},
         git_sha="abc1234",
     )
@@ -199,7 +233,10 @@ def test_to_records_into_in_memory_store():
     from lmtune.storage.store import InMemoryArtifactStore
 
     r = BenchmarkResult(
-        run_id="r1", profile_slug="p", endpoint_slug="e", runner_kind="g",
+        run_id="r1",
+        profile_slug="p",
+        endpoint_slug="e",
+        runner_kind="g",
         metrics={"ttft": {"p99": 500.0}},
         requests=[RequestEntry(req_id="req-1", ttft_ms=42.0)],
     )

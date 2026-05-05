@@ -29,7 +29,7 @@ from lmtune.search.objective import Objective, ObjectiveResult
 class ObjectiveKey:
     metric: str
     workload: str | None
-    direction: str   # "maximize" | "minimize"
+    direction: str  # "maximize" | "minimize"
 
 
 class ParetoObjective:
