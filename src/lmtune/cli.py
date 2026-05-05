@@ -87,6 +87,11 @@ from lmtune.cli_storage import app as _storage_app  # noqa: E402
 
 app.add_typer(_storage_app, name="storage")
 
+# lmtune#S1-PLUG: tuner 메타 (sampler / pruner 의 valid kind 노출)
+from lmtune.cli_tuner import app as _tuner_app  # noqa: E402
+
+app.add_typer(_tuner_app, name="tuner")
+
 
 def _default_db_path() -> Path:
     return Path(os.environ.get("LMTUNE_DB", "data/db/lmtune.duckdb"))

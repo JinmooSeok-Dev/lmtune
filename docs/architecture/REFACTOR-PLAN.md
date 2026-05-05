@@ -145,6 +145,8 @@ Outer loop (시각화/분석):
   - **#73 PLUG-NativeMedianPruner** — Pruner axis 의 첫 native impl. `_NATIVE_PRUNER_KINDS = {"median_native"}` 신규 + `tuner.factory.make_pruner` 분기 — Optuna 위임 없이 stdlib statistics 만으로 cross-trial median 기반 prune
   - **#74 docs(README)** — PLUG 표 두 추상 → 세 추상 (Pruner row 추가) + Native MedianPruner 노출
   - **#75 PLUG-NativePercentilePruner** — Pruner axis 의 두 번째 native impl. `_NATIVE_PRUNER_KINDS` 에 `percentile_native` 합류 — 임의 percentile (0.5 = median 동치, 수학적 검증 포함). PLUG 패턴이 한 axis 안에서 2회 시연됨
+  - **#76 cli-tuner-list** — `lmtune tuner list-{samplers,pruners}` 신규. PLUG 화이트리스트 (`_NATIVE_STRATEGIES`, `_LLM_STRATEGIES`, `_NATIVE_PRUNER_KINDS`, `_OPTUNA_PRUNER_KINDS`) 를 단일 진실원으로 노출 — `lmtune storage list-backends` 와 동등한 PLUG 가시성
 - **Storage 운영 도구 5종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
+- **Tuner 메타 도구** (`lmtune tuner list-samplers` / `list-pruners`) — PLUG 합류 즉시 자동 노출 (drift 가드 테스트 포함).
 - **Pruner axis PLUG 합류** — Optuna (SH/Hyperband) + Native (Median + Percentile) 네 빌트인. ASHA / 외부 SDK pruner 추가 시 1+1 줄 변경.
 - 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60/#73/#75 으로 세 축 (Storage + Sampler + Pruner) 모두 시연. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
