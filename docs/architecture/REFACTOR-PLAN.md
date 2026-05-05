@@ -150,6 +150,8 @@ Outer loop (시각화/분석):
   - **#78 docs(README)** — Tuner 메타 도구 섹션 추가 (`list-samplers` / `list-pruners` / `describe`). Storage 운영 도구와 동등한 형식
   - **#79 ergo(tuner)** — `lmtune.tuner` 의 lazy `__getattr__` 에 `NativeMedianPruner` / `NativePercentilePruner` 추가. import path 단순화 (`from lmtune.tuner import NativeMedianPruner`)
   - **#80 cli-tuner-make-config** — `lmtune tuner make-config <kind>` 신규. `inspect.signature` 의 default kwargs 로 채워진 SearchSpace YAML/JSON 블록 출력 (`--format yaml|json` + `--flat`). 사용자가 SearchSpace YAML 의 빈 슬롯에 즉시 paste 가능 — describe 가 metadata 표면, make-config 가 paste-able 표면
+  - **#81 docs(README)** — Tuner 메타 도구 섹션에 make-config 노출 (3 명령 → 4 명령). describe ↔ make-config 차이 명시
+  - **#82 cli-contracts-make-template** — `lmtune contracts make-template --record-kind <k>` 신규. Pydantic `model_fields` introspection → 필수 필드 placeholder + optional default 채워진 record JSON/YAML 출력. tuner make-config 와 동일 paste-able 표면 패턴. round-trip 검증 (validate-record 통과)
 - **Storage 운영 도구 5종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
 - **Tuner 메타 도구 4종** (`lmtune tuner list-samplers` / `list-pruners` / `describe <kind>` / `make-config <kind>`) — PLUG 합류 즉시 자동 노출 + introspect + paste-able config block (drift 가드 테스트 포함).
 - **Pruner axis PLUG 합류** — Optuna (SH/Hyperband) + Native (Median + Percentile) 네 빌트인. ASHA / 외부 SDK pruner 추가 시 1+1 줄 변경.
