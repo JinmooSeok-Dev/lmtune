@@ -108,3 +108,18 @@ Outer loop (시각화/분석):
 ## CHANGELOG
 
 - 2026-05-06: 초안. WS / A1 / CS / SS-rec / SS / R0 / S1 / OD / OUT / PLUG 10 PR sequence 확정.
+- 2026-05-06 (afternoon): leaf-up 진행. 머지된 PR 누적:
+  - **#37 WS** — WorkloadSpec contract + LiteralProvider + LMWorkloadsProvider
+  - **#38 CS docs** — ClusterSpec contract design + GPU/NPU 3-tier 모델 (docs only; ariadne 본체 코드 의존)
+  - **#39 SS-rec** — RecordSpec + QuerySpec Pydantic + lmtune contracts CLI (`dump-schema`, `validate-record`)
+  - **#43 R0** — BenchmarkResult contract + `to_records()` + `validate-result` CLI
+  - **#44 R0-rt** — RunArtifact → BenchmarkResult 변환 helper (`runners/result_emit.py`)
+  - **#45 SS** — ArtifactStore ABC + InMemoryArtifactStore + DuckDBArtifactStore
+  - **#46 S1** — Tuner Sampler/Pruner ABC + OptunaAdapter (`src/lmtune/tuner/`)
+  - **#47 S1-native** — NativeRandom/LHC/TPE 가 tuner.Sampler 구현체로 어댑트
+  - **#48 R0-bridge** — `bench run` 이 raw_dir/<run_id>/result.json 으로 BenchmarkResult 덤프 (production wire-up)
+  - **#49 S1-factory** — `tuner.factory.make_sampler` 통합 dispatch
+  - **#50 R0-roundtrip** — DuckDB PK-less 테이블 INSERT 분리 + BenchmarkResult round-trip 통합 검증
+  - **#51 SS-tz** — DuckDBArtifactStore datetime UTC round-trip (tz-aware 일관성)
+  - 부수: **#41 fix(ci)** — vllm_restart venv fallback + ruff format 일괄 적용 (post-rename)
+- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module), PLUG (LLMOracleSampler/PostgresStore stub)
