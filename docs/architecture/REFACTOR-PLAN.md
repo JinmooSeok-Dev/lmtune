@@ -128,7 +128,11 @@ Outer loop (시각화/분석):
   - **#58 PLUG** — PostgresArtifactStore stub: ArtifactStore ABC plug-in 패턴 실증 (psycopg optional, ImportError → typer.BadParameter 변환, _BACKENDS 자동 합류)
   - **#59 PLUG** — LLMOracleSampler stub: Sampler ABC plug-in 패턴 실증 (anthropic optional, `tuner.factory.make_sampler('llm_oracle')` dispatch)
   - **#60 PLUG-deps** — `[postgres]` / `[agent]` extras 등록 + drift test (ImportError 메시지의 install command 가 pyproject 와 항상 일치)
+  - **#62 docs(README)** — PLUG/Storage 섹션 추가 + `pip install lmtune[...]` 정합화 (rename drift 차단)
+  - **#63 SS-info** — `lmtune storage info` — record kind 별 count 보고 (--json 으로 monitoring loop 친화)
+  - **#64 cli-version** — `lmtune --version` / `-V` flag + drift test (`__version__` ↔ pyproject)
   - 부수: **#41 fix(ci)** — vllm_restart venv fallback + ruff format 일괄 적용 (post-rename)
   - 부수: **#52 docs** — REFACTOR-PLAN CHANGELOG 13 PR 누적 정리
   - 부수: **#57 docs** — REFACTOR-PLAN CHANGELOG SS-leaf 4종 누적
-- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60 으로 두 축 (Storage + Sampler) 모두 시연 — 추가 plug-in (S3 / Mooncake / BoTorch) 은 follow-up 가능.
+  - 부수: **#61 docs** — REFACTOR-PLAN CHANGELOG PLUG 3종 (#58-#60) 누적
+- 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60 으로 두 축 (Storage + Sampler) 모두 시연 — 추가 plug-in (S3 / Mooncake / BoTorch) 은 follow-up 가능. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
