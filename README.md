@@ -222,10 +222,43 @@ lmtune search export <study_id> --winner top-1 --out b200/results/<study_id>/win
 
 | 모드 | LLM 콜 | 명령 | 의존성 |
 |:---|:---:|:---|:---|
-| **Headless** (1st-class, 기본) | 0회 | `lmtune search start --strategy tpe --max-trials 40` — Optuna TPE/NSGA-II/CMA-ES + hand-curated `axis_priors.yaml` | `pip install bench[search,distributed]` |
-| **LLM-guided** (optional) | macro 추론 1 / 분석 1-2 | `autoresearch.sh` 가 Claude/GPT/local LLM 호출 → `lmtune search ask/tell` piping | `pip install bench[search,distributed,agent]` (anthropic / openai SDK 추가) |
+| **Headless** (1st-class, 기본) | 0회 | `lmtune search start --strategy tpe --max-trials 40` — Optuna TPE/NSGA-II/CMA-ES + hand-curated `axis_priors.yaml` | `pip install lmtune[search,distributed]` |
+| **LLM-guided** (optional) | macro 추론 1 / 분석 1-2 | `autoresearch.sh` 가 Claude/GPT/local LLM 호출 → `lmtune search ask/tell` piping | `pip install lmtune[search,distributed,agent]` (anthropic SDK 추가) |
 
-**의존성 격리 원칙**: `src/bench/search/llm_prior.py` (정적 YAML reader, LLM-free) 와 `src/bench/search/llm_oracle.py` (optional `[agent]` extra, dynamic import) 분리. ImportError 발생 시 명확한 에러 메시지 ("install with bench[agent]"). LLM-guided 모드의 산출물(갱신된 `axis_priors.yaml`) 은 정적 YAML 이라 git 검토 + headless 재현 가능.
+**의존성 격리 원칙**: `src/lmtune/search/llm_prior.py` (정적 YAML reader, LLM-free) 와 `src/lmtune/tuner/llm_oracle.py` (optional `[agent]` extra, dynamic import) 분리. ImportError 발생 시 명확한 에러 메시지 (`install with lmtune[agent]`). LLM-guided 모드의 산출물(갱신된 `axis_priors.yaml`) 은 정적 YAML 이라 git 검토 + headless 재현 가능.
+
+## PLUG — Backend / Sampler 추가하기
+
+본 프로젝트의 **모든 layer 가 ABC + 구현체** 원칙 (REFACTOR-PLAN 핵심 원칙 #2) 을 외부 사용자가 1 PR 로 확장할 수 있도록 PLUG 패턴을 정착시켰다. 두 추상 모두 같은 형식:
+
+| 추상 | ABC | 첫 빌트인 | 두 번째 빌트인 | PLUG stub | 합류 시 |
+|:---|:---|:---|:---|:---|:---|
+| **Storage backend** | `lmtune.storage.store.ArtifactStore` | `DuckDBArtifactStore` | `LocalArtifactStore` (jsonl) | `PostgresArtifactStore` (`pip install lmtune[postgres]`) | `lmtune storage migrate --src-kind postgres --src postgres://...` 자동 동작 |
+| **Tuner sampler** | `lmtune.tuner.Sampler` | `OptunaSamplerAdapter` (TPE/NSGA-II/CMA-ES 6종) | `Native{Random,LHC,TPE}` | `LLMOracleSampler` (`pip install lmtune[agent]`) | `lmtune.tuner.factory.make_sampler('llm_oracle', space)` 즉시 동작 |
+
+새 backend 추가 시 변경되는 곳: ABC 구현체 1 파일 + factory 매핑 1줄. 외부 사용자 입장에선 `--src-kind X` / `--strategy X` 만 추가하면 즉시 사용 가능. 자세한 step-by-step 은 `docs/architecture/REFACTOR-PLAN.md` PLUG 섹션과 `tests/storage/test_postgres_store_stub.py` / `tests/tuner/test_llm_oracle_stub.py` 의 acceptance 케이스 참조.
+
+## Storage 변환 — DuckDB ↔ Local jsonl
+
+\`\`\`bash
+# 운영 DB 를 git 친화 jsonl 디렉토리로 export
+lmtune storage migrate \
+  --src-kind duckdb --src data/db/lmtune.duckdb \
+  --dst-kind local  --dst data/archive/2026-05-06/
+
+# 외부 archive (jsonl) 를 다시 DuckDB 로 import
+lmtune storage migrate \
+  --src-kind local  --src data/archive/2026-05-06/ \
+  --dst-kind duckdb --dst data/db/imported.duckdb
+
+# 등록된 backend 목록 (PLUG 합류 시 자동 노출)
+lmtune storage list-backends
+
+# BenchmarkResult result.json → records 디렉토리 (raw_dir 외부에서 받은 산출 archive)
+lmtune contracts records-from-result <result.json> --out <records-dir>
+\`\`\`
+
+위 4 명령은 모두 `ArtifactStore.put` / `query` 만 사용하므로 신규 backend (`postgres` 등) 가 합류해도 수정 0.
 
 ## User Contract — Inputs & Outputs
 
@@ -327,7 +360,8 @@ SearchSpace YAML                       endpoint YAML (adapter 만 다름)
 설치 (선택적):
 ```bash
 pip install -e ".[lowlevel]"   # ariadne 활성 (B6 시스템 토폴로지)
-pip install -e ".[agent]"      # LLM-guided 모드 (anthropic / openai)
+pip install -e ".[agent]"      # LLM-guided 모드 (LLMOracleSampler — anthropic SDK)
+pip install -e ".[postgres]"   # PostgresArtifactStore (multi-writer / 분산 환경)
 ```
 
 ## Subcommand 요약
@@ -360,10 +394,12 @@ lmtune dashboard   정적 HTML 대시보드 (build/serve)
 | `b200/dashboards/` | 정적 HTML 대시보드 산출 (Output G) |
 | `b200/results/<study>/winner/` | self-contained recipe (Output A/H) |
 | `b200/perf-changelog.yaml` | 외부 PR 머지 → baseline 영향 시계열 (B5 watch) |
-| `src/bench/search/` | SearchSpace, Sampler, Pruner, Objective, profile_binder, llm_prior |
-| `src/bench/orchestrate/` | TrialBackend (k8s_job / process_pool), Driver |
-| `src/bench/deploy/` | DeploymentAdapter (LocalVLLM, LLMDK8s) |
-| `src/bench/visualization/dashboard/` | Jinja2 + Tailwind CDN 정적 dashboard 빌더 |
+| `src/lmtune/search/` | SearchSpace, Objective, profile_binder, llm_prior (정적 YAML reader) |
+| `src/lmtune/tuner/` | Sampler / Pruner ABC + Optuna adapter + Native + LLMOracleSampler stub |
+| `src/lmtune/storage/store/` | ArtifactStore ABC + DuckDB / Local / InMemory / Postgres stub |
+| `src/lmtune/orchestrate/` | TrialBackend (k8s_job / process_pool), Driver |
+| `src/lmtune/deploy/` | DeploymentAdapter (LocalVLLM, LLMDK8s) |
+| `src/lmtune/visualization/dashboard/` | Jinja2 + Tailwind CDN 정적 dashboard 빌더 |
 | `data/db/lmtune.duckdb` | 결과 누적 저장소 |
 | `data/archive/` | 과거 study archive (read-only) |
 
