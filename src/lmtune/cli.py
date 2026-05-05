@@ -55,6 +55,11 @@ from lmtune.cli_workload import app as _workload_app  # noqa: E402
 
 app.add_typer(_workload_app, name="workload")
 
+# lmtune#SS: storage backend 간 migrate (ArtifactStore ABC plug-in)
+from lmtune.cli_storage import app as _storage_app  # noqa: E402
+
+app.add_typer(_storage_app, name="storage")
+
 
 def _default_db_path() -> Path:
     return Path(os.environ.get("LMTUNE_DB", "data/db/lmtune.duckdb"))
