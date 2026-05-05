@@ -134,3 +134,48 @@ def cmd_list_backends() -> None:
     """
     for b in _BACKENDS:
         console.print(f"- {b}")
+
+
+@app.command("info")
+def cmd_info(
+    kind: Annotated[
+        str,
+        typer.Option("--kind", help=f"backend: {' | '.join(_BACKENDS)}"),
+    ],
+    path: Annotated[
+        Path,
+        typer.Option("--path", help="store path (local: dir, duckdb: file, postgres: dsn)"),
+    ],
+    json_out: Annotated[
+        bool,
+        typer.Option("--json", help="machine-readable JSON 출력 (autotune/monitoring 용)"),
+    ] = False,
+) -> None:
+    """ArtifactStore 의 record kind 별 count 요약.
+
+    backend 무관 — ABC 의 ``count(kind)`` 만 호출. 새 backend 가 합류해도 본 명령
+    수정 0. 빈 kind 는 0 으로 표시.
+    """
+    store = _open_store(kind, path)
+    counts: dict[str, int] = {}
+    try:
+        for record_kind in RECORD_KINDS:
+            counts[record_kind] = store.count(record_kind)
+    finally:
+        store.close()
+
+    total = sum(counts.values())
+
+    if json_out:
+        # one-line JSON — autoresearch 가 stat polling 시 grep 가능
+        import json
+
+        payload = {"backend": kind, "path": str(path), "total": total, "counts": counts}
+        print(json.dumps(payload, separators=(",", ":")))
+        return
+
+    console.print(f"[bold]storage info[/bold] {kind}://{path}")
+    for k, v in counts.items():
+        marker = "  " if v == 0 else "● "
+        console.print(f"  {marker}{k:<20} {v}")
+    console.print(f"  [bold]total[/bold]               {total}")
