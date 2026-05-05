@@ -20,10 +20,14 @@ from __future__ import annotations
 from typing import Any
 
 from lmtune.search.space import SearchSpace
-from lmtune.tuner.base import Sampler
+from lmtune.tuner.base import Pruner, Sampler
 
 _NATIVE_STRATEGIES = {"random_native", "lhc_native", "tpe_native"}
 _LLM_STRATEGIES = {"llm_oracle"}
+
+# Pruner kind 화이트리스트 — search.pruners.make_pruner 가 받는 값과 동일.
+# drift 방지용 단일 진실원: 본 set 만 갱신하면 factory 가 자동 흡수.
+_OPTUNA_PRUNER_KINDS = {"sh", "successive_halving", "hyperband"}
 
 
 def make_sampler(
@@ -98,4 +102,38 @@ def _make_llm(strategy: str, space: SearchSpace) -> Sampler:
     raise ValueError(f"unknown LLM strategy: {strategy!r}")
 
 
-__all__ = ["make_sampler"]
+def make_pruner(kind: str | None = None, **kwargs) -> Pruner | None:
+    """``kind`` 이름으로 tuner.Pruner ABC 인스턴스 생성.
+
+    현재는 Optuna 위임 only — search.pruners.make_pruner 가 반환하는
+    ``optuna.pruners.BasePruner`` 를 ``OptunaPrunerAdapter`` 로 wrap.
+    PLUG 의 입구로 자체 ABC 구현체 (ASHA, MedianPruner 직접 구현 등) 가
+    들어오면 본 함수에 분기 1줄 + ``_OPTUNA_PRUNER_KINDS`` 갱신만으로 합류.
+
+    Args:
+        kind: ``None`` 또는 ``"none"`` → ``None`` 반환 (no-op pruner).
+            그 외 ``search.pruners.make_pruner`` 가 받는 모든 kind 지원
+            (현재 ``sh`` / ``successive_halving`` / ``hyperband``).
+        **kwargs: ``search.pruners.make_pruner`` 로 그대로 전달
+            (min_resource / reduction_factor / max_resource 등).
+
+    Returns:
+        Pruner ABC 구현체 또는 None.
+    """
+    if kind is None or kind == "none":
+        return None
+
+    k = kind.lower()
+    if k in _OPTUNA_PRUNER_KINDS:
+        from lmtune.search.pruners import make_pruner as _make_optuna_pruner
+        from lmtune.tuner.optuna_adapter import OptunaPrunerAdapter
+
+        optuna_pruner = _make_optuna_pruner(k, **kwargs)
+        return OptunaPrunerAdapter(optuna_pruner)
+
+    raise ValueError(
+        f"unknown pruner kind: {kind!r}. Valid: {sorted(_OPTUNA_PRUNER_KINDS) + ['none']}"
+    )
+
+
+__all__ = ["make_pruner", "make_sampler"]
