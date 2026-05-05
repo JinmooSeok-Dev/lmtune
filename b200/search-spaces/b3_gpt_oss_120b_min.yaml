@@ -1,0 +1,85 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b3-gpt-oss-120b-min
+
+# B3 [Track B-I] — gpt-oss-120b 16-GPU TP/DP autotune 최소 검증 search-space.
+#
+# 본 파일은 b3_parallelism.yaml (16 axis, 12 constraint) 의 좁은 subset.
+# - axis 이름은 short form (tp/pp/dp/ep) — merge_params_into_endpoint 의
+#   _PARALLELISM_KEYS 와 매칭 → render_values_overlay 가 chart 의
+#   decode.parallelism.tensor / decode.replicas 로 직접 emit.
+# - 사용자 환경 (NHN Cloud B200 dual-node, 16 GPU, NVLink + IB) 에서 안전한
+#   조합만 sample.
+# - feasibility constraint 는 short-form 으로 재작성 (기존 b3 는 long-form).
+#
+# 사용:
+#   lmtune search start \
+#     --space b200/search-spaces/b3_gpt_oss_120b_min.yaml \
+#     --endpoint b200/endpoints/b200_gpt-oss-120b.yaml \
+#     --cluster-env b200-dual-node \
+#     --strategy random --max-trials 12 --seed 42 \
+#     -p configs/profiles/autotune/short.yaml \
+#     -p configs/profiles/autotune/medium.yaml
+
+axes:
+  # ─── Parallelism (vllm-config-puzzle simulator subset) ───
+  tp:
+    type: categorical
+    values: [2, 4, 8]
+    # tp=8 = 단일 노드 NVLink. tp=2,4 = 단일 노드 부분 활용 (DP 우위 가능)
+    # tp=16 (cross-node TP) 는 NCCL all-reduce 비용 ↑↑ 라 제외
+
+  dp:
+    type: categorical
+    values: [1, 2, 4, 8]
+    # tp×dp ≤ 16 (총 GPU). feasibility c1_npu_count 가 자동 prune
+
+  # pp = 1 고정 — gpt-oss-120b 36 layers 는 PP 도입 효과 작음.
+  # ep_size 는 active_if 로 MoE 모델만 활성
+
+  ep:
+    type: bool
+    # vllm 0.17.1 의 --enable-expert-parallel toggle. (ep_size 는 미노출 — 기본
+    # vllm 이 dp×tp 로 자동 derive)
+
+  # ─── Engine args (b2 의 핵심 axis subset) ───
+  max_num_seqs:
+    type: categorical
+    values: [64, 128, 256]
+
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.85
+    high: 0.92
+
+
+# ─── Feasibility constraints (vllm-config-puzzle validation.ts subset, short form) ───
+# Sampler 가 sample 한 후 src/lmtune/search/feasibility.py 가 evaluator.
+# `--cluster-env b200-dual-node` 없으면 미설치 (회귀 안전).
+feasibility_constraints:
+  - id: c1_npu_count
+    rule: "tp * dp <= environment.total_npus"
+    message: "tp × dp must fit total NPUs (16 on B200 dual-node)"
+
+  - id: c2_tp_single_node
+    rule: "tp <= environment.npus_per_server"
+    message: "TP must fit in a single node (NCCL ring within NVLink)"
+
+  - id: c4_heads_div_tp
+    rule: "model.num_attention_heads % tp == 0"
+    message: "TP must divide attention heads (gpt-oss-120b: 64 heads)"
+
+  - id: c6_gpu_memory
+    rule: "surrogate.simulated_total_gb <= environment.gpu_vram_gb * gpu_memory_utilization"
+    message: "Active params + KV must fit in GPU HBM (B200: 192 GB)"
+
+  - id: c7_tp_dp_balance
+    rule: "(tp * dp >= 8) OR (environment.total_npus < 16)"
+    severity: warning
+    message: "16-GPU 환경에서 tp×dp < 8 은 GPU 활용도 ↓ (warning, hard fail 아님)"

@@ -27,14 +27,18 @@ def _endpoint_dict() -> dict:
 def test_overlay_single_release_legacy():
     overlay = render_values_overlay(_endpoint_dict(), release_name="ms-phase1")
     assert "ms-phase1" in overlay
-    args = overlay["ms-phase1"]["vllmArgs"]
+    payload = overlay["ms-phase1"]
+    args = payload["vllmArgs"]
     # snake_case → kebab-case
     assert args["enable-prefix-caching"] is True
     assert args["max-num-seqs"] == 64
     assert args["gpu-memory-utilization"] == 0.85
-    # parallelism flag mapping
-    assert args["tensor-parallel-size"] == 1
-    assert args["data-parallel-size"] == 1
+    # tp/dp 는 vllmArgs 가 아니라 chart 의 decode.parallelism / decode.replicas 로
+    # emit (b3 wiring + chart hardcoded path 충돌 차단). 자세한 동기는 R8 후속 메모.
+    assert "tensor-parallel-size" not in args
+    assert "data-parallel-size" not in args
+    assert payload["decode"]["parallelism"]["tensor"] == 1
+    assert payload["decode"]["replicas"] == 1
     # ep=False → no enable-expert-parallel
     assert "enable-expert-parallel" not in args
 
@@ -81,6 +85,35 @@ def test_adapter_from_endpoint_with_overrides():
     assert adapter._helmfile_file == "phase2/helmfile.yaml.gotmpl"
     assert adapter._target.namespace == "llm-d-pd-qwen25"
     assert adapter._dry_run is True
+
+
+def test_overlay_tp_dp_emit_to_decode_chart_path():
+    """tp/dp axis sample → chart 가 읽는 위치 (decode.parallelism.tensor /
+    decode.replicas) 에 들어가야 chart 의 hardcoded TP=8 default 를 override.
+    vllmArgs 에는 안 들어가야 (vllm CLI duplicate flag 차단)."""
+    ep = _endpoint_dict()
+    ep["deployment"]["parallelism"] = {"tp": 4, "dp": 2}
+    overlay = render_values_overlay(ep, release_name="ms-infsch")
+    payload = overlay["ms-infsch"]
+    # decode.parallelism.tensor + decode.replicas 로 emit
+    assert payload["decode"]["parallelism"]["tensor"] == 4
+    assert payload["decode"]["replicas"] == 2
+    # vllmArgs 에는 절대 안 들어감 (chart 가 자동 inject 하는 영역과 중복 회피)
+    assert "tensor-parallel-size" not in payload["vllmArgs"]
+    assert "data-parallel-size" not in payload["vllmArgs"]
+
+
+def test_overlay_pp_stays_in_vllm_args():
+    """pp 는 vllm 이 인식하는 CLI flag (--pipeline-parallel-size) 라 vllmArgs
+    경로 유지. 단 chart 가 pp 를 자동 inject 하지 않는 한정 상황."""
+    ep = _endpoint_dict()
+    ep["deployment"]["parallelism"] = {"pp": 2, "tp": 8}
+    overlay = render_values_overlay(ep, release_name="ms")
+    args = overlay["ms"]["vllmArgs"]
+    assert args["pipeline-parallel-size"] == 2
+    # tp 는 별도 경로
+    assert "tensor-parallel-size" not in args
+    assert overlay["ms"]["decode"]["parallelism"]["tensor"] == 8
 
 
 def test_adapter_dry_run_writes_overlay_without_running_helmfile(tmp_path: Path):
