@@ -270,6 +270,14 @@ lmtune storage diff --left-kind ... --right-kind ... --json | jq .equal
 # 5. 등록된 backend 목록 (PLUG 합류 시 자동 노출)
 lmtune storage list-backends
 
+# 6. backend 의 메타 — class / 의존성 / path 인자 / capability
+lmtune storage describe-backend postgres
+# postgres  (PostgresArtifactStore)
+#   Postgres DSN — multi-writer, server-side store (stub, psycopg 필요)
+#   path arg: dsn
+#   install: pip install lmtune[postgres]
+#   transactional: yes, concurrent writers: yes
+
 # 외부 result.json → ArtifactStore mirror 변환 (contracts 도구 — storage 와 별개)
 lmtune contracts records-from-result <result.json> --out <records-dir>
 \`\`\`
@@ -281,6 +289,7 @@ lmtune contracts records-from-result <result.json> --out <records-dir>
 | `validate` | 모든 record 가 RecordSpec schema 통과하는지 query 시도 | 0 (valid) / 1 (invalid) |
 | `diff` | 두 store 의 record 차이 — `only_left` / `only_right` / `mismatched` | 0 |
 | `list-backends` | `_BACKENDS` 목록 출력 (PLUG 진입로) | 0 |
+| `describe-backend <name>` | backend 메타 — class / 의존성 / path / capability (Pydantic-free metadata 표면) | 0 / 2 (unknown) |
 
 ## Tuner 메타 도구
 
@@ -376,7 +385,7 @@ lmtune contracts make-template -k metric -f json | jq
 
 | Axis | list | describe | paste-able |
 |:---|:---|:---|:---|
-| Storage | `list-backends` | (impl docs) | `migrate` (기존 store) |
+| Storage | `list-backends` | `describe-backend <name>` | `migrate` (기존 store) |
 | Tuner | `list-{samplers,pruners}` | `describe <kind>` | `make-config <kind>` |
 | Contracts | `list-records` | `describe-record <kind>` | `make-template <kind>` |
 

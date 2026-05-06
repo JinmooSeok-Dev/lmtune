@@ -181,7 +181,7 @@ PR 들이 매번 wire-up 부터 다시 다툼 — 본 패턴이 차단.
 
 | Axis | list | metadata | paste-able | full schema |
 |:---|:---|:---|:---|:---|
-| **Storage** (ArtifactStore) | `storage list-backends` (#56) | (impl docstring) | `storage migrate` | n/a |
+| **Storage** (ArtifactStore) | `storage list-backends` (#56) | `storage describe-backend <name>` (#91) | `storage migrate` | n/a |
 | **Tuner** (Sampler / Pruner) | `tuner list-{samplers,pruners}` (#76) | `tuner describe <kind>` (#77) | `tuner make-config <kind>` (#80) | n/a |
 | **Contracts** (RecordSpec) | `contracts list-records` (#85) | `contracts describe-record <kind>` (#86) | `contracts make-template <kind>` (#82) | `contracts dump-schema` (#39) |
 
@@ -227,16 +227,15 @@ ABC + 빌트인 + stub 의 reference:
 - **NativeMedianPruner** (#73) + **NativePercentilePruner** (#75): Pruner axis 의 native PLUG slot 합류 (Optuna 위임 0)
 
 CLI 표면의 reference:
-- **list** (`#76`): `lmtune tuner list-{samplers,pruners}` — 단일 진실원 (factory set) 에서 자동 노출
-- **list-records** (`#85`): `lmtune contracts list-records` — `RECORD_KINDS` 단일 진실원
-- **describe** (`#77`): `lmtune tuner describe <kind>` — `inspect.signature` introspect, optuna 빌트인은 reference URL fallback
-- **describe-record** (`#86`): `lmtune contracts describe-record <kind>` — Pydantic `model_fields` introspect — name/type/required/default/description
+- **list** (`#56` / `#76` / `#85`): `lmtune storage list-backends` / `lmtune tuner list-{samplers,pruners}` / `lmtune contracts list-records` — 단일 진실원 (set / tuple) 에서 자동 노출
+- **describe** (`#77` / `#86` / `#91`): `lmtune tuner describe <kind>` (`inspect.signature`) / `lmtune contracts describe-record <kind>` (Pydantic `model_fields`) / `lmtune storage describe-backend <name>` (CLI 모듈의 `_BACKEND_META` dict)
 - **make-config** (`#80`): `lmtune tuner make-config <kind>` — paste-able default-filled YAML/JSON
 - **make-template** (`#82`): `lmtune contracts make-template -k <kind>` — Pydantic `model_fields` 기반, 같은 paste-able 패턴
 
 Drift 가드 reference:
 - **`_OPTUNA_PRUNER_KINDS` ↔ `_NATIVE_PRUNER_KINDS`** (#70/#71/#76): `tests/tuner/test_factory_pruner.py`, `test_cli_tuner_list.py`
 - **`RECORD_KINDS` ↔ `_RecordBase` 자식** (#89): `tests/contracts/test_record_kinds_drift.py` — 새 record class 가 RECORD_KINDS 에 등록 안 되면 즉시 실패
+- **`_BACKENDS` ↔ `_BACKEND_META`** (#91): `tests/storage/test_cli_storage_describe_backend.py` — 새 backend 등록 시 메타도 동기화 필수
 
 위 PR 의 코드 + 테스트가 본 문서의 살아있는 1:1 reference. 새 PLUG 추가 시
 가장 가까운 axis 를 그대로 복사 + 이름 / SDK 만 바꾸는 게 가장 빠른 경로.
