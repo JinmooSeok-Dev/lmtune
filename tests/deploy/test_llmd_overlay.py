@@ -131,3 +131,50 @@ def test_adapter_dry_run_writes_overlay_without_running_helmfile(tmp_path: Path)
     assert result.ok is True
     assert "dry-run" in result.notes
     assert result.health.ready is True
+
+
+def test_overlay_dp_routing_data_for_wide_ep():
+    """R18: wide-EP path 에서 dp_routing='data' 로 dp 가 within-pod data-parallel
+    의미. decode.parallelism.data 로 emit, decode.replicas 는 안 set."""
+    ep = _endpoint_dict()
+    ep["deployment"]["parallelism"] = {"tp": 2, "dp": 4, "ep": True}
+    overlay = render_values_overlay(ep, release_name="ms-wideep", dp_routing="data")
+    payload = overlay["ms-wideep"]
+    # tp 는 chart 의 decode.parallelism.tensor 로 (기존)
+    assert payload["decode"]["parallelism"]["tensor"] == 2
+    # dp 는 decode.parallelism.data 로 (R18 신규)
+    assert payload["decode"]["parallelism"]["data"] == 4
+    # decode.replicas 는 set 안 됨 — chart values yaml 의 hardcode 가 그대로 (= 노드 수)
+    assert "replicas" not in payload["decode"]
+    # ep=true → enable-expert-parallel 자동 emit
+    assert payload["vllmArgs"]["enable-expert-parallel"] is True
+
+
+def test_overlay_dp_routing_replicas_default_unchanged():
+    """R18: dp_routing 미지정 (기본값 'replicas') 시 b3 inference-scheduling
+    동작 그대로 (backward compat)."""
+    ep = _endpoint_dict()
+    ep["deployment"]["parallelism"] = {"tp": 4, "dp": 2}
+    overlay = render_values_overlay(ep, release_name="ms-infsch")  # default routing
+    payload = overlay["ms-infsch"]
+    assert payload["decode"]["parallelism"]["tensor"] == 4
+    assert payload["decode"]["replicas"] == 2  # ← 기존 behavior 그대로
+    assert "data" not in payload["decode"].get("parallelism", {})
+
+
+def test_adapter_from_endpoint_reads_dp_routing():
+    """R18: endpoint YAML 의 helmfile_overrides.dp_routing 가 adapter 에 전달."""
+    ep = _endpoint_dict()
+    ep["deployment"]["helmfile_overrides"] = {
+        "release_name": "ms-wideep",
+        "namespace": "b200-wideep",
+        "dp_routing": "data",
+    }
+    adapter = LLMDK8sAdapter.from_endpoint(ep, dry_run=True)
+    assert adapter._dp_routing == "data"
+
+    # 미설정 시 default 'replicas'
+    ep2 = _endpoint_dict()
+    ep2["deployment"]["helmfile_overrides"] = {"release_name": "ms-infsch"}
+    adapter2 = LLMDK8sAdapter.from_endpoint(ep2, dry_run=True)
+    assert adapter2._dp_routing == "replicas"

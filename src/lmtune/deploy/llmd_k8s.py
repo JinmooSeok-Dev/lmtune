@@ -107,6 +107,7 @@ def render_values_overlay(
     *,
     release_name: str | None = None,
     release_names: list[str] | None = None,
+    dp_routing: str = "replicas",
 ) -> dict[str, Any]:
     """Build the minimal Helm values overlay from a merged endpoint dict.
 
@@ -117,6 +118,14 @@ def render_values_overlay(
     For multi-release helmfile (e.g. P/D disaggregation = ms-pd-prefill +
     ms-pd-decode), pass `release_names=[...]` and the same vllmArgs are emitted
     for each. Single release: legacy `release_name="..."` still works.
+
+    dp_routing — wide-EP path 에서 `dp` axis 의 chart-side 의미 분기 (R18):
+      - "replicas" (default, inference-scheduling/b3): dp = independent replica
+        count. dp=N → N pods, each with TP=tp 모델 인스턴스.
+      - "data" (wide-EP/b4): dp = within-pod data-parallel groups. dp=N →
+        decode.parallelism.data=N. replicas 는 chart values 의 hardcode (보통 노드 수).
+        만약 dp=8 인데 replicas=replicas 매핑이면 8 pods × 8 GPU = 64 GPU 요청
+        (가용 16 → 4 pending). dp_routing=data 로 우회.
     """
     deployment = dict(endpoint_data.get("deployment") or {})
     engine_args = dict(deployment.get("engine_args") or {})
@@ -141,7 +150,12 @@ def render_values_overlay(
     if "tp" in parallelism:
         decode_overlay.setdefault("parallelism", {})["tensor"] = int(parallelism["tp"])
     if "dp" in parallelism:
-        decode_overlay["replicas"] = int(parallelism["dp"])
+        if dp_routing == "data":
+            # wide-EP (R18): dp 가 within-pod data-parallel.
+            decode_overlay.setdefault("parallelism", {})["data"] = int(parallelism["dp"])
+        else:
+            # inference-scheduling default: dp 가 replica count.
+            decode_overlay["replicas"] = int(parallelism["dp"])
 
     # Resolve target releases.
     if release_names:
@@ -188,6 +202,7 @@ class LLMDK8sAdapter(DeploymentAdapter):
         deployment_names: list[str] | None = None,
         rollout_timeout_s: int = 600,
         helmfile_file: str = "phase1/helmfile.yaml.gotmpl",
+        dp_routing: str = "replicas",
         dry_run: bool = False,
     ):
         self._root = Path(helmfile_root) if helmfile_root else DEFAULT_HELMFILE_ROOT
@@ -203,6 +218,7 @@ class LLMDK8sAdapter(DeploymentAdapter):
             deployment_name=deployment_name,
         )
         self._rollout_timeout_s = int(rollout_timeout_s)
+        self._dp_routing = dp_routing
         self._dry_run = bool(dry_run)
 
     @classmethod
@@ -221,6 +237,7 @@ class LLMDK8sAdapter(DeploymentAdapter):
             release_names: [ms-pd-prefill, ms-pd-decode]
             deployment_names: [ms-pd-prefill, ms-pd-decode]
             rollout_timeout_s: 600
+            dp_routing: data    # wide-EP 만. default 'replicas' (R18)
         """
         deployment = dict(endpoint_data.get("deployment") or {})
         ov = dict(deployment.get("helmfile_overrides") or {})
@@ -235,6 +252,7 @@ class LLMDK8sAdapter(DeploymentAdapter):
             deployment_names=ov.get("deployment_names"),
             rollout_timeout_s=int(ov.get("rollout_timeout_s", 600)),
             helmfile_file=ov.get("helmfile_file", "phase1/helmfile.yaml.gotmpl"),
+            dp_routing=ov.get("dp_routing", "replicas"),
             dry_run=dry_run,
         )
 
@@ -256,6 +274,7 @@ class LLMDK8sAdapter(DeploymentAdapter):
         overlay = render_values_overlay(
             data,
             release_names=self._release_names,
+            dp_routing=self._dp_routing,
         )
 
         # Path-aware routing: if a well_lit_path was sampled, override the static
