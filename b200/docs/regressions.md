@@ -172,21 +172,35 @@ no valid backends
 - 동일 chart v1.5.0 의 EPP image 만 v1.4.0 으로 downgrade 하면 metric 못 찾아도 warning 만, backend healthy 유지. minikube + chart v1.5.0 + EPP v1.4.0 정상 시작 검증.
 
 **영속화 위치**
-- Config: `b200/helmfile/inference-scheduling/values-gaie.yaml` — `inferenceExtension.image.tag: v1.4.0` 추가
-- Config: `b200/helmfile/wide-ep-lws/values-gaie.yaml` — 동일
-- Config: `b200/helmfile/pd-disaggregation/values-gaie.yaml` — 동일
-- 사용자가 helmfile reapply 시 EPP image 가 자동 v1.4.0 으로 재배포됨
+
+3 path 모두에 두 단계 fix 가 필요 (PR #95 의 image-only fix 가 불완전 — chart configmap 의 v1.5 schema 가 v1.4 EPP 의 모르는 plugin type `core-metrics-extractor` 을 포함해 EPP 시작 자체가 실패):
+
+- Config: `b200/helmfile/{inference-scheduling,wide-ep-lws,pd-disaggregation}/values-gaie.yaml` — 모두 동일 schema:
+  - `inferenceExtension.image.tag: v1.4.0` (image downgrade)
+  - `inferenceExtension.pluginsConfigFile: custom-plugins.yaml` (EPP args `--config-file` redirect)
+  - `inferenceExtension.pluginsCustomConfig.custom-plugins.yaml: |` (v1.4 호환 plugin 만 — queue-scorer / kv-cache-utilization-scorer / prefix-cache-scorer)
+- mini helmfile (`helmfile-mini.yaml.gotmpl`) 도 동일 `values-gaie.yaml` 사용 — 자동 반영
+
+**검증 (minikube + chart v1.5.0 + EPP v1.4)**
+- chart 가 configmap 에 `default-plugins.yaml` (v1.5 schema, EPP 미사용) + `custom-plugins.yaml` (v1.4 호환, EPP 사용) 둘 다 emit
+- EPP args 는 `--config-file=/config/custom-plugins.yaml` 로 우리 override 만 가리킴
+- `core-metrics-extractor` 부재 → lora metric polling 안 함 → backend healthy
 
 **즉시 적용 (이미 떠있는 cluster, helmfile reapply 전)**
 ```bash
+# image v1.4 + configmap 에서 v1.4 미지원 plugin 둘 제거 (core-metrics-extractor + metrics-data-source)
 kubectl set image deployment/gaie-infsch-epp -n b200-infsch \
   epp=registry.k8s.io/gateway-api-inference-extension/epp:v1.4.0
+kubectl get cm gaie-infsch-epp -n b200-infsch -o yaml \
+  | sed '/- type: core-metrics-extractor/d; /- type: metrics-data-source/,/insecureSkipVerify: true/d' \
+  | kubectl apply -f -
+kubectl rollout restart deployment/gaie-infsch-epp -n b200-infsch
 kubectl rollout status deployment/gaie-infsch-epp -n b200-infsch
 ```
 
 **향후 v1.5+ 채택 시 필요 작업**
 - 새 schema (`engineConfigs in EndpointPickerConfig`) 로 lora 등 optional metric 비활성 표현 검증
-- chart values 의 `pluginsCustomConfig` 에 engineConfigs YAML 작성
+- chart values 의 `pluginsCustomConfig` 에 engineConfigs YAML 작성 + `pluginsConfigFile` 로 redirect
 - `system defaults` 로 추가되는 plugin 을 어떻게 disable 할 수 있는지 chart 내부 동작 재확인
 
 ---

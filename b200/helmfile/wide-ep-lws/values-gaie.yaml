@@ -1,12 +1,28 @@
 # gaie values for wide-EP — minimal EPP
 #
-# inferenceExtension.image.tag = v1.4.0 으로 pin (R9 영속 fix).
-# v1.5.0 은 system defaults 로 core-metrics-extractor + lora_requests_info 강제
-# 주입 → vLLM 이 LoRA 비활성이면 metric 못 찾아 endpoint unhealthy → "no valid
-# backends". v1.4 EPP 가 chart v1.5.0 의 configmap schema 와 호환됨을 검증.
+# R9 영속 fix — image v1.4 + custom-plugins.yaml redirect (자세한 사유는
+# inference-scheduling/values-gaie.yaml 헤더 코멘트 참조).
 inferenceExtension:
   image:
     tag: v1.4.0
+  pluginsConfigFile: custom-plugins.yaml
+  pluginsCustomConfig:
+    custom-plugins.yaml: |
+      apiVersion: inference.networking.x-k8s.io/v1alpha1
+      kind: EndpointPickerConfig
+      plugins:
+      - type: queue-scorer
+      - type: kv-cache-utilization-scorer
+      - type: prefix-cache-scorer
+      schedulingProfiles:
+      - name: default
+        plugins:
+        - pluginRef: queue-scorer
+          weight: 2
+        - pluginRef: kv-cache-utilization-scorer
+          weight: 2
+        - pluginRef: prefix-cache-scorer
+          weight: 3
 
 inferencePool:
   modelServers:
