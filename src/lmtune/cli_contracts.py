@@ -4,6 +4,9 @@
   lmtune contracts list-records [--json]
       유효한 record kind 목록을 출력. 다른 axis 의 가시성 표면과 대칭
       (``lmtune storage list-backends`` / ``lmtune tuner list-{samplers,pruners}``).
+  lmtune contracts describe-record <kind> [--json]
+      특정 record kind 의 필드 표시 — name / type / required / default / description.
+      Pydantic ``model_fields`` introspect. lmtune tuner describe 와 동일 패턴.
   lmtune contracts dump-schema --kind {record,query,result} [--out file.json]
       RecordSpec / QuerySpec / BenchmarkResult 의 JSON Schema 출력.
   lmtune contracts dump-schema --kind record --record-kind run [--out file.json]
@@ -59,6 +62,72 @@ def cmd_list_records(
     for kind in RECORD_KINDS:
         cls = kind_to_class(kind)
         console.print(f"  - [cyan]{kind}[/cyan]  ({cls.__name__})")
+
+
+@app.command("describe-record")
+def cmd_describe_record(
+    record_kind: Annotated[
+        str,
+        typer.Argument(help=f"record kind (필수). valid: {', '.join(RECORD_KINDS)}"),
+    ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="기계 친화적 JSON 출력"),
+    ] = False,
+) -> None:
+    """특정 record kind 의 필드 표시 — name / type / required / default / description.
+
+    Pydantic ``model_fields`` introspect. 외부 사용자가 record schema 를 학습할 때
+    full JSON Schema (`dump-schema`) 보다 짧고 사람 친화적인 표면. ``lmtune tuner
+    describe`` 와 동일 패턴 (metadata 표면).
+    """
+    if record_kind not in RECORD_KINDS:
+        raise typer.BadParameter(
+            f"unknown record kind: {record_kind!r}. "
+            "use 'lmtune contracts list-records' to see valid kinds."
+        )
+
+    cls = kind_to_class(record_kind)
+    fields = []
+    for name, field in cls.model_fields.items():
+        ann = field.annotation
+        default = field.default
+        fields.append(
+            {
+                "name": name,
+                "annotation": str(ann) if ann is not None else None,
+                "required": field.is_required(),
+                "default": None if field.is_required() else repr(default),
+                "description": field.description,
+            }
+        )
+
+    payload = {
+        "kind": record_kind,
+        "class_name": cls.__name__,
+        "module": cls.__module__,
+        "doc": (cls.__doc__ or "").strip().splitlines()[0] if cls.__doc__ else "",
+        "primary_key_arity": len(cls.model_fields),
+        "fields": fields,
+    }
+    if json_output:
+        print(json.dumps(payload, separators=(",", ":"), default=str))
+        return
+
+    console.print(f"[bold]{payload['kind']}[/bold]  ({payload['class_name']})")
+    if payload["doc"]:
+        console.print(f"  [dim]{payload['doc']}[/dim]")
+    console.print(f"  module: [dim]{payload['module']}[/dim]")
+    console.print(f"  fields ({len(fields)}):")
+    for f in fields:
+        marker = "[red]*[/red]" if f["required"] else " "
+        ann_short = (f["annotation"] or "?").replace("typing.", "")
+        line = f"    {marker} [cyan]{f['name']}[/cyan]: {ann_short}"
+        if not f["required"]:
+            line += f"  [dim](default={f['default']})[/dim]"
+        if f["description"]:
+            line += f"  — {f['description']}"
+        console.print(line)
 
 
 @app.command("dump-schema")
