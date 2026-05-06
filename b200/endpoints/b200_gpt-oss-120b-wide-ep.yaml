@@ -29,6 +29,11 @@ deployment:
     namespace: b200-wideep
     deployment_name: ms-wideep-llm-d-modelservice-decode
     rollout_timeout_s: 1500   # 117B MXFP4 + EP=8 spread 초기 셋업 길어질 수 있음
+    # R18: wide-EP 에서 dp axis 는 within-pod data-parallel 의미 (chart 의
+    # decode.parallelism.data 로 emit). default 'replicas' 매핑 (b3 inference-
+    # scheduling 패턴) 으로 두면 dp=8 trial 에서 decode.replicas=8 → 8 pods ×
+    # 8 GPU = 64 GPU 요구 (가용 16) → Pending 4개 발생.
+    dp_routing: data
 
 notes: |
   gpt-oss-120b wide-EP-LWS — 117B MoE / 5.1B active / 128 experts top-4 / MXFP4.

@@ -460,6 +460,53 @@ vllm serve ... --eplb-config '{"window_size": 1000, "step_interval": 3000}'
 
 ---
 
+## R18 — adapter `render_values_overlay` 의 `dp → decode.replicas` hardcode 매핑이 wide-EP 에서 over-provision
+
+**증상**
+- PR #103 (R16/R17 fix) 머지 후 사용자가 b4 study 재시작 시 vllm pod 일부가 Pending 상태로 stuck:
+  ```
+  Warning  FailedScheduling  ...  0/2 nodes are available:
+  2 Insufficient cpu, 2 Insufficient nvidia.com/gpu.
+  ```
+- `kubectl get deploy`: `ms-wideep-llm-d-modelservice-decode 4/8 8 4` — DESIRED=8, READY=4
+- `kubectl get rs`: 9 ReplicaSet 누적 (매 trial 마다 새 RS 생성)
+- 4 Running pods + 4 Pending pods
+
+**진단**
+- `src/lmtune/deploy/llmd_k8s.py::render_values_overlay` line 143-144 (당시):
+  ```python
+  if "dp" in parallelism:
+      decode_overlay["replicas"] = int(parallelism["dp"])
+  ```
+- 이 매핑은 **inference-scheduling (b3) 패턴 가정**: `dp` axis = independent replica count, 각 replica 가 TP=N 로 자체 모델 인스턴스 운영
+- **wide-EP (b4) 의 `dp` 는 의미가 다름**: within-pod data-parallel groups (expert 분산용). chart 의 `decode.parallelism.data` 로 emit 되어야 함
+- 현재 매핑으로 wide-EP 에서 trial 이 `dp=8` sample → adapter 가 `decode.replicas=8` 로 chart 에 inject
+- chart 가 8 replicas 생성, 각 pod 의 GPU 요청 = `tp × dp_default = 2 × 4 = 8` GPU
+- 8 replicas × 8 GPU = **64 GPU 요구** (B200 dual-node 가용 = 16) → 4 pods schedule, 4 Pending
+
+**영속화 위치**
+- Code: `src/lmtune/deploy/llmd_k8s.py::render_values_overlay` — 신규 `dp_routing` 인자 추가
+  - `dp_routing="replicas"` (default): 기존 동작 — `dp → decode.replicas` (b3 inference-scheduling, backward compat)
+  - `dp_routing="data"`: wide-EP — `dp → decode.parallelism.data`. `decode.replicas` 는 set 안 함 (chart values 의 hardcode 가 그대로 = 노드 수)
+- Code: `src/lmtune/deploy/llmd_k8s.py::LLMDK8sAdapter.__init__` + `from_endpoint` — `dp_routing` field 추가, endpoint YAML 의 `helmfile_overrides.dp_routing` 에서 읽음
+- Code: `src/lmtune/deploy/llmd_k8s.py::LLMDK8sAdapter.apply` — `render_values_overlay` 호출 시 `self._dp_routing` 전달
+- Endpoint: `b200/endpoints/b200_gpt-oss-120b-wide-ep.yaml` — `helmfile_overrides.dp_routing: data` 추가. 주석으로 R18 reference + GPU over-provision 사유 명시
+- Test: `tests/deploy/test_llmd_overlay.py`:
+  - `test_overlay_dp_routing_data_for_wide_ep` — wide-EP 매핑 확인
+  - `test_overlay_dp_routing_replicas_default_unchanged` — backward compat (default behavior)
+  - `test_adapter_from_endpoint_reads_dp_routing` — endpoint YAML 의 hint 가 adapter 에 전달
+
+**향후 (다른 path 추가 시 동일 패턴 차단)**
+- 새 well-lit-path 추가 시 endpoint YAML 의 `helmfile_overrides.dp_routing` 값 결정 룰:
+  - `inference-scheduling`: `replicas` (default). `dp` = independent model replica
+  - `wide-ep-lws`: `data`. `dp` = within-pod data-parallel
+  - `pd-disaggregation`: 별도 검토 필요 (prefill / decode 별 replica count 분리)
+- search-space 의 `dp` axis values 는 path-specific 으로 좁혀야:
+  - inference-scheduling: dp ∈ [1, 2, 4] (replica 수 — GPU 가용 / TP 의 분모)
+  - wide-EP: dp ∈ [2, 4, 8] but tp × dp ≤ npus_per_server 제약 (within-pod GPU 한계)
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)
