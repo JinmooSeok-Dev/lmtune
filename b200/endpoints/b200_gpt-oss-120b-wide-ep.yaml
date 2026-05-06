@@ -18,7 +18,9 @@ deployment:
     max_model_len: 32768
     gpu_memory_utilization: 0.90
     kv_cache_dtype: fp8
-    dtype: bfloat16
+    # dtype 미설정 → vllm 가 model config 의 native MXFP4 자동 감지 (R13).
+    # bf16 강제 시 117B MoE 가 ~234GB 으로 dequantize → TP=2 DP=4 토폴로지에서
+    # KV profiling 단계 OOM (worker subprocess SIGKILL → 빈 RuntimeError).
   helmfile_overrides:
     helmfile_file: b200/helmfile/wide-ep-lws/helmfile.yaml.gotmpl
     environment: default

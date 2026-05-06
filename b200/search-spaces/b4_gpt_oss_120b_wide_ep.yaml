@@ -56,10 +56,22 @@ axes:
   # ─── Wide-EP 전용 axis (신규) ───
   all2all_backend:
     type: categorical
-    values: [allgather_reducescatter, deepep_low_latency, deepep_high_throughput, nixl_ep]
+    values: [allgather_reducescatter, deepep_low_latency, deepep_high_throughput, flashinfer_all2allv, pplx]
     # 본 study 의 핵심 axis — B200 RDMA fabric 위에서 expert all-to-all 통신
     # backend 의 throughput/latency 차이 정량화. Sobol total-order index 로
     # 다른 axis 대비 영향력 자동 추출.
+    #
+    # vllm 0.17.1 valid choices (실측, R14):
+    #   allgather_reducescatter, deepep_high_throughput, deepep_low_latency,
+    #   flashinfer_all2allv, mori, naive, pplx
+    # 본 study 가 sweep 하는 5개:
+    #   - allgather_reducescatter — baseline (NCCL 기본)
+    #   - deepep_low_latency — DeepEP latency 최적화 (small batch)
+    #   - deepep_high_throughput — DeepEP throughput 최적화 (large batch)
+    #   - flashinfer_all2allv — FlashInfer kernels (B200 sm_100 native, vllm 0.17 신규)
+    #   - pplx — Perplexity all-to-all backend
+    # 제외: mori (실험적), naive (성능 비교 가치 낮음).
+    # 원래 후보였던 nixl_ep 는 vllm 0.17.1 에서 invalid choice — 미지원 (R14).
 
   enable_dbo:
     type: bool

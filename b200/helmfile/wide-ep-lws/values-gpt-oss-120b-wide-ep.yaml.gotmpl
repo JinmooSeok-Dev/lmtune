@@ -78,29 +78,32 @@ decode:
       image: vllm/vllm-openai:v0.17.1
       modelCommand: vllmServe
       args:
-        {{- /* chart 가 decode.parallelism.{tensor,data} 에서 --tensor-parallel-size /
-              --data-parallel-size 를 자동 inject. 여기서 또 emit 하면 vllm 이
-              "ambiguous"/duplicate 로 reject (helmfile template 검증 시 실측 확인). */}}
-        - "--enable-expert-parallel"
-        {{- /* wide-EP defaults — search-space axis 가 vllmArgs 로 override 가능.
-              defaults 의 key 는 snake_case 로 통일 (lmtune adapter 가 snake_case 로
-              vllmArgs 를 inject 하므로 mergeOverwrite 가 같은 logical flag 를 두 번
-              emit 하는 사고 방지). emit 시 kebab 으로 변환. */}}
+        {{- /* R14a: chart 가 decode.parallelism.{tensor,data} 에서 --tensor-parallel-size
+              / --data-parallel-size 를 자동 inject — 여기서 또 emit 하면 duplicate.
+              R14b: lmtune adapter (render_values_overlay) 가 vllmArgs 를 kebab-case
+              로 emit + ep=true 시 enable-expert-parallel 도 자동 추가. 따라서
+              (1) defaults dict 도 kebab 으로 통일 → mergeOverwrite 가 같은 logical
+                  flag collapse → range 가 한 번만 emit
+              (2) --enable-expert-parallel 하드코드 라인 제거 — adapter 가 vllmArgs
+                  로 자동 inject 함 (search-space ep:true 일 때만). */}}
+        {{- /* R13: dtype 를 default 에서 제외 → vllm 가 model config 의 native
+              quantization (gpt-oss-120b 의 MXFP4) 자동 감지. bf16 강제 시 117B
+              가 dequantize → ~234GB → TP=2 DP=4 토폴로지에서 KV profiling 단계
+              worker SIGKILL (빈 RuntimeError 로 마스킹). */}}
         {{- $defaults := dict
-              "max_num_seqs" 128
-              "max_model_len" 32768
-              "gpu_memory_utilization" 0.90
-              "dtype" "bfloat16"
-              "kv_cache_dtype" "auto"
+              "max-num-seqs" 128
+              "max-model-len" 32768
+              "gpu-memory-utilization" 0.90
+              "kv-cache-dtype" "auto"
         }}
         {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
         {{- range $k, $v := $merged }}
         {{- if kindIs "bool" $v }}
         {{- if $v }}
-        - "--{{ $k | replace "_" "-" }}"
+        - "--{{ $k }}"
         {{- end }}
         {{- else }}
-        - "--{{ $k | replace "_" "-" }}"
+        - "--{{ $k }}"
         - {{ $v | quote }}
         {{- end }}
         {{- end }}
