@@ -1,11 +1,18 @@
-"""``lmtune storage`` subcommand — ArtifactStore backend 간 변환/이관 도구.
+"""``lmtune storage`` subcommand — ArtifactStore backend 운영 도구 6 명령.
 
 서브커맨드:
-  lmtune storage migrate --src-kind {local,duckdb} --src <path> \
-                         --dst-kind {local,duckdb} --dst <path> \
-                         [--kinds run,metric,...] [--batch N]
-      한 backend → 다른 backend 로 record 일괄 복사. ABC 의 put/query 만 사용
-      → backend 추가 시 코드 수정 0.
+  lmtune storage list-backends
+      등록된 backend 이름 목록.
+  lmtune storage describe-backend <name>
+      backend 의 class / 의존성 / path 인자 의미 / capability 표시.
+  lmtune storage migrate --src-kind ... --dst-kind ... ...
+      한 backend → 다른 backend 로 record 일괄 복사 (ABC put/query 만 사용).
+  lmtune storage info --kind <backend> --path <p>
+      record kind 별 count 보고.
+  lmtune storage validate --kind <backend> --path <p>
+      모든 record 의 schema validity 검증.
+  lmtune storage diff --left-* --right-*
+      두 store 의 record 차이 (only_left / only_right / mismatched).
 
 Use cases:
   - DuckDB (운영) → Local jsonl (git archive, S3 sync, jq 검색)
@@ -15,6 +22,7 @@ Use cases:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -134,6 +142,81 @@ def cmd_list_backends() -> None:
     """
     for b in _BACKENDS:
         console.print(f"- {b}")
+
+
+# backend 별 메타 — describe-backend 가 노출. CLI 모듈에서 직접 관리하는 이유:
+# 외부 SDK 미설치 환경에서도 PostgresArtifactStore 의 docstring 등을 읽을 수 있어야
+# 하지만 클래스 자체는 import 시 ImportError 가능. 가벼운 dict 가 실용적.
+_BACKEND_META: dict[str, dict[str, object]] = {
+    "local": {
+        "class_name": "LocalArtifactStore",
+        "module": "lmtune.storage.store.local",
+        "summary": "JSONL per kind — disk 영속, primary_key dedup, grep 친화",
+        "path_kind": "directory",
+        "extras": None,
+        "transactional": False,
+        "concurrent_writers": False,
+    },
+    "duckdb": {
+        "class_name": "DuckDBArtifactStore",
+        "module": "lmtune.storage.store.duckdb",
+        "summary": "DuckDB single-file — query 성능, ACID",
+        "path_kind": "file",
+        "extras": None,
+        "transactional": True,
+        "concurrent_writers": False,
+    },
+    "postgres": {
+        "class_name": "PostgresArtifactStore",
+        "module": "lmtune.storage.store.postgres",
+        "summary": "Postgres DSN — multi-writer, server-side store (stub, psycopg 필요)",
+        "path_kind": "dsn",  # postgres://user:pass@host/db
+        "extras": "[postgres]",
+        "transactional": True,
+        "concurrent_writers": True,
+    },
+}
+
+
+@app.command("describe-backend")
+def cmd_describe_backend(
+    name: Annotated[
+        str,
+        typer.Argument(help=f"backend name. valid: {', '.join(_BACKENDS)}"),
+    ],
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="기계 친화적 JSON 출력"),
+    ] = False,
+) -> None:
+    """특정 backend 의 메타 표시 — class / 의존성 / path 인자 의미 / capability.
+
+    ``lmtune tuner describe`` / ``lmtune contracts describe-record`` 와 동일한
+    metadata 표면 패턴. axis 대칭 — Storage / Tuner / Contracts 가 같은
+    list / describe / paste-able 4 layer 가시성을 갖는다.
+    """
+    if name not in _BACKENDS:
+        raise typer.BadParameter(
+            f"unknown backend: {name!r}. use 'lmtune storage list-backends' to see valid names."
+        )
+
+    meta = _BACKEND_META[name]
+    payload = {"name": name, **meta}
+    if json_output:
+        print(json.dumps(payload, separators=(",", ":"), default=str))
+        return
+
+    console.print(f"[bold]{name}[/bold]  ({meta['class_name']})")
+    console.print(f"  [dim]{meta['summary']}[/dim]")
+    console.print(f"  module: [dim]{meta['module']}[/dim]")
+    console.print(f"  path arg: [cyan]{meta['path_kind']}[/cyan]")
+    if meta["extras"]:
+        # rich 가 [postgres] 를 markup 으로 해석하지 않도록 escape
+        extras_str = str(meta["extras"]).replace("[", r"\[")
+        console.print(f"  install: pip install lmtune{extras_str}")
+    transactional = "yes" if meta["transactional"] else "no"
+    concurrent = "yes" if meta["concurrent_writers"] else "no"
+    console.print(f"  transactional: {transactional}, concurrent writers: {concurrent}")
 
 
 @app.command("diff")
