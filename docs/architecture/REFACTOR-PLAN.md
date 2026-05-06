@@ -152,7 +152,13 @@ Outer loop (시각화/분석):
   - **#80 cli-tuner-make-config** — `lmtune tuner make-config <kind>` 신규. `inspect.signature` 의 default kwargs 로 채워진 SearchSpace YAML/JSON 블록 출력 (`--format yaml|json` + `--flat`). 사용자가 SearchSpace YAML 의 빈 슬롯에 즉시 paste 가능 — describe 가 metadata 표면, make-config 가 paste-able 표면
   - **#81 docs(README)** — Tuner 메타 도구 섹션에 make-config 노출 (3 명령 → 4 명령). describe ↔ make-config 차이 명시
   - **#82 cli-contracts-make-template** — `lmtune contracts make-template --record-kind <k>` 신규. Pydantic `model_fields` introspection → 필수 필드 placeholder + optional default 채워진 record JSON/YAML 출력. tuner make-config 와 동일 paste-able 표면 패턴. round-trip 검증 (validate-record 통과)
+  - 부수: **#83 docs** — README Contracts 도구 섹션 신설 (5 명령 노출)
+  - 부수: **#84 docs(arch)** — PLUG_PATTERN.md 에 두 표면 (metadata / paste-able) 절 추가 + reference impl 섹션 확장
+  - **#85 cli-contracts-list-records** — `lmtune contracts list-records` 신규. `RECORD_KINDS` (record_spec 의 단일 진실원) 를 그대로 노출. 다른 PLUG axis (`storage list-backends` / `tuner list-{samplers,pruners}`) 와 대칭. drift 가드 테스트로 RECORD_KINDS ↔ CLI 출력 1:1 동기 영속 검증
+  - **#86 cli-contracts-describe-record** — `lmtune contracts describe-record <kind>` 신규. Pydantic `model_fields` introspect → name / type / required / default / description 필드 표. `dump-schema` (full JSON Schema) 보다 짧고 사람 친화적인 metadata 표면. `tuner describe` 와 동일 패턴
+  - 부수: **#87 docs(README)** — Contracts 도구 섹션 5 → 7 명령 (list-records + describe-record 노출) + axis 대칭표 (Storage/Tuner/Contracts 의 list/describe/paste-able 표면)
 - **Storage 운영 도구 5종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
 - **Tuner 메타 도구 4종** (`lmtune tuner list-samplers` / `list-pruners` / `describe <kind>` / `make-config <kind>`) — PLUG 합류 즉시 자동 노출 + introspect + paste-able config block (drift 가드 테스트 포함).
+- **Contracts 메타 도구 7종** (`list-records` / `describe-record` / `dump-schema` / `validate-record` / `validate-result` / `records-from-result` / `make-template`) — `RECORD_KINDS` 단일 진실원 + Pydantic introspect. 4 layer 가시성 (list → describe → paste-able → full schema) 이 Contracts 에도 완비.
 - **Pruner axis PLUG 합류** — Optuna (SH/Hyperband) + Native (Median + Percentile) 네 빌트인. ASHA / 외부 SDK pruner 추가 시 1+1 줄 변경.
 - 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60/#73/#75 으로 세 축 (Storage + Sampler + Pruner) 모두 시연. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
