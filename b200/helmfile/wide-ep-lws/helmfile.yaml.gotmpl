@@ -11,6 +11,12 @@
 #
 # 사용법:
 #   NS=b200-wideep helmfile -f b200/helmfile/wide-ep-lws/helmfile.yaml.gotmpl --selector role=base apply
+#
+# 모델 전환 (inference-scheduling 와 동일 패턴):
+#   B200_MODEL_VALUES=values-gpt-oss-120b-wide-ep.yaml.gotmpl \
+#     helmfile -f b200/helmfile/wide-ep-lws/helmfile.yaml.gotmpl apply
+#   미설정 시 default = values-mixtral-8x22b-dp2-ep8.yaml. 새 모델 추가는
+#   values-<model>-wide-ep.yaml.gotmpl 1개로 끝.
 
 environments:
   default:
@@ -72,7 +78,7 @@ releases:
       - {{ printf "gaie-%s" $rn | quote }}
     values:
       - ../base/values-b200-common.yaml.gotmpl
-      - values-mixtral-8x22b-dp2-ep8.yaml
+      - {{ env "B200_MODEL_VALUES" | default "values-mixtral-8x22b-dp2-ep8.yaml" }}
     # See inference-scheduling/helmfile.yaml.gotmpl for rationale —
     # inject runtimeClassName=nvidia into all Deployments (chart limitation).
     postRenderer: ../_postrender/postrender.sh
