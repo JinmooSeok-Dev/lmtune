@@ -164,6 +164,22 @@ stub 단계의 가치는 **새 axis 의 wiring 검증 (driver, CLI, tests 까지
 이 implementation 보다 먼저 검증되는 것**. wiring 이 깨지면 follow-up 의 구현
 PR 들이 매번 wire-up 부터 다시 다툼 — 본 패턴이 차단.
 
+## 두 표면 — metadata vs paste-able
+
+새 PLUG 가 합류할 때 노출되는 사용자 표면은 두 종류로 구분한다.
+
+| 표면 | 목적 | 입력 | 출력 | 사용자 워크플로우 |
+|:---|:---|:---|:---|:---|
+| **list** | "어떤 kind 가 있나" | (없음) | kind 목록 (그룹별) | 처음 인지 |
+| **metadata** (`describe`) | "그 kind 가 뭐 받나" — 사람용 | kind name | hyperparam 표 + docstring 첫 줄 + reference URL | 학습 / 검토 |
+| **paste-able** (`make-config`, `make-template`) | "그 kind 의 default 블록 즉시 paste" — 기계용 | kind name + `--format yaml\|json` | 채워진 dict 블록 (필수 placeholder, optional default) | YAML 작성 시작 |
+
+두 표면은 동일 `_resolve_kind()` 매핑을 공유 — 새 PLUG 가 `_resolve_kind` 에 1줄 매핑만 추가하면 list / describe / make-config (또는 make-template) 모두 자동 인지.
+
+reference impl:
+- Sampler / Pruner axis: `lmtune.cli_tuner.cmd_describe` + `cmd_make_config` (#77, #80)
+- Record axis: `lmtune.cli_contracts.cmd_make_template` (#82) — Pydantic `model_fields` 기반 대신 `inspect.signature` 와 본질 동일
+
 ## Drift 차단 — 두 곳을 같이 보는 테스트
 
 PLUG 의 본질은 "한 번 틀어지면 install 자체가 깨지는" 형식의 정합성. 본 repo
@@ -191,12 +207,19 @@ PLUG 의 본질은 "한 번 틀어지면 install 자체가 깨지는" 형식의 
 - [ ] `docs/architecture/REFACTOR-PLAN.md` CHANGELOG entry
 - [ ] (옵션) README 의 PLUG 표에 row 추가
 
-## 참고 — 세 reference impl
+## 참고 — reference impl
 
+ABC + 빌트인 + stub 의 reference:
 - **PostgresArtifactStore** (#58): `src/lmtune/storage/store/postgres.py` + `tests/storage/test_postgres_store_stub.py`
 - **LLMOracleSampler** (#59): `src/lmtune/tuner/llm_oracle.py` + `tests/tuner/test_llm_oracle_stub.py`
 - **`tuner.factory.make_pruner`** (#70/#71): `src/lmtune/tuner/factory.py::make_pruner` + `tests/tuner/test_factory_pruner.py` — Pruner ABC dispatch 입구 + `_OPTUNA_PRUNER_KINDS` drift 가드
+- **NativeMedianPruner** (#73) + **NativePercentilePruner** (#75): Pruner axis 의 native PLUG slot 합류 (Optuna 위임 0)
 
-위 세 PR 의 코드 + 테스트가 본 문서 5단계의 살아있는 1:1 reference. 새 PLUG
-추가 시 가장 가까운 axis 를 그대로 복사 + 이름 / SDK 만 바꾸는 게 가장 빠른
-경로.
+CLI 표면의 reference:
+- **list** (`#76`): `lmtune tuner list-{samplers,pruners}` — 단일 진실원 (factory set) 에서 자동 노출
+- **describe** (`#77`): `lmtune tuner describe <kind>` — `inspect.signature` introspect, optuna 빌트인은 reference URL fallback
+- **make-config** (`#80`): `lmtune tuner make-config <kind>` — paste-able default-filled YAML/JSON
+- **make-template** (`#82`): `lmtune contracts make-template -k <kind>` — Pydantic `model_fields` 기반, 같은 paste-able 패턴
+
+위 PR 의 코드 + 테스트가 본 문서의 살아있는 1:1 reference. 새 PLUG 추가 시
+가장 가까운 axis 를 그대로 복사 + 이름 / SDK 만 바꾸는 게 가장 빠른 경로.
