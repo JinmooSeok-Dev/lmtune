@@ -1,4 +1,14 @@
-# gaie-pd values for inference-scheduling — minimal EPP
+# gaie values for inference-scheduling — minimal EPP
+#
+# inferenceExtension.image.tag = v1.4.0 으로 pin (R9 영속 fix).
+# v1.5.0 은 system defaults 로 core-metrics-extractor + lora_requests_info 강제
+# 주입 → vLLM 이 LoRA 비활성이면 metric 못 찾아 endpoint unhealthy → "no valid
+# backends". v1.4.0 은 같은 metric 못 찾아도 warning 만, backend healthy 유지.
+# v1.4 EPP 가 chart v1.5.0 의 configmap schema 와 호환됨을 minikube 에서 검증.
+inferenceExtension:
+  image:
+    tag: v1.4.0
+
 inferencePool:
   modelServers:
     matchLabels:
