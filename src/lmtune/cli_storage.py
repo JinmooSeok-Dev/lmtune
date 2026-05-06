@@ -135,11 +135,21 @@ def cmd_migrate(
 
 
 @app.command("list-backends")
-def cmd_list_backends() -> None:
+def cmd_list_backends(
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="기계 친화적 JSON 출력"),
+    ] = False,
+) -> None:
     """등록된 ArtifactStore backend 목록.
 
     새 backend 가 ABC 를 구현해 plug-in 되면 본 목록에 합류한다 (PLUG 패턴 시연).
+    ``lmtune tuner list-{samplers,pruners}`` / ``lmtune contracts list-records`` 와
+    동일한 ``--json`` 표면.
     """
+    if json_output:
+        print(json.dumps({"backends": list(_BACKENDS)}))
+        return
     for b in _BACKENDS:
         console.print(f"- {b}")
 
