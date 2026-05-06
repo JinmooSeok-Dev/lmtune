@@ -81,3 +81,79 @@ def test_merge_pd_replicas_routed_to_replicas_block(tmp_path: Path):
     # P/D 키가 engine_args 로 흘러들지 않음
     assert "prefill_replicas" not in merged["deployment"]["engine_args"]
     assert "decode_replicas" not in merged["deployment"]["engine_args"]
+
+
+def test_merge_simulator_only_axes_dropped(tmp_path: Path):
+    """R11: simulator-only axis (cross_node_type / intra_node_type / pcp / dcp 등) 는
+    engine_args 로 흘러들지 않는다 — vllm 이 unrecognized argument 로 reject 하는 문제 차단."""
+    p = tmp_path / "ep.yaml"
+    _baseline(p)
+    merged = merge_params_into_endpoint(
+        p,
+        {
+            # simulator metadata
+            "cross_node_type": "roce",
+            "intra_node_type": "pcie",
+            "node_split_strategy": "dual-node-pp2-tp8",
+            "prefill_context_parallel_size": 2,
+            "decode_context_parallel_size": 1,
+            "ep_strategy": "wide",
+            "sequence_parallel": True,
+            # 정상 axis (control)
+            "max_num_seqs": 64,
+            "tp": 4,
+        },
+    )
+    ea = merged["deployment"]["engine_args"]
+    para = merged["deployment"]["parallelism"]
+    # simulator metadata 는 어디에도 emit 안 됨
+    for k in (
+        "cross_node_type",
+        "intra_node_type",
+        "node_split_strategy",
+        "prefill_context_parallel_size",
+        "decode_context_parallel_size",
+        "ep_strategy",
+        "sequence_parallel",
+    ):
+        assert k not in ea, f"{k} leaked to engine_args (vllm reject)"
+        assert k not in para, f"{k} leaked to parallelism"
+    # 정상 axis 는 그대로
+    assert ea["max_num_seqs"] == 64
+    assert para["tp"] == 4
+
+
+def test_merge_simulator_only_warmstart_replay(tmp_path: Path):
+    """R11 시나리오: warmstart-db 가 옛 b3_parallelism trial params 를 enqueue한
+    상황 — 9 axis 전부 sample 로 들어와도 vllm 미지원 7개는 모두 drop, 2개만 emit."""
+    p = tmp_path / "ep.yaml"
+    _baseline(p)
+    warmstart_params = {
+        "tp": 8,
+        "dp": 2,
+        "ep": False,
+        "max_num_seqs": 128,
+        "gpu_memory_utilization": 0.85,
+        # 이하 simulator-only — 옛 study 가 sample 했던 것
+        "intra_node_type": "pcie",
+        "cross_node_type": "roce",
+        "node_split_strategy": "dual-node-pp2-tp8",
+        "prefill_context_parallel_size": 4,
+        "decode_context_parallel_size": 1,
+    }
+    merged = merge_params_into_endpoint(p, warmstart_params)
+    # engine_args 에 simulator key 없어야
+    ea_keys = set(merged["deployment"]["engine_args"].keys())
+    assert ea_keys.isdisjoint(
+        {
+            "intra_node_type",
+            "cross_node_type",
+            "node_split_strategy",
+            "prefill_context_parallel_size",
+            "decode_context_parallel_size",
+        }
+    )
+    # 정상 axis 는 emit
+    assert merged["deployment"]["parallelism"]["tp"] == 8
+    assert merged["deployment"]["parallelism"]["dp"] == 2
+    assert merged["deployment"]["engine_args"]["max_num_seqs"] == 128

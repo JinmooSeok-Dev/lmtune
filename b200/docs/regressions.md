@@ -247,6 +247,41 @@ kubectl get httproute b200-infsch-smoke -n b200-infsch -o yaml | grep -A5 Resolv
 
 ---
 
+## R11 — simulator-only axis 가 vllm CLI args 로 emit 되어 trial 전부 reject
+
+**증상**
+study 시작 후 모든 trial 이 vllm crash:
+```
+WARNING ... Found duplicate keys --tensor-parallel-size
+vllm: error: unrecognized arguments: --cross-node-type roce --intra-node-type pcie --node-split-strategy dual-node-pp2-tp8
+```
+search-space 에 `cross_node_type` 등 axis 가 없어도 발생 — 특히 `--warmstart-db` 옵션 사용 시 (옛 b3_parallelism study 의 trial params 가 enqueue 됨).
+
+**진단**
+- `src/lmtune/deploy/base.py::merge_params_into_endpoint` 의 fallback 분기 (line 89-90):
+  ```python
+  else:
+      engine_args[k] = v   # "Unknown keys are written under deployment.engine_args
+                           # (vLLM passes unknowns through as CLI flags)"  ← 잘못된 가정
+  ```
+- 코멘트가 "vllm passes unknowns through" 라 가정했지만 vllm 은 unrecognized arg 로 reject. simulator metadata (cross_node_type / intra_node_type / node_split_strategy / pcp / dcp / ep_strategy / sequence_parallel) 가 그대로 vllm CLI 로 흘러감.
+- warmstart-db 가 옛 study 의 trial.params 그대로 enqueue → 새 search-space 에 없는 axis 도 trial.params 에 carry → engine_args 로 emit.
+
+**영속화 위치**
+- Code: `src/lmtune/deploy/base.py::_SIMULATOR_ONLY_KEYS` — 7 axis 명시 set
+- Code: `merge_params_into_endpoint` 가 simulator-only key 를 silently skip (engine_args / parallelism / replicas 어느 쪽으로도 안 감)
+- Test: `tests/deploy/test_base.py::test_merge_simulator_only_axes_dropped` — 7 simulator key 모두 어디에도 안 나타남
+- Test: `tests/deploy/test_base.py::test_merge_simulator_only_warmstart_replay` — warmstart 시나리오 (10 키 enqueue 중 5 simulator drop, 5 정상 emit)
+
+**즉시 우회 (study 진행 중)**
+- `--warmstart-db ... --warmstart-top-k 8` 옵션을 빼고 study 재시작 (옛 study 의 dirty params 차단)
+- 또는 PR #98 (R11 fix) 머지 후 git pull — warmstart 사용 가능
+
+**향후 (chart wiring 검증 시 axis 합류)**
+PCP/DCP/ep_strategy 가 chart values gotmpl 의 vllmArgs 경로에 정상 emit 되는 것 검증 후 본 set 에서 제거 + `_PARALLELISM_KEYS` 또는 `_ENGINE_ARG_KEYS` 로 합류.
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)

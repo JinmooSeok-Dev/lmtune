@@ -45,6 +45,26 @@ _PARALLELISM_KEYS: set[str] = {"tp", "pp", "dp", "ep", "rsd"}
 # 블록의 replicas 키와 1:1 매핑 (e.g., prefill_replicas=2 → prefill.replicas: 2).
 _PD_REPLICA_KEYS: set[str] = {"prefill_replicas", "decode_replicas"}
 
+# vllm-config-puzzle simulator 의 metadata-only axis. feasibility checker /
+# surrogate model 가 사용하지만 vllm CLI flag 는 아니다 (vllm reject).
+# warmstart-db 가 옛 b3_parallelism study 의 trial params 를 가져올 때 이
+# 키들이 trial.params 에 들어 있으면 unknown 처리되어 engine_args 로 emit →
+# vllm 이 'unrecognized argument' 로 모든 trial reject (R11). 명시 skip.
+_SIMULATOR_ONLY_KEYS: set[str] = {
+    # network topology — chart 가 NCCL_* env 로 표현, vllm CLI 아님
+    "intra_node_type",
+    "cross_node_type",
+    # node_split_strategy — 파생 metadata, helmfile 가 derive
+    "node_split_strategy",
+    # context parallel — vllm 0.17.1 wiring 미검증 (chart values gotmpl 의
+    # vllmArgs 경로에 emit 되는지 사전 검증 안 됨). chart wiring 검증 후
+    # 본 set 에서 제거 + _ENGINE_ARG_KEYS 또는 _PARALLELISM_KEYS 로 합류.
+    "prefill_context_parallel_size",
+    "decode_context_parallel_size",
+    "ep_strategy",  # standard/wide — chart 가 wide-ep-lws path 로 표현
+    "sequence_parallel",  # vllm-config-puzzle placeholder, 미활성
+}
+
 
 @dataclass(slots=True)
 class HealthReport:
@@ -70,8 +90,10 @@ def merge_params_into_endpoint(
 
     Keys in `_ENGINE_ARG_KEYS` land under `deployment.engine_args`.
     Keys in `_PARALLELISM_KEYS` land under `deployment.parallelism`.
-    Unknown keys are written under `deployment.engine_args` (vLLM passes unknowns
-    through as CLI flags) so new axes work without code changes.
+    Keys in `_SIMULATOR_ONLY_KEYS` are silently dropped — feasibility checker /
+    surrogate model 가 쓰지만 vllm CLI flag 가 아니라 emit 시 reject 됨 (R11).
+    Other unknown keys are written under `deployment.engine_args` so new vllm
+    flags work without code changes (vllm 0.7+ 의 신규 CLI flag).
     """
     p = Path(endpoint_path)
     data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
@@ -81,6 +103,8 @@ def merge_params_into_endpoint(
     replicas = deployment.setdefault("replicas", {})
 
     for k, v in params.items():
+        if k in _SIMULATOR_ONLY_KEYS:
+            continue  # metadata-only — feasibility checker 만 사용
         if k in _PARALLELISM_KEYS:
             parallelism[k] = v
         elif k in _PD_REPLICA_KEYS:
