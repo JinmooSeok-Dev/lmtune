@@ -90,11 +90,18 @@ decode:
               quantization (gpt-oss-120b 의 MXFP4) 자동 감지. bf16 강제 시 117B
               가 dequantize → ~234GB → TP=2 DP=4 토폴로지에서 KV profiling 단계
               worker SIGKILL (빈 RuntimeError 로 마스킹). */}}
+        {{- /* R15: enable-expert-parallel: true 를 default 로 강제. wide-EP path
+              의 정의상 항상 활성. 이전엔 search-space 의 `ep` axis 가 adapter 를 통해
+              vllmArgs 에 inject 했지만 sampler 가 ep=false 로 sample 하면
+              enable_eplb=true 와 결합 시 vllm 가 pydantic ValidationError
+              ("enable_expert_parallel must be True to use EPLB") 로 reject.
+              search-space 에서 ep axis 제거 + 여기서 강제 ON 으로 영속화. */}}
         {{- $defaults := dict
               "max-num-seqs" 128
               "max-model-len" 32768
               "gpu-memory-utilization" 0.90
               "kv-cache-dtype" "auto"
+              "enable-expert-parallel" true
         }}
         {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
         {{- range $k, $v := $merged }}

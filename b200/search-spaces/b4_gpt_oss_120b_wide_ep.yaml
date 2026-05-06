@@ -48,10 +48,12 @@ axes:
     # data-parallel 그룹 수. dp=8 + tp=1 = 8 GPU 1 worker, 가장 wide-spread.
     # dp=4 + tp=2 = 8 GPU (mixtral 패턴), dp=2 + tp=4 = 8 GPU (less wide).
 
-  ep:
-    type: bool
-    values: [true]
-    # wide-EP 의 정의 — 강제 ON. b4 path 자체가 ep_strategy=wide.
+  # ep axis 제거 (R15) — wide-EP 의 정의상 ep=true 강제.
+  # 이전엔 `type: bool, values: [true]` 였으나 bool sampler 가 values 제약 무시
+  # → 일부 trial 이 ep=false 로 sample → adapter 가 enable-expert-parallel 안 emit
+  # → enable_eplb=true 와 결합 시 vllm pydantic ValidationError
+  #   ("enable_expert_parallel must be True to use EPLB").
+  # 강제 ON 은 values-gpt-oss-120b-wide-ep.yaml.gotmpl 의 $defaults 에서 처리.
 
   # ─── Wide-EP 전용 axis (신규) ───
   all2all_backend:
