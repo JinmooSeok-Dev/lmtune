@@ -17,6 +17,7 @@ from lmtune.deploy.base import (
     DeploymentAdapter,
     HealthReport,
     merge_params_into_endpoint,
+    merge_params_to_dict,
 )
 from lmtune.deploy.health import probe_openai_models, warmup_one_token
 from lmtune.deploy.llmd_k8s import LLMDK8sAdapter
@@ -29,6 +30,7 @@ __all__ = [
     "LocalVLLMAdapter",
     "LLMDK8sAdapter",
     "merge_params_into_endpoint",
+    "merge_params_to_dict",
     "probe_openai_models",
     "warmup_one_token",
 ]

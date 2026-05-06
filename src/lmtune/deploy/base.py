@@ -83,17 +83,20 @@ class ApplyResult:
     adapter: str = ""
 
 
-def merge_params_into_endpoint(
-    endpoint_path: str | Path, params: Mapping[str, Any]
-) -> dict[str, Any]:
-    """Merge trial params into endpoint YAML; write in place; return the merged dict.
+def merge_params_to_dict(endpoint_path: str | Path, params: Mapping[str, Any]) -> dict[str, Any]:
+    """Read endpoint YAML, merge trial params into a fresh dict, return it.
 
-    Keys in `_ENGINE_ARG_KEYS` land under `deployment.engine_args`.
-    Keys in `_PARALLELISM_KEYS` land under `deployment.parallelism`.
-    Keys in `_SIMULATOR_ONLY_KEYS` are silently dropped — feasibility checker /
-    surrogate model 가 쓰지만 vllm CLI flag 가 아니라 emit 시 reject 됨 (R11).
-    Other unknown keys are written under `deployment.engine_args` so new vllm
-    flags work without code changes (vllm 0.7+ 의 신규 CLI flag).
+    **Pure function — endpoint YAML is NEVER mutated** (R12). Use this from
+    LLMDK8sAdapter / any caller that doesn't need a file on disk; the merged
+    dict is fed directly to render_values_overlay or similar in-memory
+    consumers.
+
+    Routing:
+      - Keys in `_ENGINE_ARG_KEYS` land under `deployment.engine_args`.
+      - Keys in `_PARALLELISM_KEYS` land under `deployment.parallelism`.
+      - Keys in `_PD_REPLICA_KEYS` land under `deployment.replicas`.
+      - Keys in `_SIMULATOR_ONLY_KEYS` are silently dropped (R11).
+      - Other unknown keys → `deployment.engine_args` (vllm 0.7+ new CLI flag).
     """
     p = Path(endpoint_path)
     data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
@@ -104,15 +107,33 @@ def merge_params_into_endpoint(
 
     for k, v in params.items():
         if k in _SIMULATOR_ONLY_KEYS:
-            continue  # metadata-only — feasibility checker 만 사용
+            continue
         if k in _PARALLELISM_KEYS:
             parallelism[k] = v
         elif k in _PD_REPLICA_KEYS:
-            # prefill_replicas → replicas.prefill, decode_replicas → replicas.decode
             replicas[k.removesuffix("_replicas")] = int(v)
         else:
             engine_args[k] = v
 
+    return data
+
+
+def merge_params_into_endpoint(
+    endpoint_path: str | Path, params: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Merge trial params into endpoint YAML; **write in place**; return the merged dict.
+
+    Same routing as ``merge_params_to_dict`` but writes the result back to
+    ``endpoint_path``. Use this only when downstream consumers need a real file
+    on disk (e.g., LocalVLLMAdapter delegates to ``scripts/vllm_restart.sh`` which
+    reads ``deployment.engine_args`` from the YAML).
+
+    **Avoid for LLMDK8sAdapter** — that path uses the dict in-memory and the
+    file-write side-effect leaks dirty values across studies (R12). Use
+    ``merge_params_to_dict`` instead.
+    """
+    p = Path(endpoint_path)
+    data = merge_params_to_dict(p, params)
     p.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     return data
 
