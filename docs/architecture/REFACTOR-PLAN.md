@@ -157,8 +157,15 @@ Outer loop (시각화/분석):
   - **#85 cli-contracts-list-records** — `lmtune contracts list-records` 신규. `RECORD_KINDS` (record_spec 의 단일 진실원) 를 그대로 노출. 다른 PLUG axis (`storage list-backends` / `tuner list-{samplers,pruners}`) 와 대칭. drift 가드 테스트로 RECORD_KINDS ↔ CLI 출력 1:1 동기 영속 검증
   - **#86 cli-contracts-describe-record** — `lmtune contracts describe-record <kind>` 신규. Pydantic `model_fields` introspect → name / type / required / default / description 필드 표. `dump-schema` (full JSON Schema) 보다 짧고 사람 친화적인 metadata 표면. `tuner describe` 와 동일 패턴
   - 부수: **#87 docs(README)** — Contracts 도구 섹션 5 → 7 명령 (list-records + describe-record 노출) + axis 대칭표 (Storage/Tuner/Contracts 의 list/describe/paste-able 표면)
-- **Storage 운영 도구 5종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
+  - 부수: **#88 docs(arch)** — REFACTOR-PLAN CHANGELOG #83~#87 누적 + Contracts 7종 요약
+  - **#89 test-record-kinds-drift** — `RECORD_KINDS` ↔ `_RecordBase` 자식 1:1 동기 drift 가드. 새 record class 가 RECORD_KINDS 에 등록 안 되면 / stale entry 가 남으면 / kind_to_class 매핑 누락 시 즉시 실패
+  - 부수: **#90 docs(arch)** — PLUG_PATTERN.md 에 4 layer × 3 axis 가시성 대칭표 + #85/#86/#89 reference
+  - **#91 cli-storage-describe-backend** — `lmtune storage describe-backend <name>` 신규. `_BACKEND_META` dict 로 class / 의존성 / path 인자 의미 / capability (transactional / concurrent_writers) 노출. Storage axis 의 metadata 표면 — Tuner describe / Contracts describe-record 와 동일 패턴. axis 대칭표가 진짜 코드로 완성. drift 가드 (`_BACKENDS ↔ _BACKEND_META.keys()`) 포함
+  - 부수: **#92 docs** — README Storage 5→6 명령 + PLUG_PATTERN axis 대칭표 진짜 완성 (Storage metadata 슬롯 채움)
+  - **#93 cli-storage-list-backends-json** — `lmtune storage list-backends --json` 신규. 세 axis 의 list 표면이 모두 `--json` 통일 (Storage `{"backends":[]}` / Tuner `{"native":[],"optuna":[],"llm":[]}` / Contracts `{"records":[]}`). drift 가드 포함
+- **Storage 운영 도구 6종 완비** (`migrate` / `info` / `validate` / `diff` / `list-backends` / `describe-backend`) — 모두 ArtifactStore ABC 만 사용. backend 추가 시 코드 수정 0.
 - **Tuner 메타 도구 4종** (`lmtune tuner list-samplers` / `list-pruners` / `describe <kind>` / `make-config <kind>`) — PLUG 합류 즉시 자동 노출 + introspect + paste-able config block (drift 가드 테스트 포함).
 - **Contracts 메타 도구 7종** (`list-records` / `describe-record` / `dump-schema` / `validate-record` / `validate-result` / `records-from-result` / `make-template`) — `RECORD_KINDS` 단일 진실원 + Pydantic introspect. 4 layer 가시성 (list → describe → paste-able → full schema) 이 Contracts 에도 완비.
+- **axis 대칭 진짜 완성** (Storage / Tuner / Contracts × list / metadata / paste-able) — 세 axis 모두 list 가 `--json` 표면 + describe(-record/-backend) metadata + paste-able (`migrate` / `make-config` / `make-template`). 새 axis 합류 시 4 표면 그대로 복제 — 사용자 학습 비용은 axis 수만큼 늘지 않음.
 - **Pruner axis PLUG 합류** — Optuna (SH/Hyperband) + Native (Median + Percentile) 네 빌트인. ASHA / 외부 SDK pruner 추가 시 1+1 줄 변경.
 - 미진입: OD (Orchestrator Driver/Backend 분리), OUT (output module). PLUG 패턴은 #58/#59/#60/#73/#75 으로 세 축 (Storage + Sampler + Pruner) 모두 시연. PLUG 추가 절차는 [`PLUG_PATTERN.md`](./PLUG_PATTERN.md) 의 5단계 + 체크리스트 참조.
