@@ -362,6 +362,40 @@ DSV3 (FP8 native), Kimi K2 (FP8 native), Llama-4 (bf16 native) 등 추가 시 dt
 
 ---
 
+## R15 — search-space 의 `ep` axis 가 무력 → enable_eplb 와 결합 시 vllm pydantic 거부
+
+**증상**
+- PR #101 (R13/R14 fix) 머지 후 b4 wide-EP study 재시작 시 일부 trial 의 vllm pod 가 다음 에러로 즉사:
+  ```
+  pydantic_core._pydantic_core.ValidationError: 1 validation error for ParallelConfig
+    Value error, enable_expert_parallel must be True to use EPLB.
+  ```
+- vllm CLI args 보면 `--enable-eplb` 는 있는데 `--enable-expert-parallel` 이 빠져있음
+
+**진단**
+- 내가 만든 b4 search-space:
+  ```yaml
+  ep:
+    type: bool
+    values: [true]   # ← bool sampler 가 무시
+  ```
+- `type: bool` 은 sampler 가 무조건 true/false 둘 다 sample. `values: [true]` 제약은 categorical type 에서만 동작
+- 결과: 50% 의 trial 이 `ep=False` 로 sample → adapter (`render_values_overlay`) 가 `if parallelism.get("ep")` 조건 통과 못 해서 `enable-expert-parallel: true` 를 vllmArgs 에 추가 안 함
+- 그런데 `enable_eplb` axis 는 별개로 sample 되어 50% true → 그 중 절반이 `(ep=False, enable_eplb=True)` infeasible 조합 → vllm pydantic ValidationError
+- 같은 패턴이 `enable_dbo` (DBO = Dual Batch Overlap, MoE-only) 에도 발생 가능 — 본 fix 로 자동 해결 (ep 항상 true)
+
+**영속화 위치**
+- Code: `b200/search-spaces/b4_gpt_oss_120b_wide_ep.yaml` — `ep` axis 자체 삭제 (wide-EP study 의 정의상 항상 true 라 axis 가 아님). 주석으로 R15 reference + 제거 사유 명시
+- Code: `b200/helmfile/wide-ep-lws/values-gpt-oss-120b-wide-ep.yaml.gotmpl` — `$defaults` dict 에 `"enable-expert-parallel" true` 추가 → 모든 trial 에 강제 emit. 주석으로 R15 reference
+- 검증: helmfile template render (state-values 시뮬레이션) — `--enable-expert-parallel` 가 vllmArgs 에 ep 가 없어도 항상 emit
+
+**향후 (다른 study 에서 fixed-on flag 패턴 차단)**
+- bool axis 에 단일 값 강제하고 싶을 때: `type: categorical, values: [true]` 사용 (bool 이 아니라). categorical sampler 는 values 제약 준수
+- 또는 더 좋은 방법: search-space 에서 axis 제거 + values gotmpl `$defaults` 에 강제 — fixed parameter 는 axis 가 아니라는 시맨틱 정확
+- search-space PR review 룰: `type: bool` + `values:` 같이 적힌 axis 발견 시 reject (모순 시그널)
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)
