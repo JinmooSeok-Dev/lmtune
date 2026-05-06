@@ -205,6 +205,48 @@ kubectl rollout status deployment/gaie-infsch-epp -n b200-infsch
 
 ---
 
+## R10 — httproute.yaml `backendRef.group` 이 deprecated `x-k8s.io` → "no valid backends" / "route not found"
+
+**증상**
+```
+$ curl -s http://127.0.0.1:8011/v1/models
+no valid backends
+# 또는
+route not found
+```
+- pod 4개 (gateway / EPP / decode×2) 다 1/1 Running
+- decode pod 직접 curl 시 vllm 200 정상
+- EPP 가 v1.4 + custom-plugins.yaml 로 정상 시작 (R9 fix 적용)
+- httproute 적용됨 (`kubectl get httproute` 보임)
+- 그러나 gateway 가 backend 거절
+
+**진단**
+httproute status 의 `ResolvedRefs` 가 False:
+```yaml
+- conditions:
+  - reason: InvalidKind
+    status: "False"
+    type: ResolvedRefs
+    message: 'referencing unsupported backendRef: group "inference.networking.x-k8s.io" kind "InferencePool"'
+```
+
+InferencePool API group 이 chart v1.5.0 에서 정식 승격됨 — `inference.networking.x-k8s.io/v1alpha2` (deprecated) → `inference.networking.k8s.io/v1`. EPP runner.go 의 `--pool-group` default 가 `inference.networking.k8s.io` 인 것으로도 확인 가능. agentgateway 는 deprecated x-k8s 를 unsupported 로 reject.
+
+**영속화 위치**
+- Config: `b200/helmfile/{inference-scheduling,wide-ep-lws,pd-disaggregation}/httproute.yaml` — `backendRefs[0].group: inference.networking.k8s.io` 로 수정
+- 검증: minikube 에서 httproute apply 후 `kubectl get httproute -n <ns> -o yaml | grep -A5 ResolvedRefs` 가 `status: "True"` 인지
+
+**즉시 적용 (이미 떠있는 cluster, helmfile reapply 전)**
+```bash
+kubectl get httproute b200-infsch-smoke -n b200-infsch -o yaml \
+  | sed 's|inference.networking.x-k8s.io|inference.networking.k8s.io|' \
+  | kubectl apply -f -
+# 잠시 후
+kubectl get httproute b200-infsch-smoke -n b200-infsch -o yaml | grep -A5 ResolvedRefs
+```
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)
