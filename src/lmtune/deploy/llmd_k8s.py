@@ -31,7 +31,7 @@ from lmtune.deploy.base import (
     ApplyResult,
     DeploymentAdapter,
     HealthReport,
-    merge_params_into_endpoint,
+    merge_params_to_dict,
 )
 from lmtune.deploy.health import probe_openai_models, warmup_one_token
 from lmtune.deploy.rollout_watcher import wait_rollout_smart
@@ -248,7 +248,11 @@ class LLMDK8sAdapter(DeploymentAdapter):
         params_clean = {k: v for k, v in dict(params).items() if k != "well_lit_path"}
         sampled_path = params.get("well_lit_path") if isinstance(params, Mapping) else None
 
-        data = merge_params_into_endpoint(ep, params_clean)
+        # R12: read-only merge — never mutate endpoint YAML on disk. The merged
+        # dict is fed to render_values_overlay → helmfile state-values; nothing
+        # downstream needs the file rewritten, and writing pollutes the
+        # endpoint YAML across studies.
+        data = merge_params_to_dict(ep, params_clean)
         overlay = render_values_overlay(
             data,
             release_names=self._release_names,
