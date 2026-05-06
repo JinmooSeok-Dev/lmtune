@@ -396,6 +396,70 @@ DSV3 (FP8 native), Kimi K2 (FP8 native), Llama-4 (bf16 native) 등 추가 시 dt
 
 ---
 
+## R16 — wide-EP study 의 DBO + non-deepep all2all_backend infeasible 조합
+
+**증상**
+- PR #102 (R15 fix) 머지 후 b4 study 재시작 시 일부 trial 에서 vllm pydantic ValidationError:
+  ```
+  Microbatching currently only supports the deepep_low_latency and
+  deepep_high_throughput all2all backend. allgather_reducescatter is not supported.
+  ```
+
+**진단**
+- vllm v0.17.1 의 `vllm/config/vllm.py:1128-1134` 가 `enable_dbo=True` 시 `all2all_backend ∈ {deepep_low_latency, deepep_high_throughput}` 을 강제
+- 내가 b4 search-space 에 넣은 `all2all_backend` values = `[allgather_reducescatter, deepep_low_latency, deepep_high_throughput, flashinfer_all2allv, pplx]`
+- `enable_dbo` 가 별개 axis 로 50% true sample → trial 의 일부가 `(enable_dbo=true, all2all_backend=allgather_reducescatter)` infeasible 조합 → vllm reject
+- 같은 패턴이 다른 non-deepep choice (flashinfer / pplx / mori / naive) 에도 적용
+
+**영속화 위치**
+- Code: `b200/search-spaces/b4_gpt_oss_120b_wide_ep.yaml` — `all2all_backend.values` 를 `[deepep_low_latency, deepep_high_throughput]` 으로 축소. 주석으로 R16 reference + 다른 backend 의 baseline 비교는 별도 study (b4-baselines) 로 분리 명시
+- Docs: `b200/docs/vllm_0.17.1_args_catalog.md` § 2.2 — DBO 호환성 룰 vllm_config.py:1128 source 로 명시
+
+**향후 (다른 wide-EP study 추가 시 동일 패턴 차단)**
+- `enable_dbo` axis 가 있는 search-space 의 `all2all_backend` 는 자동으로 deepep 2개로 제한 (validator 예정 — § 본 catalog § 9)
+- DBO=false 만 쓰는 baseline 비교 study 는 별개 search-space 로 분리
+
+---
+
+## R17 — vllm CLI flag 카탈로그 미확보 → 비-flag axis + wrong name axis (3 sub-issue)
+
+**증상**
+- b4 search-space 의 다음 axis 들이 vllm CLI 에 emit 되어도 의미 없음 / 거부됨:
+  - `eplb_window_size` (R17a)
+  - `eplb_step_interval` (R17b)
+  - `dbo_token_threshold` (R17c)
+- 일부 trial 의 vllm 로그에서 `Found duplicate keys --eplb-window-size, --dbo-token-threshold` 또는 silently ignored
+- 본 결함은 R14a (nixl_ep invalid choice) 와 같은 root cause: **search-space 작성 시 vllm 0.17.1 의 실제 CLI flag 카탈로그를 확보 안 함**
+
+**진단** — vllm v0.17.1 source 직접 확인
+
+| 내가 만든 axis | 실제 vllm 0.17.1 | 출처 |
+|:--|:--|:--|
+| **R17a** `eplb_window_size` | **CLI flag 아님**. `EPLBConfig.window_size` 가 `--eplb-config` JSON 안 | parallel.py:54-65, arg_utils:916 |
+| **R17b** `eplb_step_interval` | **CLI flag 아님**. `EPLBConfig.step_interval` (동일) | 동일 |
+| **R17c** `dbo_token_threshold` | **wrong name**. 실제는 `--dbo-decode-token-threshold` (default 32) 와 `--dbo-prefill-token-threshold` (default 512) **분리** | arg_utils:907-913 |
+
+EPLB 의 window_size/step_interval 는 별개 CLI flag 가 아니라 `--eplb-config` JSON 통째로 전달:
+```bash
+vllm serve ... --eplb-config '{"window_size": 1000, "step_interval": 3000}'
+```
+
+→ search-space axis 로 노출하려면 lmtune adapter 가 JSON 합치는 wiring 추가 필요 (별도 PR)
+
+**영속화 위치**
+- Code: `b200/search-spaces/b4_gpt_oss_120b_wide_ep.yaml`:
+  - R17a/b: `eplb_window_size`, `eplb_step_interval` axis 제거 (vllm default 1000/3000 사용). 주석으로 reference + JSON wiring 추가 후 활성화 가능 명시
+  - R17c: `dbo_token_threshold` → `dbo_decode_token_threshold` 로 rename + values 도 vllm default 32 기반으로 조정 ([16, 32, 64, 128])
+- Docs: `b200/docs/vllm_0.17.1_args_catalog.md` 신규 — 모든 vllm 0.17.1 CLI flag + Literal choices + cross-flag 제약 source-verified
+- Docs: catalog § 7 — lmtune adapter 의 axis ↔ vllm flag 매핑 표
+
+**향후 (validator 자동화)**
+- `b200/scripts/validate_search_space.py` 신규 (별도 PR): search-space YAML 의 모든 axis name + categorical values 를 catalog 와 1:1 자동 검증
+- pytest mark `@pytest.mark.search_space_validity` 로 회귀 테스트
+- search-space 신규/변경 시 catalog 미확인 PR 거부
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)

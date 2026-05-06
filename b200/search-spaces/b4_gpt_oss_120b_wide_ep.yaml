@@ -58,22 +58,22 @@ axes:
   # ─── Wide-EP 전용 axis (신규) ───
   all2all_backend:
     type: categorical
-    values: [allgather_reducescatter, deepep_low_latency, deepep_high_throughput, flashinfer_all2allv, pplx]
-    # 본 study 의 핵심 axis — B200 RDMA fabric 위에서 expert all-to-all 통신
-    # backend 의 throughput/latency 차이 정량화. Sobol total-order index 로
-    # 다른 axis 대비 영향력 자동 추출.
+    values: [deepep_low_latency, deepep_high_throughput]
+    # 본 study 의 핵심 axis — B200 RDMA fabric 위에서 DeepEP 의 latency 최적화 vs
+    # throughput 최적화 변종 비교. Sobol total-order index 로 영향력 정량화.
     #
-    # vllm 0.17.1 valid choices (실측, R14):
+    # vllm 0.17.1 valid choices (전체):
     #   allgather_reducescatter, deepep_high_throughput, deepep_low_latency,
     #   flashinfer_all2allv, mori, naive, pplx
-    # 본 study 가 sweep 하는 5개:
-    #   - allgather_reducescatter — baseline (NCCL 기본)
-    #   - deepep_low_latency — DeepEP latency 최적화 (small batch)
-    #   - deepep_high_throughput — DeepEP throughput 최적화 (large batch)
-    #   - flashinfer_all2allv — FlashInfer kernels (B200 sm_100 native, vllm 0.17 신규)
-    #   - pplx — Perplexity all-to-all backend
-    # 제외: mori (실험적), naive (성능 비교 가치 낮음).
-    # 원래 후보였던 nixl_ep 는 vllm 0.17.1 에서 invalid choice — 미지원 (R14).
+    #
+    # 본 study 가 deepep 2개만 sweep 하는 사유 (R16):
+    #   - enable_dbo=true 일 때 vllm 가 microbatching 을 deepep 2개로 제한
+    #     ("Microbatching currently only supports the deepep_low_latency and
+    #      deepep_high_throughput all2all backend"). 다른 backend 와 결합 시 reject.
+    #   - non-deepep backend 의 baseline 비교는 enable_dbo=false 만 sample 하는
+    #     별도 study 로 분리 (b4-baselines.yaml, 향후 PR).
+    #
+    # 원래 후보였던 nixl_ep 는 vllm 0.17.1 에서 invalid choice — 미지원 (R14a).
 
   enable_dbo:
     type: bool
@@ -84,24 +84,20 @@ axes:
     type: bool
     # Expert Load Balancing. 동적 expert 재라우팅으로 hot-expert imbalance 완화.
 
-  eplb_window_size:
-    type: categorical
-    values: [16, 64, 256]
-    active_if: {enable_eplb: true}
-    # EPLB 의 sliding window 크기 (recent token batch 수). 작으면 reactive,
-    # 크면 stable.
+  # eplb_window_size / eplb_step_interval axis 제거 (R17a/b) —
+  # vllm 0.17.1 에서 이 두 값은 별개 CLI flag 가 아니라 `--eplb-config` 의 JSON
+  # 안 (window_size / step_interval) 에 있음. arg_utils.py:916 가 단일 flag
+  # `--eplb-config` 만 expose. lmtune adapter 가 JSON 으로 합쳐 inject 하는
+  # wiring 추가 후 활성화 가능. 본 PR 에선 제거 (default 1000 / 3000 사용).
 
-  eplb_step_interval:
+  dbo_decode_token_threshold:
     type: categorical
-    values: [50, 200, 1000]
-    active_if: {enable_eplb: true}
-    # EPLB 재라우팅 step 주기. 작으면 적응적, 크면 안정적.
-
-  dbo_token_threshold:
-    type: categorical
-    values: [128, 512, 2048]
+    values: [16, 32, 64, 128]
     active_if: {enable_dbo: true}
-    # DBO 활성 token 수 임계값 (작은 batch 는 overlap 의미 X).
+    # DBO 활성 token 수 임계값 (decode 단계). vllm 0.17.1 default = 32.
+    # 작은 batch 는 overlap 의미 X. (R17c — 이전 axis 이름 'dbo_token_threshold'
+    # 는 wrong name. 실제 vllm CLI flag 는 --dbo-decode-token-threshold 와
+    # --dbo-prefill-token-threshold 분리. 본 study 는 decode threshold 만 sweep.)
 
   # ─── Scheduling / Batching (b3 verified) ───
   max_num_seqs:
