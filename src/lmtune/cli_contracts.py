@@ -1,6 +1,9 @@
 """``lmtune contracts`` subcommand — contract schema dump 도구.
 
 서브커맨드:
+  lmtune contracts list-records [--json]
+      유효한 record kind 목록을 출력. 다른 axis 의 가시성 표면과 대칭
+      (``lmtune storage list-backends`` / ``lmtune tuner list-{samplers,pruners}``).
   lmtune contracts dump-schema --kind {record,query,result} [--out file.json]
       RecordSpec / QuerySpec / BenchmarkResult 의 JSON Schema 출력.
   lmtune contracts dump-schema --kind record --record-kind run [--out file.json]
@@ -34,6 +37,28 @@ from lmtune.contracts.result_spec import BenchmarkResult
 
 app = typer.Typer(no_args_is_help=True, help="lmtune contracts 단독 도구")
 console = Console()
+
+
+@app.command("list-records")
+def cmd_list_records(
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="기계 친화적 JSON 출력"),
+    ] = False,
+) -> None:
+    """유효한 record kind 목록을 출력.
+
+    ``RECORD_KINDS`` (record_spec 의 단일 진실원) 를 그대로 노출. 다른 PLUG axis
+    의 가시성 표면 (``lmtune storage list-backends`` / ``lmtune tuner
+    list-{samplers,pruners}``) 과 대칭. 새 record kind 추가 시 자동 반영.
+    """
+    if json_output:
+        print(json.dumps({"records": list(RECORD_KINDS)}))
+        return
+    console.print(f"[bold]record kinds[/bold] ({len(RECORD_KINDS)}):")
+    for kind in RECORD_KINDS:
+        cls = kind_to_class(kind)
+        console.print(f"  - [cyan]{kind}[/cyan]  ({cls.__name__})")
 
 
 @app.command("dump-schema")
