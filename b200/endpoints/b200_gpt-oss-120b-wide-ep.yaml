@@ -1,0 +1,47 @@
+apiVersion: lmtune/v1alpha1
+slug: b200-gpt-oss-120b-wide-ep
+name: "B200 16-GPU — gpt-oss-120b wide-EP-LWS (MoE, MXFP4)"
+url: http://127.0.0.1:8011/v1
+model: openai/gpt-oss-120b
+tokenizer: openai/gpt-oss-120b
+api_type: openai
+
+deployment:
+  engine: vllm
+  version: "0.17.1"
+  # wide-EP topology — TP=2 × DP=4 × replicas=2 (EP=8 effective)
+  # b3 inference-scheduling (TP=8 × DP=2 packed) 와 대비. expert 가 8 GPU 분산.
+  # 자세한 wiring 은 b200/helmfile/wide-ep-lws/values-gpt-oss-120b-wide-ep.yaml.gotmpl 참조.
+  engine_args:
+    enable_prefix_caching: true
+    max_num_seqs: 128
+    max_model_len: 32768
+    gpu_memory_utilization: 0.90
+    kv_cache_dtype: fp8
+    dtype: bfloat16
+  helmfile_overrides:
+    helmfile_file: b200/helmfile/wide-ep-lws/helmfile.yaml.gotmpl
+    environment: default
+    selector: kind=inference-stack
+    release_name: ms-wideep
+    namespace: b200-wideep
+    deployment_name: ms-wideep-llm-d-modelservice-decode
+    rollout_timeout_s: 1500   # 117B MXFP4 + EP=8 spread 초기 셋업 길어질 수 있음
+
+notes: |
+  gpt-oss-120b wide-EP-LWS — 117B MoE / 5.1B active / 128 experts top-4 / MXFP4.
+  TP=2 × DP=4 × replicas=2 = 16 GPU 전부 활용. EP=8 effective (TP×DP=8 spread).
+  P/D disaggregation 비활성 (NIXL 미정상). prefill.create: false 명시.
+  TopologySpreadConstraint 로 노드별 1 replica 강제.
+
+  핵심 axis (search-space b4_gpt_oss_120b_wide_ep.yaml):
+    - all2all_backend ∈ {allgather_reducescatter, deepep_low_latency,
+                         deepep_high_throughput, nixl_ep}
+    - enable_dbo, enable_eplb (MoE-only optimization)
+
+  helmfile redeploy 전:
+    export B200_MODEL_VALUES=values-gpt-oss-120b-wide-ep.yaml.gotmpl
+    export NS=b200-wideep
+    export RELEASE_NAME_POSTFIX=wideep
+
+tags: [b200, gpt-oss, moe, mxfp4, large, 16gpu, wide-ep, b4]

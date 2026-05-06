@@ -1,0 +1,164 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b4-gpt-oss-120b-wide-ep
+
+# B4 [Track B-I/B-II] — gpt-oss-120b 16-GPU wide-EP-LWS autotune.
+#
+# 본 파일 = b3_gpt_oss_120b_extended.yaml (12 axis, inference-scheduling path) 의
+# wide-EP-LWS 변종:
+#   - well-lit-path = wide-ep-lws (vs b3 의 inference-scheduling)
+#   - ep 강제 ON (wide-EP 의 정의 — toggle 아님)
+#   - 신규 axis 그룹 (wide-EP 전용):
+#       all2all_backend, enable_dbo, enable_eplb, eplb_window_size,
+#       eplb_step_interval, dbo_token_threshold
+#   - 토폴로지 default = TP=2 × DP=4 × replicas=2 (EP=8 spread)
+#     (b3 의 TP=8 × DP=2 packed 와 대비)
+#
+# 본 PR 의 비-목표 (별도 후속 PR):
+#   - PCP / DCP — vllm 0.17.1 chart wiring 미검증 (R11 _SIMULATOR_ONLY_KEYS drop 중)
+#   - SP — vllm 미활성
+#   - 인터노드 LWS (TP=16 cross-node) — Phase B-IV 의 LeaderWorkerSet 도입 후
+#
+# 사용:
+#   lmtune search start \
+#     --space b200/search-spaces/b4_gpt_oss_120b_wide_ep.yaml \
+#     --endpoint b200/endpoints/b200_gpt-oss-120b.yaml \
+#     --adapter llmd-k8s --cluster-env b200-dual-node \
+#     --strategy tpe --max-trials 30 --seed 13 \
+#     --warmstart-db data/db/lmtune.duckdb --warmstart-top-k 8 \
+#     --name b4-gpt-oss-120b-wide-ep \
+#     --repeats 3 --ttft-slo-ms 2000 \
+#     -p configs/profiles/autotune/short.yaml
+
+axes:
+  # ─── Parallelism (wide-EP 변종) ───
+  tp:
+    type: categorical
+    values: [1, 2, 4]
+    # wide-EP 에서 TP 작게 + DP 크게 가 핵심. TP=8 은 b3 의 packed 영역 (제외).
+
+  pp:
+    type: categorical
+    values: [1]
+    # PP=1 강제 (single-node-per-replica chart, multinode false).
+
+  dp:
+    type: categorical
+    values: [2, 4, 8]
+    # data-parallel 그룹 수. dp=8 + tp=1 = 8 GPU 1 worker, 가장 wide-spread.
+    # dp=4 + tp=2 = 8 GPU (mixtral 패턴), dp=2 + tp=4 = 8 GPU (less wide).
+
+  ep:
+    type: bool
+    values: [true]
+    # wide-EP 의 정의 — 강제 ON. b4 path 자체가 ep_strategy=wide.
+
+  # ─── Wide-EP 전용 axis (신규) ───
+  all2all_backend:
+    type: categorical
+    values: [allgather_reducescatter, deepep_low_latency, deepep_high_throughput, nixl_ep]
+    # 본 study 의 핵심 axis — B200 RDMA fabric 위에서 expert all-to-all 통신
+    # backend 의 throughput/latency 차이 정량화. Sobol total-order index 로
+    # 다른 axis 대비 영향력 자동 추출.
+
+  enable_dbo:
+    type: bool
+    # Decode Batch Overlap (MoE-only). decode 의 expert all-to-all 을 GPU compute
+    # 와 overlap → tail latency 개선 가능.
+
+  enable_eplb:
+    type: bool
+    # Expert Load Balancing. 동적 expert 재라우팅으로 hot-expert imbalance 완화.
+
+  eplb_window_size:
+    type: categorical
+    values: [16, 64, 256]
+    active_if: {enable_eplb: true}
+    # EPLB 의 sliding window 크기 (recent token batch 수). 작으면 reactive,
+    # 크면 stable.
+
+  eplb_step_interval:
+    type: categorical
+    values: [50, 200, 1000]
+    active_if: {enable_eplb: true}
+    # EPLB 재라우팅 step 주기. 작으면 적응적, 크면 안정적.
+
+  dbo_token_threshold:
+    type: categorical
+    values: [128, 512, 2048]
+    active_if: {enable_dbo: true}
+    # DBO 활성 token 수 임계값 (작은 batch 는 overlap 의미 X).
+
+  # ─── Scheduling / Batching (b3 verified) ───
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256, 512]
+
+  max_num_batched_tokens:
+    type: categorical
+    values: [2048, 4096, 8192, 16384]
+
+  max_model_len:
+    type: categorical
+    values: [32768, 65536, 131072]
+    # b3 와 정렬 + 32K 추가 (wide-EP 가 KV 재분포 → context 영향 다를 수 있음).
+
+  # ─── KV / Compute (b3 verified) ───
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  prefix_caching_hash_algo:
+    type: categorical
+    values: [builtin, sha256]
+    active_if: {enable_prefix_caching: true}
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+
+  block_size:
+    type: categorical
+    values: [16, 32]
+
+
+# ─── Feasibility constraints ───
+# `--cluster-env b200-dual-node` 명시 시에만 활성, 미명시 시 회귀 안전.
+feasibility_constraints:
+  - id: c1_npu_count
+    rule: "tp * pp * dp * 1 <= environment.npus_per_server"
+    message: "wide-EP single-node-per-replica: tp × dp 가 8 GPU/node 이하"
+    # mixtral 패턴: 1 worker pod = 1 node, replicas=N 이 cross-node 분산.
+    # dp 가 within-pod, 따라서 tp × dp ≤ npus_per_server (8).
+
+  - id: c2_tp_single_node
+    rule: "tp <= environment.npus_per_server"
+    message: "TP must fit in a single node (NCCL ring within NVLink)"
+
+  - id: c3_pp_layers
+    rule: "pp <= model.num_layers"
+    message: "PP stages cannot exceed model layers (gpt-oss-120b: 36 layers)"
+
+  - id: c4_heads_div_tp
+    rule: "model.num_attention_heads % tp == 0"
+    message: "TP must divide attention heads (gpt-oss-120b: 64 heads)"
+
+  - id: c6_gpu_memory
+    rule: "surrogate.simulated_total_gb <= environment.gpu_vram_gb * gpu_memory_utilization"
+    message: "Active params + KV must fit in GPU HBM (B200: 192 GB)"
+
+  - id: c12_ep_divides_experts
+    rule: "model.num_experts % (tp * dp) == 0"
+    message: "expert 수가 effective EP (tp × dp) 로 나누어떨어져야 (gpt-oss-120b: 128 experts)"
+
+  - id: c13_wide_ep_pp1
+    rule: "pp == 1"
+    message: "wide-ep-lws path 는 PP=1 만 지원 (multinode false, replicas 가 cross-node)"
+
+  - id: c14_dp_min
+    rule: "dp >= 2"
+    severity: warning
+    message: "dp=1 은 wide-EP 의 의미 없음 (b3 inference-scheduling 으로 대체 권장)"

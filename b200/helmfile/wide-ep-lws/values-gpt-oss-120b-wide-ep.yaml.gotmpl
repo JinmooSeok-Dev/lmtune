@@ -1,0 +1,127 @@
+# gpt-oss-120b — B200 16-GPU wide-EP-LWS (TEMPLATED, TP=2 × DP=4 × replicas=2, EP=8)
+#
+# OpenAI gpt-oss-120b: 117B MoE (128 experts × top-4, 5.1B active), MXFP4 native (~63GB).
+#
+# Wide-EP topology vs inference-scheduling default:
+#   - inference-scheduling (b3): TP=8 × DP=2 = 16 GPU, expert 가 같은 GPU 그룹에 packed
+#   - wide-ep-lws       (b4): **TP=2 × DP=4 × replicas=2 = 16 GPU**, EP=8 spread,
+#     expert 가 GPU 4개씩 분산 → expert all-to-all comm 이 핵심 bottleneck/axis
+#
+# 기본값 (lmtune StateValues 미주입 시):
+#   - 2 replicas (1 per B200 node, NVLink 8-GPU 통째)
+#   - 1 worker pod per replica, TP=2, DP=4 within pod (vllm 가 8 GPU 모두 활용)
+#   - EP=8 effective (TP × DP), 128 expert / 8 GPU = 16 expert/GPU
+#
+# search space (b4_gpt_oss_120b_wide_ep.yaml) 가 sample 하면 LLMDK8sAdapter 가
+#   .StateValues.ms-wideep.{decode.parallelism,vllmArgs,replicas} 로 inject
+#   → trial 마다 chart redeploy.
+
+{{- $release := "ms-wideep" -}}
+{{- $sv := index .StateValues $release | default dict -}}
+{{- $vllmArgs := index $sv "vllmArgs" | default dict -}}
+{{- /* lmtune b4 search-space (tp/dp/all2all_backend/...) 가 inject 하는 parallelism/replicas. */}}
+{{- $svDecode := index $sv "decode" | default dict -}}
+{{- $svPar := index $svDecode "parallelism" | default dict -}}
+{{- $tp := index $svPar "tensor" | default 2 -}}
+{{- $dp := index $svPar "data" | default 4 -}}
+{{- $rep := index $svDecode "replicas" | default 2 -}}
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://openai/gpt-oss-120b"
+  size: 80Gi
+  name: "openai/gpt-oss-120b"
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "b200-gpt-oss-120b-wide-ep"
+    llm-d.ai/hardware-variant: "b200"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "gpt-oss-120b"
+    llm-d.ai/model-family: "moe"
+
+routing:
+  proxy:
+    enabled: false
+    targetPort: 8000
+  servicePort: 8000
+
+prefill:
+  create: false
+
+decode:
+  # modelservice v0.4.12 parallelism schema:
+  #   tensor   = TP within a worker (chart auto-injects --tensor-parallel-size)
+  #   data     = DP groups within a worker (NOT auto-injected → 명시 args 필요)
+  #   workers  = worker pod 개수 per replica (LWS 미사용시 1)
+  parallelism:
+    tensor: {{ $tp }}
+    data: {{ $dp }}
+    dataLocal: 1
+    workers: 1
+  create: true
+  replicas: {{ $rep }}
+  monitoring:
+    podmonitor:
+      enabled: false
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          llm-d.ai/role: decode
+          llm-d.ai/model: gpt-oss-120b
+  containers:
+    - name: "vllm"
+      image: vllm/vllm-openai:v0.17.1
+      modelCommand: vllmServe
+      args:
+        {{- /* chart 가 decode.parallelism.{tensor,data} 에서 --tensor-parallel-size /
+              --data-parallel-size 를 자동 inject. 여기서 또 emit 하면 vllm 이
+              "ambiguous"/duplicate 로 reject (helmfile template 검증 시 실측 확인). */}}
+        - "--enable-expert-parallel"
+        {{- /* wide-EP defaults — search-space axis 가 vllmArgs 로 override 가능.
+              defaults 의 key 는 snake_case 로 통일 (lmtune adapter 가 snake_case 로
+              vllmArgs 를 inject 하므로 mergeOverwrite 가 같은 logical flag 를 두 번
+              emit 하는 사고 방지). emit 시 kebab 으로 변환. */}}
+        {{- $defaults := dict
+              "max_num_seqs" 128
+              "max_model_len" 32768
+              "gpu_memory_utilization" 0.90
+              "dtype" "bfloat16"
+              "kv_cache_dtype" "auto"
+        }}
+        {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
+        {{- range $k, $v := $merged }}
+        {{- if kindIs "bool" $v }}
+        {{- if $v }}
+        - "--{{ $k | replace "_" "-" }}"
+        {{- end }}
+        {{- else }}
+        - "--{{ $k | replace "_" "-" }}"
+        - {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+      resources:
+        requests:
+          # GPU/pod = TP × DP × workers (1 worker, all 8 GPUs of one node)
+          nvidia.com/gpu: {{ mul (int $tp) (int $dp) | quote }}
+          cpu: "32"
+          memory: 384Gi
+        limits:
+          nvidia.com/gpu: {{ mul (int $tp) (int $dp) | quote }}
+          cpu: "64"
+          memory: 512Gi
+      env:
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        # NCCL: 8-GPU NVLink/NVSwitch + NVLS in-network reduction (B200)
+        - name: NCCL_NVLS_ENABLE
+          value: "1"
+        - name: NCCL_DEBUG
+          value: "WARN"
+        # B200 sm_100 native DeepGEMM kernels — wide-EP 에서 expert FFN 가속
+        - name: VLLM_USE_DEEP_GEMM
+          value: "1"
