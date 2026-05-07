@@ -784,6 +784,28 @@ R23 + R25 둘 다 1-3 단계만 통과시키고 4 단계 검증 누락이 원인
 
 ---
 
+## R28 — vllm 0.17.1 의 gpt-oss-120b MXFP4 weight loader 가 PP + EP 조합 미지원
+
+**증상**
+- b3-v3 study 의 trial (PP=2, TP=4, EP=true) 에서 worker startup 직전 weight load fail:
+  `RuntimeError: The size of tensor a (32) must match the size of tensor b (0) at non-singleton dimension 0`
+- vllm/model_executor/models/gpt_oss.py:498 의 `_load_weights_mxfp4()` → `weight_loader()` → fused_moe/layer.py:1072 의 `param.data[:, :dim1].copy_(loaded_weight)` 에서 expert weight slice 가 0 size 로 옴
+- `Worker_PP1_TP3_EP3` 등 PP rank 1 의 EP rank 들이 모두 fail
+
+**진단 경로**
+- gpt-oss-120b 가 MXFP4 native quantization 모델. vllm 의 _load_weights_mxfp4 가 EP rank 별 expert chunk 를 slicing 하는데, PP rank 가 함께 활성되면 PP missing parameter 처리 + EP slicing 의 상호작용이 안 맞음 (vllm 0.17.1 한계)
+- PP=1 + EP=true OR PP>1 + EP=false 단독은 정상. **PP+EP 조합만 fail**
+- gpt-oss-120b 외의 dense / non-MXFP4 모델은 본 결함 무관
+
+**영속화 위치**
+- Search-space: `b200/search-spaces/b3_gpt_oss_120b_v3.yaml` 의 c12 feasibility constraint `(pp == 1) OR (NOT ep)` 추가 → 해당 조합 자동 prune
+- 본 catalog R28 entry — 차후 다른 MXFP4 모델 study 작성 시 자동 가드
+
+**향후 (vllm fix 후 재활성)**
+- vllm 의 PR/release 모니터: gpt-oss MXFP4 + PP + EP 호환성 fix 머지 시 c12 제거. 검증 시 catalog 4단계 (CLI flag / config validation / feature gate / backend opt-in) + 5단계 (model-config validation) 모두 통과 의무
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)
