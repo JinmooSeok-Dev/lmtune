@@ -319,7 +319,13 @@ class LLMDK8sAdapter(DeploymentAdapter):
                 notes="repo unavailable",
             )
 
-        # 1. helmfile apply
+        # 1. helmfile apply --args "--force"
+        # R20: 매 trial 마다 helmfile 이 helm upgrade 로 release 갱신. helm 의
+        # strategic merge patch 가 env list 같은 ordered 필드에서 같은 key 두 번
+        # (예: chart auto-inject HF_TOKEN + values gotmpl HF_TOKEN) 발생 시
+        # `failed to create patch: doesn't match $setElementOrder list` 로 reject.
+        # --force 는 strategic merge 실패 시 release 통째 replace 로 fallback.
+        # safe: 매 trial 이 어차피 새 spec 이라 통째 replace 가 의도와 일치.
         cmd = [
             "helmfile",
             "--environment",
@@ -331,6 +337,8 @@ class LLMDK8sAdapter(DeploymentAdapter):
             "-f",
             str(helmfile_root / helmfile_file),
             "apply",
+            "--args",
+            "--force",
         ]
         log.info("LLMDK8sAdapter: %s", " ".join(cmd))
         proc = subprocess.run(cmd, cwd=str(helmfile_root), capture_output=True, text=True)

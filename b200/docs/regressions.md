@@ -568,6 +568,41 @@ DeepEPHTAll2AllManager (HT) 와 DeepEPLLAll2AllManager (LL) 둘 다 base 의 이
 
 ---
 
+## R20 — adapter 의 helmfile apply 가 helm strategic merge conflict 로 trial 마다 fail
+
+**증상**
+- PR #105 (b3-v2) 머지 후 b3-gpt-oss-120b-v2 study 시작 시 5 trial 다 ~3-4 초 만에 crash
+- circuit breaker 가 5 consecutive failures 로 study HALT
+- ApplyResult.detail 에:
+  ```
+  Error: UPGRADE FAILED: failed to create patch: The order in patch list:
+    [...HF_TOKEN... HF_TOKEN... TP_SIZE...]
+     doesn't match $setElementOrder list:
+    [VLLM_LOGGING_LEVEL HF_TOKEN DP_SIZE TP_SIZE DP_SIZE_LOCAL HF_TOKEN]
+  notes: helmfile apply rc=1
+  ```
+
+**진단**
+- helm 의 strategic merge patch 가 env list 같은 ordered 필드 patch 시 같은 key (HF_TOKEN) 가 두 번 등장하는 spec 변경을 처리 못 함
+- 사용자가 직접 helmfile apply (수동 deploy) 한 release 의 spec 와 lmtune adapter 가 trial 에서 만드는 spec 가 미세히 다름 (modelArtifacts authSecretName + chart auto-injected HF_TOKEN env + values gotmpl env 의 결합 결과)
+- 두 번째 apply 시 helm 이 두 spec 의 env list 순서를 비교하다 conflict
+- ~4 초 trial duration = helmfile apply 가 chart fetch + render 후 helm upgrade 단계에서 즉시 reject (rollout 까지 못 감)
+
+**영속화 위치**
+- Code: `src/lmtune/deploy/llmd_k8s.py::LLMDK8sAdapter.apply` — helmfile apply 명령에 `--args "--force"` 추가. helm 의 --force flag 는 strategic merge 실패 시 release 통째 replace 로 fallback. 매 trial 이 어차피 새 spec 이라 의도와 일치
+- 주석으로 R20 reference + safety rationale 명시
+
+**향후 (root cause 의 제거 — 별도 PR)**
+- chart 의 modelservice template 이 HF_TOKEN env 를 자동 inject 하는지 확인
+- values gotmpl 의 env 블록과 chart auto-inject 가 중복 안 되도록 정리
+- 매 trial 의 helmfile apply 가 동일 spec 산출하도록 adapter 의 render_values_overlay 결정성 강화 (동일 params → 동일 spec, 순서 안정)
+
+**워크플로우 변경 권장**
+- 사용자가 직접 helmfile apply 로 deploy 후 lmtune search start 하는 패턴 유지 가능 (--force fallback 으로 conflict 자동 처리)
+- 단 lmtune 시작 전 사용자 helmfile apply 와 lmtune 의 첫 trial helmfile apply 가 spec 일치하면 더 빠름 (--force 안 거치면 helm upgrade in-place patch 로 더 빠름)
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)
