@@ -56,13 +56,14 @@ _SIMULATOR_ONLY_KEYS: set[str] = {
     "cross_node_type",
     # node_split_strategy — 파생 metadata, helmfile 가 derive
     "node_split_strategy",
-    # context parallel — vllm 0.17.1 wiring 미검증 (chart values gotmpl 의
-    # vllmArgs 경로에 emit 되는지 사전 검증 안 됨). chart wiring 검증 후
-    # 본 set 에서 제거 + _ENGINE_ARG_KEYS 또는 _PARALLELISM_KEYS 로 합류.
-    "prefill_context_parallel_size",
-    "decode_context_parallel_size",
+    # PCP/DCP 는 R24 fix 로 chart wiring 검증됨 (b3-v3 PR) — _SIMULATOR_ONLY_KEYS
+    # 에서 제거하여 engine_args 경로 (else branch) 로 흘러가게 함. vllm CLI flag
+    # `--prefill-context-parallel-size` / `--decode-context-parallel-size` 로 emit.
     "ep_strategy",  # standard/wide — chart 가 wide-ep-lws path 로 표현
-    "sequence_parallel",  # vllm-config-puzzle placeholder, 미활성
+    "sequence_parallel",  # vllm 0.17.1 은 compilation_config 의 pass_config 로만
+                          # 활성. TP>1 + eligible model 시 vllm 자체 auto-enable
+                          # (vllm_config.py:863). axis 로 표현하려면 compilation-config
+                          # JSON 을 generate 해야 해서 별도 PR.
 }
 
 

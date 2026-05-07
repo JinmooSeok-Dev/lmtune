@@ -676,6 +676,31 @@ DeepEPHTAll2AllManager (HT) 와 DeepEPLLAll2AllManager (LL) 둘 다 base 의 이
 
 ---
 
+## R24 — chart GPU resource 가 TP 만 반영, PP/PCP 곱셈 누락
+
+**증상**
+- `inference-scheduling/values-gpt-oss-120b.yaml.gotmpl` 의 `nvidia.com/gpu: {{ $tp | quote }}` 가 TP 만 반영
+- vllm 의 `--pipeline-parallel-size` / `--prefill-context-parallel-size` 는 mp executor 로 single pod 안에 N 개 rank spawn → world_size = TP × PP × PCP (parallel.py:649)
+- 따라서 PP=2 든 PCP=2 든 `nvidia.com/gpu = TP` 만 받으면 vllm rank N - TP 개가 GPU 부족으로 startup 실패
+- **Decode Context Parallel (DCP) 는 TP group 안에서 KV 분산 → 추가 GPU 안 씀** (parallel.py:278, tp%dcp==0 제약)
+- 본 결함은 `_SIMULATOR_ONLY_KEYS` 에 PCP/DCP 가 박혀 있던 시기엔 axis 가 emit 안 되어 잠복했음. b3-v3 PR 에서 PP/PCP/DCP axis 활성하면서 표면화
+
+**진단 경로**
+- vllm 0.17.1 의 `parallel.py:649` `world_size = pp × tp × pcp × dp` 공식
+- chart 의 `nvidia.com/gpu` line 이 단일 변수 `$tp` 만 quote
+- PP/PCP > 1 trial 의 pod 가 startup 에서 "CUDA error: out of memory" 또는 "rank N has no GPU available" 류 fail
+
+**영속화 위치**
+- Code: `b200/helmfile/inference-scheduling/values-gpt-oss-120b.yaml.gotmpl` 에서 `$totalGpu := mul $tp $pp $pcp` 계산 후 `nvidia.com/gpu: {{ $totalGpu | quote }}` 두 번 (requests + limits)
+- `$pp`, `$pcp` 는 `index $vllmArgs "..."` 로 lmtune adapter 가 emit 한 값에서 읽고, 미주입 시 `default 1` 로 backward-compat (b3_v2 호환)
+- Code: `src/lmtune/deploy/base.py::_SIMULATOR_ONLY_KEYS` 에서 PCP/DCP 제거, sequence_parallel + ep_strategy 만 잔존
+- Test: `tests/deploy/test_llmd_overlay.py` 의 PCP/DCP 합성 trial → vllmArgs 에 emit 검증
+
+**기억 — chart wiring 은 catalog § 가 검증 못 한다**
+- catalog § 3 "vllm 0.10+ verified" 로 axis 가 vllm 안에 있다는 사실만 확인했지, helm chart 가 N GPU 를 어떻게 배분하는지는 별개. 차후 chart wiring 검증을 catalog 에 별도 표로 (TODO 별도 PR).
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)

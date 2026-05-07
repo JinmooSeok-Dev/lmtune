@@ -1,0 +1,137 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b3-gpt-oss-120b-v3
+
+# B3 v3 — gpt-oss-120b 16-GPU inference-scheduling autotune (PP/PCP/DCP 추가).
+#
+# 본 파일 = b3_gpt_oss_120b_v2.yaml (13 axis) + simulator.ts 의 vllm-config-puzzle
+# 1:1 port 를 따라 추가:
+#   - pipeline_parallel_size (vllm 0.17.1 arg_utils.py:400, mp executor)
+#   - prefill_context_parallel_size (vllm 0.17.1 parallel.py:101)
+#   - decode_context_parallel_size (vllm 0.17.1 parallel.py:278, tp%dcp==0)
+#
+# Sequence Parallel: vllm 0.17.1 에 별도 CLI flag 없음. compilation_config 의
+# pass_config 로만 활성. TP>1 + eligible model 시 vllm 자체 auto-enable
+# (vllm_config.py:863). 명시 axis 미도입 — TP>1 axis sample 시 자동 효과.
+#
+# 본 path = inference-scheduling (multinode: false). single pod 안에서 vllm 의
+# mp executor 가 모든 rank spawn. world_size = TP × PP × PCP (DCP 는 TP group
+# 안에서 KV 분산이라 추가 GPU 안 씀, parallel.py:649 1:1 port).
+# 따라서 single-pod 제약 = TP × PP × PCP <= 8 (B200 노드 1대 8 GPU).
+#
+# 본 PR 의 비-목표 (별도 PR):
+#   - SP — vllm compilation_config JSON axis 표현 검증 후
+#   - wide-EP / DBO / EPLB — R19 (DeepEP NotImplementedError) 회피
+#
+# 사용:
+#   lmtune search start \
+#     --space b200/search-spaces/b3_gpt_oss_120b_v3.yaml \
+#     --endpoint b200/endpoints/b200_gpt-oss-120b.yaml \
+#     --adapter llmd-k8s --cluster-env b200-dual-node \
+#     --strategy tpe --max-trials 30 --seed 17 \
+#     --warmstart-db data/db/lmtune.duckdb --warmstart-top-k 8 \
+#     --name b3-gpt-oss-120b-v3 \
+#     --repeats 3 --ttft-slo-ms 2000 \
+#     -p configs/profiles/autotune/short.yaml
+
+axes:
+  # ─── Parallelism (b3-v2 + PP/PCP/DCP 추가) ───
+  tp:
+    type: categorical
+    values: [2, 4, 8]
+
+  pp:
+    type: categorical
+    values: [1, 2]
+    # vllm 0.17.1 mp executor 로 single-pod intra-node PP. multinode chart 가
+    # 아니어서 cross-node PP 불가. tp × pp × pcp <= 8 단일 노드 제약.
+
+  prefill_context_parallel_size:
+    type: categorical
+    values: [1, 2]
+    # PCP — prefill 시 context 분할 (parallel.py:101, world_size 곱셈).
+    # 긴 prompt 의 prefill latency 개선 효과. tp × pp × pcp <= 8 제약.
+
+  decode_context_parallel_size:
+    type: categorical
+    values: [1, 2, 4]
+    # DCP — decode 시 KV 분산 (parallel.py:278, tp%dcp==0). TP group 안에서
+    # 분산이라 추가 GPU 안 씀. KV cache 가 GPU mem 초과할 때 효과.
+
+  dp:
+    type: categorical
+    values: [1, 2]
+    # inference-scheduling: dp = independent replica count (R18 default).
+    # b3_v2 의 [1,2,4,8] 에서 [1,2] 로 축소 — pp/pcp 와 곱하면 노드 수 부족.
+
+  ep:
+    type: bool
+    # MoE 모델 (gpt-oss-120b) 의 ep toggle. wide-EP path 와 별개로 안전.
+
+  # ─── Scheduling / Batching (b3-v2 와 동일) ───
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256, 512]
+
+  max_num_batched_tokens:
+    type: categorical
+    values: [2048, 4096, 8192, 16384]
+
+  max_model_len:
+    type: categorical
+    values: [65536, 131072]
+
+  async_scheduling:
+    type: bool
+
+  # ─── KV / Compute (b3-v2 와 동일) ───
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  prefix_caching_hash_algo:
+    type: categorical
+    values: [builtin, sha256]
+    active_if: {enable_prefix_caching: true}
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+
+  block_size:
+    type: categorical
+    values: [16, 32, 64]
+
+
+# ─── Feasibility constraints ───
+feasibility_constraints:
+  - id: c1_npu_count
+    rule: "tp * pp * dp <= environment.total_npus"
+    message: "tp × pp × dp must fit total NPUs (16 on B200 dual-node)"
+
+  - id: c2_intra_pod_size
+    rule: "tp * pp * prefill_context_parallel_size <= environment.npus_per_server"
+    message: "TP × PP × PCP 가 single pod 8 GPU 안에 fit (multinode: false)"
+
+  - id: c3_pp_layers
+    rule: "pp <= model.num_layers"
+    message: "PP stages cannot exceed model layers (gpt-oss-120b: 36)"
+
+  - id: c4_heads_div_tp
+    rule: "model.num_attention_heads % tp == 0"
+    message: "TP must divide attention heads (gpt-oss-120b: 64 heads)"
+
+  - id: c5_dcp_div_tp
+    rule: "tp % decode_context_parallel_size == 0"
+    message: "DCP must divide TP (parallel.py:389 — ring attention within TP)"
+
+  - id: c6_gpu_memory
+    rule: "surrogate.simulated_total_gb <= environment.gpu_vram_gb * gpu_memory_utilization"
+    message: "Active params + KV must fit in GPU HBM (B200: 192 GB)"
+
+  - id: c11_inference_scheduling_pp
+    rule: "tp * pp * prefill_context_parallel_size <= 8"
+    message: "inference-scheduling chart multinode false — single pod 8 GPU 한정"
