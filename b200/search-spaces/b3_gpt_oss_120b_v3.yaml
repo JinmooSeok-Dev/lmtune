@@ -151,3 +151,8 @@ feasibility_constraints:
   - id: c11_inference_scheduling_pp
     rule: "tp * pp <= 8"
     message: "inference-scheduling chart multinode false — single pod 8 GPU 한정"
+
+  - id: c12_pp_ep_mxfp4_incompat
+    rule: "(pp == 1) OR (NOT ep)"
+    message: "R28: vllm 0.17.1 의 gpt-oss-120b MXFP4 weight loader 가 PP+EP 조합 미지원
+      (gpt_oss.py:498 의 weight broadcasting 0-size). PP 또는 EP 단독은 OK"
