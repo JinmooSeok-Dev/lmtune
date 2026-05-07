@@ -762,6 +762,28 @@ R23 + R25 둘 다 1-3 단계만 통과시키고 4 단계 검증 누락이 원인
 
 ---
 
+## R27 — SLO 미달이 PRUNED 가 아닌 CRASH 로 분류 → breaker 너무 빨리 halt
+
+**증상**
+- b3-v3 study st-01KR136V8K1JZA1PTZ4J8KZNNQ (2026-05-07) 가 5 trial 만에 HALTED
+- 4/5 trial 이 "crash" 로 분류, breaker 80% threshold 초과
+- 그러나 실제 fail 분포: 진짜 hard fail 1건 (stale pod), 나머지 3건은 SLO 미달 (`slo_pass=False`) — 측정 자체는 정상 완료
+
+**진단 경로**
+- `objective.py:199-202` 가 `slo_pass=False` 시 `first_error = "...slo_pass=False"` set
+- `study.py:204` 의 `if result.error: trial.status = TrialStatus.CRASH` → SLO 미달이 CRASH 분류됨
+- `failure_handler.py:78` 의 breaker 의도 주석: "PRUNED — SLO 미달이지만 측정 자체는 valid" — 의도와 구현 불일치
+
+**영속화 위치**
+- Code: `src/lmtune/search/objective.py::ScoreObjective.__call__` 에서 SLO 미달 시 `error` 미set, `accepted=False` 만 set → study.tell 이 PRUNED 분류 → breaker exclude
+- Test: `tests/search/test_objective.py::test_score_objective_slo_miss_is_pruned_not_crash` — 회귀 방지
+
+**효과**
+- SLO 미달 trial 들이 breaker 카운트에서 제외 → 진짜 인프라 실패 (OOM, startup timeout, hard crash) 만 트립
+- sampler 는 PRUNED state 에서도 score 신호를 받아 SLO 미달 영역 회피 학습. 학습 신호 손실 0
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)

@@ -197,9 +197,12 @@ class ScoreObjective:
             if res.get("accepted") is False:
                 accepted_all = False
             if res.get("slo_pass") is False:
-                any_fail = True
-                if first_error is None:
-                    first_error = f"{wl}: slo_pass=False"
+                # R27: SLO 미달은 정상 측정 결과 (sampler 가 score 낮게 받아 회피
+                # 학습). breaker 의 의도가 SLO 미달을 PRUNED 분류하는 것인데
+                # error 를 set 하면 study.tell 이 CRASH 로 marking → breaker 가
+                # 안정성 fail 로 카운트 → study 너무 빨리 halt. error 미set 해
+                # accepted=False 만으로 PRUNED 흐름 가게 둠.
+                accepted_all = False
 
         metrics[("score", None)] = total
         return ObjectiveResult(
