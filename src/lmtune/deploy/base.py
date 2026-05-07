@@ -56,9 +56,12 @@ _SIMULATOR_ONLY_KEYS: set[str] = {
     "cross_node_type",
     # node_split_strategy — 파생 metadata, helmfile 가 derive
     "node_split_strategy",
-    # PCP/DCP 는 R24 fix 로 chart wiring 검증됨 (b3-v3 PR) — _SIMULATOR_ONLY_KEYS
-    # 에서 제거하여 engine_args 경로 (else branch) 로 흘러가게 함. vllm CLI flag
-    # `--prefill-context-parallel-size` / `--decode-context-parallel-size` 로 emit.
+    # DCP 는 R24 fix 로 chart wiring 검증됨 (b3-v3) — engine_args 경로로 emit.
+    # PCP 는 R25 로 다시 drop — vllm 0.17.1 backend 어느 것도 supports_pcp=True
+    # 가 아님 (backend.py:647 base False, 어느 subclass 도 override 안 함) →
+    # cp_utils.py:38 의 assert 가 startup crash. vllm 차후 release backend 가
+    # supports_pcp 활성 시 본 set 에서 제거 (검증 절차 R23 와 동일).
+    "prefill_context_parallel_size",
     "ep_strategy",  # standard/wide — chart 가 wide-ep-lws path 로 표현
     "sequence_parallel",  # vllm 0.17.1 은 compilation_config 의 pass_config 로만
                           # 활성. TP>1 + eligible model 시 vllm 자체 auto-enable

@@ -701,6 +701,37 @@ DeepEPHTAll2AllManager (HT) 와 DeepEPLLAll2AllManager (LL) 둘 다 base 의 이
 
 ---
 
+## R25 — PCP (prefill_context_parallel_size) 는 vllm 0.17.1 backend 미지원
+
+**증상**
+- b3-v3 PR (#109) 에서 PCP axis 활성. PCP > 1 trial 시 startup 에서 `cp_utils.py:38` 의 `assert layer_impl.supports_pcp` 가 fail
+- vllm 의 모든 attention backend (flash_attn, flashinfer, MLA 5종) 가 `supports_pcp` 를 base class default `False` 그대로 상속 — 어느 subclass 도 True override 안 함
+- PCP CLI flag 자체는 arg_utils.py:406 + ParallelConfig 에 존재 → vllm 이 parse 까지는 함. 그러나 실제 attention forward 에서 assert crash
+
+**진단 경로**
+- 사용자 요구로 PR #109 머지 후 PCP 가 정말 작동하는지 vllm 0.17.1 wheel 추출 (1467 .py 파일) 로 직접 확인
+- `grep -rn "supports_pcp = True" vllm/` → 0 hits (PR #109 시점엔 catalog 에 axis 가 코드에 존재한다는 사실만 확인하고 backend 구현 옵트인은 검증 안 했음 — R23 와 동일 패턴 재발)
+- `cp_utils.py:38` 의 `assert layer_impl.supports_pcp, "PCP requires attention impls' support, but the impl <ClassName> does not support PCP."`
+
+**영속화 위치**
+- Search-space: `b200/search-spaces/b3_gpt_oss_120b_v3.yaml` 에서 PCP axis 제거. feasibility constraints 에서 PCP 항 제거 (`tp * pp <= 8` 만 남김)
+- Adapter: `src/lmtune/deploy/base.py::_SIMULATOR_ONLY_KEYS` 에 `prefill_context_parallel_size` 다시 등록 (R24 fix 시 제거했던 것)
+- Chart: `b200/helmfile/inference-scheduling/values-gpt-oss-120b.yaml.gotmpl` 의 `$totalGpu := mul $tp $pp` (PCP 곱셈 제거. 누군가 vllmArgs 로 직접 inject 해도 chart 가 곱셈 안 하니 GPU 부족 + assert crash 모두 일관)
+- Tests: `tests/deploy/test_base.py` + `tests/deploy/test_chart_render_pp_pcp_dcp.py` 에 PCP drop 검증 추가
+
+**catalog 신뢰도 보강 — 매 axis 검증 절차**
+
+PR #109 의 R24 catalog § 마지막 줄 "차후 chart wiring 검증 + axis 검증을 catalog 에 별도 표로 (TODO)" 를 본 R25 발생 후 의무 절차로 승격. 매 axis 추가 시 다음 4단계:
+
+1. **CLI flag 존재** — `arg_utils.py` 의 ParallelConfig / EngineArgs 에 등록되어 있는지
+2. **Config-level validation** — `parallel.py` / `vllm_config.py` 의 `__post_init__` raise 검사
+3. **Feature gate** — `arg_utils.py::_check_feature_supported` 의 NotImplementedError 검사 (R23)
+4. **Backend opt-in** — attention impl 의 `supports_<feature> = True` override 가 실제 존재하는지 (R25, 본 entry)
+
+R23 + R25 둘 다 1-3 단계만 통과시키고 4 단계 검증 누락이 원인. 향후 axis 추가 PR 의 acceptance 에 4단계 grep 결과 첨부 의무.
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)

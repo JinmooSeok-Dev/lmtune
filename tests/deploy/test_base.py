@@ -97,9 +97,9 @@ def test_merge_simulator_only_axes_dropped(tmp_path: Path):
             "node_split_strategy": "dual-node-pp2-tp8",
             "ep_strategy": "wide",
             "sequence_parallel": True,
-            # PCP/DCP 는 R24 fix 로 chart wiring 검증 후 engine_args 경로 활성
-            # (b3-v3). 본 테스트의 drop 검증 대상에서 분리.
+            # PCP 는 R25 로 다시 drop (vllm 0.17.1 backend 미지원)
             "prefill_context_parallel_size": 2,
+            # DCP 는 R24 fix 로 engine_args 경로 활성 (b3-v3)
             "decode_context_parallel_size": 1,
             # 정상 axis (control)
             "max_num_seqs": 64,
@@ -108,18 +108,18 @@ def test_merge_simulator_only_axes_dropped(tmp_path: Path):
     )
     ea = merged["deployment"]["engine_args"]
     para = merged["deployment"]["parallelism"]
-    # simulator metadata 는 어디에도 emit 안 됨
+    # simulator metadata + PCP 는 어디에도 emit 안 됨
     for k in (
         "cross_node_type",
         "intra_node_type",
         "node_split_strategy",
         "ep_strategy",
         "sequence_parallel",
+        "prefill_context_parallel_size",
     ):
         assert k not in ea, f"{k} leaked to engine_args (vllm reject)"
         assert k not in para, f"{k} leaked to parallelism"
-    # PCP/DCP 는 engine_args 로 emit (R24 — chart 가 vllmArgs 경로로 받음)
-    assert ea["prefill_context_parallel_size"] == 2
+    # DCP 만 engine_args 로 emit (R24 — chart 가 vllmArgs 경로로 받음)
     assert ea["decode_context_parallel_size"] == 1
     # 정상 axis 는 그대로
     assert ea["max_num_seqs"] == 64
@@ -128,7 +128,7 @@ def test_merge_simulator_only_axes_dropped(tmp_path: Path):
 
 def test_merge_simulator_only_warmstart_replay(tmp_path: Path):
     """R11 시나리오: warmstart-db 가 옛 b3_parallelism trial params 를 enqueue한
-    상황 — node-split / fabric metadata 는 drop, PCP/DCP 는 R24 fix 로 emit."""
+    상황 — node-split / fabric metadata + PCP 는 drop, DCP 는 R24 fix 로 emit."""
     p = tmp_path / "ep.yaml"
     _baseline(p)
     warmstart_params = {
@@ -141,22 +141,23 @@ def test_merge_simulator_only_warmstart_replay(tmp_path: Path):
         "intra_node_type": "pcie",
         "cross_node_type": "roce",
         "node_split_strategy": "dual-node-pp2-tp8",
-        # PCP/DCP 는 R24 fix 로 axis 활성됨 (b3-v3) — engine_args 로 emit 됨
+        # PCP 는 R25 로 다시 drop (vllm 0.17.1 backend 미지원)
         "prefill_context_parallel_size": 4,
+        # DCP 는 R24 fix 로 engine_args 활성
         "decode_context_parallel_size": 1,
     }
     merged = merge_params_into_endpoint(p, warmstart_params)
-    # engine_args 에 fabric/topology metadata 없어야
+    # engine_args 에 fabric/topology + PCP metadata 없어야
     ea_keys = set(merged["deployment"]["engine_args"].keys())
     assert ea_keys.isdisjoint(
         {
             "intra_node_type",
             "cross_node_type",
             "node_split_strategy",
+            "prefill_context_parallel_size",
         }
     )
-    # PCP/DCP 는 engine_args 로 활성 — chart 가 vllmArgs 경로로 받아 vllm CLI 로 emit
-    assert merged["deployment"]["engine_args"]["prefill_context_parallel_size"] == 4
+    # DCP 는 engine_args 로 emit
     assert merged["deployment"]["engine_args"]["decode_context_parallel_size"] == 1
     # 정상 axis 는 emit
     assert merged["deployment"]["parallelism"]["tp"] == 8
@@ -180,7 +181,7 @@ def test_merge_params_to_dict_does_not_write_file(tmp_path: Path):
 
 
 def test_merge_params_to_dict_simulator_keys_dropped(tmp_path: Path):
-    """R12 + R11: read-only merge 도 fabric/topology key 는 drop. PCP/DCP 는 R24 후 emit."""
+    """R12 + R11: read-only merge 도 fabric/topology + PCP key 는 drop. DCP 는 R24 후 emit."""
     p = tmp_path / "ep.yaml"
     _baseline(p)
     merged = merge_params_to_dict(
@@ -201,11 +202,11 @@ def test_merge_params_to_dict_simulator_keys_dropped(tmp_path: Path):
         "cross_node_type",
         "intra_node_type",
         "node_split_strategy",
+        "prefill_context_parallel_size",
     ):
         assert k not in ea
         assert k not in para
-    # PCP/DCP 는 engine_args 로 emit (R24 — chart wiring 검증됨)
-    assert ea["prefill_context_parallel_size"] == 4
+    # DCP 는 engine_args 로 emit (R24 — chart wiring 검증됨)
     assert ea["decode_context_parallel_size"] == 1
     assert ea["max_num_seqs"] == 64
     assert para["tp"] == 4
