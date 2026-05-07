@@ -732,6 +732,36 @@ R23 + R25 둘 다 1-3 단계만 통과시키고 4 단계 검증 누락이 원인
 
 ---
 
+## R26 — DCP > 1 with GQA/MQA non-MLA 모델은 tp > num_kv_heads 강제
+
+**증상**
+- b3-v3 study (PR #109/#110/#112) 시작 후 첫 trial 에서 vllm 0.17.1 startup pydantic ValidationError:
+  `Assertion failed, tensor parallel size 2 must be greater than total num kv heads 8 when enable decode context parallel for GQA/MQA`
+- gpt-oss-120b 는 GQA + num_kv_heads=8. tp ∈ {2, 4, 8} ALL fail (2 < 8, 4 < 8, 8 NOT > 8 — STRICT)
+- inference-scheduling chart `multinode: false` → single-pod max tp=8 → tp > 8 활성 불가 → DCP > 1 모든 trial infeasible
+
+**진단 경로**
+- vllm/config/model.py:1072~1090 (GQA/MQA + DCP>1 분기) 에서 3개 assert:
+  1. `tensor_parallel_size > total_num_kv_heads` (STRICT)
+  2. `decode_context_parallel_size <= tensor_parallel_size // total_num_kv_heads`
+  3. `(num_attention_heads / num_kv_heads) % decode_context_parallel_size == 0`
+- MLA 모델 (DSV3 등) 은 `if ... not self.use_mla` 분기로 본 검증 우회 — 즉 GQA 한정 제약
+- 우리 search-space 의 `c5_dcp_div_tp = (tp % dcp == 0)` 는 본 모든 제약 미커버
+- vllm-config-puzzle 의 validation.ts:131 도 마찬가지 (`tp % dcp == 0` 만) — simulator 가 vllm 0.17.1 까지 follow up 못 한 영역
+
+**영속화 위치**
+- Search-space: `b200/search-spaces/b3_gpt_oss_120b_v3.yaml` 에서 DCP axis 제거 + 향후 재추가 시 등록할 3 룰을 주석으로 명시
+- 본 catalog R26 entry — 차후 다른 GQA 모델 (Llama-3, Qwen2.5 등) study 작성 시 자동 가드
+
+**Upstream contribution**
+- vllm-config-puzzle 의 validation.ts 에 c8_dcp_kv_constraint (`(use_mla) OR (tp > num_kv_heads AND dcp <= tp/num_kv_heads AND (num_q/num_kv) % dcp == 0)`) 추가 PR 후보 — 본 결함 1차 생산자가 그 simulator
+
+**catalog 4단계 검증의 5번째 단계 추가 후보**
+- R23 (feature gate), R25 (backend opt-in), R26 (model-specific config validation) 패턴 — `vllm/config/model.py::verify_with_parallel_config` 류의 model-level 제약 검사가 4단계에서 빠짐
+- 5단계: **Model-config-level validation** — `vllm/config/model.py::verify_with_parallel_config()` 의 raise/assert 검사 (model-architecture 별로 다른 parallelism 제약). axis 추가 PR 의 acceptance 에 추가 (TODO 별도 PR — CLAUDE.md PR 게이트 보강)
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)

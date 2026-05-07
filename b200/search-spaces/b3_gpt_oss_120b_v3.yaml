@@ -5,12 +5,17 @@ name: b3-gpt-oss-120b-v3
 # B3 v3 — gpt-oss-120b 16-GPU inference-scheduling autotune (PP/PCP/DCP 추가).
 #
 # 본 파일 = b3_gpt_oss_120b_v2.yaml (13 axis) + simulator.ts 의 vllm-config-puzzle
-# 1:1 port 를 따라 추가 (R25 후, PCP 제외 2개):
-#   - pipeline_parallel_size (vllm 0.17.1 arg_utils.py:400, mp executor)
-#   - decode_context_parallel_size (vllm 0.17.1 parallel.py:278, tp%dcp==0)
+# 1:1 port 를 따라 추가 (R25, R26 후, PP 1개만 살아남음):
+#   - pipeline_parallel_size (vllm 0.17.1 arg_utils.py:400, mp executor + GptOss
+#     SupportsPP 명시 source-verified)
 #
 # PCP (prefill_context_parallel_size) 는 R25 로 제거. vllm 0.17.1 backend 들
 # 어느 것도 supports_pcp=True 가 아님 → cp_utils.py:38 assert crash.
+#
+# DCP (decode_context_parallel_size) 는 R26 으로 제거. gpt-oss-120b 는 GQA
+# (num_kv_heads=8). vllm/config/model.py:1072 가 GQA + DCP>1 시 tp > 8 강제.
+# inference-scheduling chart multinode false 라 single-pod max tp=8 →
+# tp > 8 불가능. multinode chart 도입 후 재고려.
 #
 # Sequence Parallel: vllm 0.17.1 에 별도 CLI flag 없음. compilation_config 의
 # pass_config 로만 활성. TP>1 + eligible model 시 vllm 자체 auto-enable
@@ -54,13 +59,15 @@ axes:
   # layer_impl.supports_pcp` 가 PCP>1 모든 backend 에서 startup crash.
   # vllm 차후 release 에서 backend 가 True override 시 재추가.
 
-  decode_context_parallel_size:
-    type: categorical
-    values: [1, 2, 4]
-    # DCP — decode 시 KV 분산 (parallel.py:278, tp%dcp==0). TP group 안에서
-    # 분산이라 추가 GPU 안 씀. flash_attn/flashinfer backend 의
-    # can_return_lse_for_decode=True 가 DCP 활성 조건 — gpt-oss-120b 의
-    # default backend 둘 다 만족 (backend 검증 source-verified).
+  # DCP (decode_context_parallel_size) 는 R26 으로 gpt-oss-120b 에서 제거.
+  # vllm/config/model.py:1072 가 GQA/MQA (non-MLA) 모델에서 DCP > 1 시:
+  #   tp > total_num_kv_heads (STRICT, model.py:1073 assert)
+  # 를 강제. gpt-oss-120b 는 GQA + num_kv_heads=8. inference-scheduling chart
+  # 는 multinode false 라 single-pod max tp=8 → tp > 8 불가능 → DCP > 1
+  # 모든 trial 이 startup assert crash.
+  # multinode chart (pd-disaggregation 등) 도입 + tp=16 가능해진 후 재추가.
+  # vllm-config-puzzle validation.ts 는 본 제약 미반영 — simulator 가 vllm
+  # 0.17.1 까지 follow up 못 한 영역.
 
   dp:
     type: categorical
@@ -131,9 +138,11 @@ feasibility_constraints:
     rule: "model.num_attention_heads % tp == 0"
     message: "TP must divide attention heads (gpt-oss-120b: 64 heads)"
 
-  - id: c5_dcp_div_tp
-    rule: "tp % decode_context_parallel_size == 0"
-    message: "DCP must divide TP (parallel.py:389 — ring attention within TP)"
+  # c5_dcp_div_tp 는 R26 으로 제거 (DCP axis 제거됨). 향후 multinode chart 와
+  # 함께 DCP 재도입 시 다음 룰들도 함께 등록 (vllm/config/model.py:1072 1:1):
+  #   - (model.use_mla == True) OR (tp > model.num_kv_heads)
+  #   - decode_context_parallel_size <= tp / model.num_kv_heads
+  #   - (model.num_attention_heads / model.num_kv_heads) % dcp == 0
 
   - id: c6_gpu_memory
     rule: "surrogate.simulated_total_gb <= environment.gpu_vram_gb * gpu_memory_utilization"
