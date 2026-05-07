@@ -5,10 +5,10 @@ name: b3-gpt-oss-120b-v2
 # B3 v2 — gpt-oss-120b 16-GPU inference-scheduling autotune 확장 (15 axis).
 #
 # 본 파일 = b3_gpt_oss_120b_extended.yaml (12 axis, 검증된 baseline) +
-# b200/docs/vllm_0.17.1_args_catalog.md 에서 source-verified axis 3개 추가:
+# b200/docs/vllm_0.17.1_args_catalog.md 에서 source-verified axis 2개 추가:
 #   - async_scheduling (SchedulerConfig, vllm 0.6+, catalog § 3 verified)
-#   - max_num_partial_prefills (SchedulerConfig, catalog § 3 verified)
 #   - block_size 64 추가 (CacheConfig, catalog § 4 verified — b3 는 16/32 만)
+# (max_num_partial_prefills 는 R23 으로 제거 — vllm 0.17.1 NotImplementedError)
 #
 # 본 study 의 path = inference-scheduling (b3 검증된 토폴로지). wide-EP-LWS 는
 # vllm 0.17.1 의 DeepEP NotImplementedError (R19) 로 gpt-oss-120b 는 부적합.
@@ -74,12 +74,10 @@ axes:
     # (parallel.py:185 의 disable_nccl_for_dp_synchronization 자동 활성).
     # SLO p99 와 trade-off 정량화가 본 axis 의 측정 목표.
 
-  max_num_partial_prefills:
-    type: categorical
-    values: [1, 4]
-    # chunked prefill 활성 시 동시에 처리할 partial prefill 수 (vllm 0.10+).
-    # 작으면 latency 우위, 크면 throughput 우위. active_if 없이 항상 valid
-    # (chunked_prefill 비활성 시 무시됨, vllm 자체 처리).
+  # max_num_partial_prefills 는 R23 (vllm 0.17.1 NotImplementedError) 로 제거.
+  # arg_utils.py:_check_feature_supported() 가 "Concurrent Partial Prefill is
+  # not supported" 로 raise. catalog § 3 "vllm 0.10+ verified" 가 0.17.1 시점에
+  # disable 된 상태 — 차후 지원 확인 시 재추가.
 
   # ─── KV / Compute (b3-extended + block_size 64 추가) ───
   enable_prefix_caching:
