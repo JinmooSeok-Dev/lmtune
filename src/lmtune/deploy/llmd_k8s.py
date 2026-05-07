@@ -319,13 +319,13 @@ class LLMDK8sAdapter(DeploymentAdapter):
                 notes="repo unavailable",
             )
 
-        # 1. helmfile apply --args "--force"
-        # R20: 매 trial 마다 helmfile 이 helm upgrade 로 release 갱신. helm 의
-        # strategic merge patch 가 env list 같은 ordered 필드에서 같은 key 두 번
-        # (예: chart auto-inject HF_TOKEN + values gotmpl HF_TOKEN) 발생 시
-        # `failed to create patch: doesn't match $setElementOrder list` 로 reject.
-        # --force 는 strategic merge 실패 시 release 통째 replace 로 fallback.
-        # safe: 매 trial 이 어차피 새 spec 이라 통째 replace 가 의도와 일치.
+        # 1. helmfile sync --args "--force"
+        # R20 + R21: 매 trial 의 helm upgrade 가 strategic merge conflict (env list
+        # 의 같은 key 두 번 등록 등) 시 `failed to create patch` 로 reject. fix 흐름:
+        #   - --force → strategic merge 실패 시 release 통째 replace (의도와 일치)
+        #   - apply → sync 변경: apply 는 helm-diff plugin 을 거치는데 helm-diff 가
+        #     --force flag 를 모름 → "plugin diff exited with error" 부작용 발생.
+        #     sync 는 helm-diff 우회하고 helm upgrade --install --force 직접 호출.
         cmd = [
             "helmfile",
             "--environment",
@@ -336,7 +336,7 @@ class LLMDK8sAdapter(DeploymentAdapter):
             str(overlay_path),
             "-f",
             str(helmfile_root / helmfile_file),
-            "apply",
+            "sync",
             "--args",
             "--force",
         ]

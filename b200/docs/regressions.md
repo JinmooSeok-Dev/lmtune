@@ -603,6 +603,37 @@ DeepEPHTAll2AllManager (HT) 와 DeepEPLLAll2AllManager (LL) 둘 다 base 의 이
 
 ---
 
+## R21 — R20 의 helmfile apply --args "--force" 가 helm-diff plugin 에서 reject (부작용)
+
+**증상**
+- PR #106 (R20 fix: helmfile apply 에 --args "--force" 추가) 머지 후 b3-v2 study 재시작 시 5 trial 다 같은 fail
+- ApplyResult.detail 에:
+  ```
+  Error: plugin "diff" exited with error
+  notes: helmfile apply rc=1
+  ```
+
+**진단**
+- helmfile apply 는 내부적으로 helm-diff plugin (변경 비교) → helm upgrade (실제 적용) 흐름
+- `--args "--force"` 는 helm-diff 와 helm upgrade **모두에 전달**됨
+- helm-diff plugin 이 `--force` flag 를 모름 → "plugin diff exited with error" 로 reject
+- 즉 R20 의 fix 가 또 다른 결함 (R21) 만든 것 — trial-and-error 의 비용
+
+**영속화 위치**
+- Code: `src/lmtune/deploy/llmd_k8s.py::LLMDK8sAdapter.apply` — `apply` 를 `sync` 로 변경. helmfile sync 는 helm-diff 우회하고 `helm upgrade --install` 직접 호출. `--args "--force"` 가 helm upgrade 에만 전달
+- 주석으로 R20 + R21 reference
+
+**Trade-off (sync vs apply)**
+- sync: 변경 비교 없이 무조건 upgrade — 변경 없는 trial 도 약간 느림 (~수초). 대신 plugin 의존 없음
+- apply: 변경 있을 때만 upgrade — 더 효율적이지만 plugin (helm-diff) 호환성 의존
+- 매 trial 의 spec 가 다른 lmtune autotune 에선 어차피 upgrade 매번이라 sync 가 손해 적음
+
+**향후 (root cause 의 제거 — 별도 PR)**
+- chart 의 modelservice template 이 HF_TOKEN env 자동 inject + values gotmpl env 블록 의 중복 정리해서 R20 의 strategic merge conflict 자체 제거 → --force 와 sync 둘 다 제거하고 normal apply 복귀 가능
+- 또는 lmtune adapter 의 render 결정성 강화 (동일 params → byte-identical state-values overlay)
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)
