@@ -1,0 +1,137 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b3-gpt-oss-120b-v2
+
+# B3 v2 — gpt-oss-120b 16-GPU inference-scheduling autotune 확장 (15 axis).
+#
+# 본 파일 = b3_gpt_oss_120b_extended.yaml (12 axis, 검증된 baseline) +
+# b200/docs/vllm_0.17.1_args_catalog.md 에서 source-verified axis 3개 추가:
+#   - async_scheduling (SchedulerConfig, vllm 0.6+, catalog § 3 verified)
+#   - max_num_partial_prefills (SchedulerConfig, catalog § 3 verified)
+#   - block_size 64 추가 (CacheConfig, catalog § 4 verified — b3 는 16/32 만)
+#
+# 본 study 의 path = inference-scheduling (b3 검증된 토폴로지). wide-EP-LWS 는
+# vllm 0.17.1 의 DeepEP NotImplementedError (R19) 로 gpt-oss-120b 는 부적합.
+#
+# 본 PR 의 비-목표 (별도 PR):
+#   - PCP / DCP — chart wiring 미검증 (R11 _SIMULATOR_ONLY_KEYS drop 중)
+#   - SP — vllm 미활성
+#   - wide-EP — R19 회피, 다른 모델로 (Kimi K2 등 향후)
+#   - B6 NCCL/IB env — helmfile values gotmpl 의 env: 블록 wiring 검증 후 별도 PR
+#
+# 사용:
+#   lmtune search start \
+#     --space b200/search-spaces/b3_gpt_oss_120b_v2.yaml \
+#     --endpoint b200/endpoints/b200_gpt-oss-120b.yaml \
+#     --adapter llmd-k8s --cluster-env b200-dual-node \
+#     --strategy tpe --max-trials 30 --seed 17 \
+#     --warmstart-db data/db/lmtune.duckdb --warmstart-top-k 8 \
+#     --name b3-gpt-oss-120b-v2 \
+#     --repeats 3 --ttft-slo-ms 2000 \
+#     -p configs/profiles/autotune/short.yaml
+
+axes:
+  # ─── Parallelism (b3-extended 와 동일, chart 호환 검증됨) ───
+  tp:
+    type: categorical
+    values: [2, 4, 8]
+
+  pp:
+    type: categorical
+    values: [1]
+    # PP=1 강제 (inference-scheduling chart, multinode false)
+
+  dp:
+    type: categorical
+    values: [1, 2, 4, 8]
+    # inference-scheduling 패턴: dp = independent replica count.
+    # adapter render_values_overlay 가 dp → decode.replicas (R18 default).
+
+  ep:
+    type: bool
+    # inference-scheduling 에선 ep 토글 가능 — DBO/EPLB 와 결합 안 하면 호환됨.
+    # wide-EP path 에선 R19 (DeepEP NotImplementedError) 회피하므로 본 study 는
+    # DBO/EPLB axis 자체가 없음 → ep=true 로 sample 되어도 안전.
+
+  # ─── Scheduling / Batching (b3-extended + 신규) ───
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256, 512]
+
+  max_num_batched_tokens:
+    type: categorical
+    values: [2048, 4096, 8192, 16384]
+
+  max_model_len:
+    type: categorical
+    values: [65536, 131072]
+
+  # ── 신규 (catalog § 3 verified, vllm 0.17.1) ──
+  async_scheduling:
+    type: bool
+    # vllm 0.6+ async scheduler. enable 시 chunked prefill + decode overlap 으로
+    # throughput 개선 가능. 단 dp synchronization 이 NCCL → Gloo 로 전환됨
+    # (parallel.py:185 의 disable_nccl_for_dp_synchronization 자동 활성).
+    # SLO p99 와 trade-off 정량화가 본 axis 의 측정 목표.
+
+  max_num_partial_prefills:
+    type: categorical
+    values: [1, 4]
+    # chunked prefill 활성 시 동시에 처리할 partial prefill 수 (vllm 0.10+).
+    # 작으면 latency 우위, 크면 throughput 우위. active_if 없이 항상 valid
+    # (chunked_prefill 비활성 시 무시됨, vllm 자체 처리).
+
+  # ─── KV / Compute (b3-extended + block_size 64 추가) ───
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  prefix_caching_hash_algo:
+    type: categorical
+    values: [builtin, sha256]
+    active_if: {enable_prefix_caching: true}
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+
+  block_size:
+    type: categorical
+    values: [16, 32, 64]
+    # 64 추가 (catalog § 4 verified, vllm 0.17.1). 큰 block 은 KV cache 효율 ↑
+    # but long-context 와 호환 이슈 가능성 — TPE 가 학습.
+
+
+# ─── Feasibility constraints (b3-extended 와 동일) ───
+feasibility_constraints:
+  - id: c1_npu_count
+    rule: "tp * pp * dp <= environment.total_npus"
+    message: "tp × pp × dp must fit total NPUs (16 on B200 dual-node)"
+
+  - id: c2_tp_single_node
+    rule: "tp <= environment.npus_per_server"
+    message: "TP must fit in a single node (NCCL ring within NVLink)"
+
+  - id: c3_pp_layers
+    rule: "pp <= model.num_layers"
+    message: "PP stages cannot exceed model layers (gpt-oss-120b: 36 layers)"
+
+  - id: c4_heads_div_tp
+    rule: "model.num_attention_heads % tp == 0"
+    message: "TP must divide attention heads (gpt-oss-120b: 64 heads)"
+
+  - id: c6_gpu_memory
+    rule: "surrogate.simulated_total_gb <= environment.gpu_vram_gb * gpu_memory_utilization"
+    message: "Active params + KV must fit in GPU HBM (B200: 192 GB)"
+
+  - id: c7_tp_dp_balance
+    rule: "(tp * pp * dp >= 8) OR (environment.total_npus < 16)"
+    severity: warning
+    message: "16-GPU 환경에서 tp×pp×dp < 8 은 GPU 활용도 ↓ (warning, hard fail 아님)"
+
+  - id: c11_inference_scheduling_pp1
+    rule: "pp == 1"
+    message: "inference-scheduling path 는 PP=1 만 지원 (chart multinode false)"

@@ -507,6 +507,67 @@ vllm serve ... --eplb-config '{"window_size": 1000, "step_interval": 3000}'
 
 ---
 
+## R19 — vllm 0.17.1 의 wide-EP + DeepEP + non-internal-MK quant 조합 NotImplementedError
+
+**증상**
+- PR #104 (R18 fix) 머지 + b200-wideep clean reset 후 첫 trial 의 vllm pod 가 init 단계에서:
+  ```
+  File "vllm/distributed/device_communicators/all2all.py", line 264, in dispatch_router_logits
+      raise NotImplementedError
+  NotImplementedError
+  ```
+- DP0~DP3 EngineCore 모두 같은 stack trace, MoE forward path 의 `default_moe_runner.py:657` 에서
+  ```python
+  hidden_states, router_logits = get_ep_group().dispatch_router_logits(...)
+  ```
+
+**진단** — vllm v0.17.1 source 직접 확인
+
+`default_moe_runner.py:631-633` — naive dispatch path 진입 조건:
+```python
+do_naive_dispatch_combine = (
+    self.moe_config.dp_size > 1 and not self.quant_method.supports_internal_mk
+)
+```
+
+→ **DP > 1** (wide-EP within-pod data-parallel) **AND** **quant 가 internal-MK 미지원**
+
+`all2all.py:237-282` — DeepEP base 의 미구현 메서드:
+```python
+class DeepEPAll2AllManagerBase(All2AllManagerBase):
+    def dispatch_router_logits(...):
+        raise NotImplementedError   # line 264
+```
+
+DeepEPHTAll2AllManager (HT) 와 DeepEPLLAll2AllManager (LL) 둘 다 base 의 이 메서드를 **override 안 함**. 즉 vllm 0.17.1 의 DeepEP 구현이 미완성.
+
+**호환성 매트릭스** (vllm 0.17.1):
+
+| backend | dispatch_router_logits | DBO 호환 | line |
+|:--|:--:|:--:|:--|
+| naive | ✅ (조건부) | ❌ | all2all.py:61 |
+| allgather_reducescatter | ✅ | ❌ | all2all.py:144 |
+| **deepep_low_latency** | **❌ NotImplementedError** | ✅ | all2all.py:264 |
+| **deepep_high_throughput** | **❌ NotImplementedError** | ✅ | all2all.py:264 |
+| flashinfer_all2allv | (확인 필요) | ❌ | all2all.py:416 |
+| pplx | (확인 필요) | ❌ | all2all.py:520 |
+| mori | (ROCm 전용) | ❌ | all2all.py:520 |
+
+**gpt-oss-120b 의 quant**: MXFP4 native. `supports_internal_mk` 가 False (확인됨, 본 study 에서 OOM/error 흐름으로 검증). → 본 모델 + DP>1 + DeepEP 조합은 **vllm 0.17.1 에서 미구현 영역**. 우리 코드 fix 로 해결 불가.
+
+**영속화 위치 (회피만 가능)**
+- 본 catalog entry — 다음 wide-EP study 시도 시 1차 진단처
+- `b200/docs/vllm_0.17.1_args_catalog.md` § 2.2 — DeepEP 의 dispatch_router_logits 미구현 호환성 룰 source 로 명시
+- 의사결정 룰: gpt-oss-120b 같은 **MXFP4/internal-MK 미지원 quant 모델은 wide-EP-LWS path 부적합**. inference-scheduling (b3 검증) 만 사용
+- wide-EP study 는 internal-MK 지원 quant 모델 (예: FP8 native — DSV3, Kimi K2 등) 로 별도 진행
+
+**향후 (vllm 0.18+ 출시 시 재검증)**
+- vllm release notes 에서 `DeepEPAll2AllManagerBase.dispatch_router_logits` 구현 / supports_internal_mk 확장 여부 추적
+- 구현 시 R19 가 resolved 로 표시 + b4 wide-EP gpt-oss-120b study 재진입 가능
+- 그 전엔 wide-EP 는 다른 모델로
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)
