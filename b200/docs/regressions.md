@@ -634,6 +634,48 @@ DeepEPHTAll2AllManager (HT) 와 DeepEPLLAll2AllManager (LL) 둘 다 base 의 이
 
 ---
 
+## R22 — Helm UPGRADE FAILED: spec.selector immutable (모델 변경 시)
+
+**증상**
+- 이전 study 가 다른 모델 (예: Llama-3.1-8B) 로 release 를 띄워둔 상태에서 새 study 의 다른 모델 (gpt-oss-120b) 로 helmfile sync → matchLabels 의 `llm-d.ai/model`, `llm-d.ai/guide` 가 다름 → Deployment.spec.selector 변경 감지 → K8s API 가 immutable 로 reject
+- `--force` 도 selector 는 못 바꿈 (Deployment 파괴 후 재생성 필요)
+- 5 trial 연속 fail → study HALTED
+
+**진단 경로**
+- `kubectl get pods -n b200-infsch -o wide` 가 stale 한 모델 (Llama) 의 pods 를 3시간+ 점유
+- duckdb 의 trial.error 컬럼에서 `spec.selector: Invalid value ... field is immutable` 확인
+- 원인: lmtune adapter 의 helmfile sync 가 `helm upgrade --install --force` 를 호출하지만 helm/k8s 의 immutable selector 정책은 `--force` 로도 우회 불가
+
+**영속화 위치**
+- Operations: 모델 교체 시 `helm uninstall <release>` + `kubectl delete pods --all` 후 새 모델로 fresh deploy 필요
+- `b200/scripts/reset-b200-infsch.sh` (TODO 별도 PR) 으로 자동화 후보
+- 주의: 같은 모델로 trial 만 여러 번 도는 케이스에선 selector 변경 없으므로 R22 미발생
+
+**향후 (root cause)**
+- chart 의 selector 가 model 이름 hash 가 아니라 release 이름만 쓰도록 변경하면 model 변경 시 selector 안 바뀜 → upstream PR 후보
+
+---
+
+## R23 — Concurrent Partial Prefill not supported (vllm 0.17.1)
+
+**증상**
+- v2 search-space 에 `max_num_partial_prefills` axis 추가 후 vllm 0.17.1 가 startup 에서 `NotImplementedError: Concurrent Partial Prefill is not supported. We recommend to remove Concurrent Partial Prefill from your config.` 로 raise
+- arg_utils.py:1925 의 `_check_feature_supported()` → `_raise_unsupported_error("Concurrent Partial Prefill")`
+
+**진단 경로**
+- vllm 의 V1 engine + sm_100 (B200) 조합에서 일부 SchedulerConfig feature 가 disable
+- catalog § 3 "vllm 0.10+ verified" 는 코드에 axis 가 존재한다는 사실만 확인했지 runtime feature flag 검증을 안 했음
+- 매 vllm minor 업그레이드마다 V1 engine + new HW 의 feature 호환성을 별도 검증해야 함
+
+**영속화 위치**
+- Search-space: `b200/search-spaces/b3_gpt_oss_120b_v2.yaml` 에서 axis 제거 + 주석으로 R23 reference
+- Catalog: `b200/docs/vllm_0.17.1_args_catalog.md` 의 § 3 SchedulerConfig 섹션에 "max_num_partial_prefills: vllm 0.17.1 V1+B200 에서 NotImplementedError, axis 비활성" 표기 (TODO 별도 PR)
+
+**catalog 신뢰도**
+- "args 가 코드에 존재" ≠ "feature 가 사용 가능". 차후 catalog 검증 절차에 startup probe (vllm 0.17.1 + 가능한 모든 axis 조합으로 dry-run) 단계 추가 (TODO 별도 PR)
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)
