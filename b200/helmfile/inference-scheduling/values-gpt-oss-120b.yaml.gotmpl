@@ -24,6 +24,13 @@
 {{- $svPar := index $svDecode "parallelism" | default dict -}}
 {{- $tp := index $svPar "tensor" | default 8 -}}
 {{- $rep := index $svDecode "replicas" | default 2 -}}
+{{- /* R24: pp/pcp/dcp axis 도입. nvidia.com/gpu 는 (tp × pp × pcp) — vllm mp
+      executor 가 single pod 안에서 모든 rank 를 spawn. DCP 는 TP group 안에서
+      KV 분산이라 추가 GPU 안 씀 (parallel.py:649 의 world_size 공식 1:1 port).
+      미주입 시 default 1 로 backward-compat (b3_v2 와 호환). */}}
+{{- $pp := default 1 (index $vllmArgs "pipeline-parallel-size") -}}
+{{- $pcp := default 1 (index $vllmArgs "prefill-context-parallel-size") -}}
+{{- $totalGpu := mul $tp $pp $pcp -}}
 
 multinode: false
 
@@ -96,11 +103,11 @@ decode:
         {{- end }}
       resources:
         requests:
-          nvidia.com/gpu: {{ $tp | quote }}   # GPU/pod = TP (NVLink intra-node)
+          nvidia.com/gpu: {{ $totalGpu | quote }}   # = TP × PP × PCP (DCP 는 TP group 안)
           cpu: "32"
           memory: 384Gi
         limits:
-          nvidia.com/gpu: {{ $tp | quote }}
+          nvidia.com/gpu: {{ $totalGpu | quote }}
           cpu: "64"
           memory: 512Gi
       env:
