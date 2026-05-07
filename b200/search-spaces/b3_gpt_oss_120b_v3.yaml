@@ -83,7 +83,10 @@ axes:
 
   max_model_len:
     type: categorical
-    values: [65536, 131072]
+    values: [131072]
+    # 사용자 지시로 131072 고정 (gpt-oss-120b native 최대). axis 가 단일 값이라
+    # sample 도 단일 — 통계적 영향 분석 시 자동 freeze. b3_v2/v4 의 [65536,131072]
+    # study 결과는 archive 에 보존 (warmstart-db 가 학습 활용).
 
   async_scheduling:
     type: bool
