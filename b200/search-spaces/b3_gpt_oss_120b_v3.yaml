@@ -5,10 +5,12 @@ name: b3-gpt-oss-120b-v3
 # B3 v3 — gpt-oss-120b 16-GPU inference-scheduling autotune (PP/PCP/DCP 추가).
 #
 # 본 파일 = b3_gpt_oss_120b_v2.yaml (13 axis) + simulator.ts 의 vllm-config-puzzle
-# 1:1 port 를 따라 추가:
+# 1:1 port 를 따라 추가 (R25 후, PCP 제외 2개):
 #   - pipeline_parallel_size (vllm 0.17.1 arg_utils.py:400, mp executor)
-#   - prefill_context_parallel_size (vllm 0.17.1 parallel.py:101)
 #   - decode_context_parallel_size (vllm 0.17.1 parallel.py:278, tp%dcp==0)
+#
+# PCP (prefill_context_parallel_size) 는 R25 로 제거. vllm 0.17.1 backend 들
+# 어느 것도 supports_pcp=True 가 아님 → cp_utils.py:38 assert crash.
 #
 # Sequence Parallel: vllm 0.17.1 에 별도 CLI flag 없음. compilation_config 의
 # pass_config 로만 활성. TP>1 + eligible model 시 vllm 자체 auto-enable
@@ -44,19 +46,21 @@ axes:
     type: categorical
     values: [1, 2]
     # vllm 0.17.1 mp executor 로 single-pod intra-node PP. multinode chart 가
-    # 아니어서 cross-node PP 불가. tp × pp × pcp <= 8 단일 노드 제약.
+    # 아니어서 cross-node PP 불가. tp × pp <= 8 단일 노드 제약.
 
-  prefill_context_parallel_size:
-    type: categorical
-    values: [1, 2]
-    # PCP — prefill 시 context 분할 (parallel.py:101, world_size 곱셈).
-    # 긴 prompt 의 prefill latency 개선 효과. tp × pp × pcp <= 8 제약.
+  # PCP (prefill_context_parallel_size) 는 R25 로 제거.
+  # vllm 0.17.1 의 backend.py:647 의 `supports_pcp` 가 base class False, 어느
+  # subclass 도 True override 안 함 → cp_utils.py:38 의 `assert
+  # layer_impl.supports_pcp` 가 PCP>1 모든 backend 에서 startup crash.
+  # vllm 차후 release 에서 backend 가 True override 시 재추가.
 
   decode_context_parallel_size:
     type: categorical
     values: [1, 2, 4]
     # DCP — decode 시 KV 분산 (parallel.py:278, tp%dcp==0). TP group 안에서
-    # 분산이라 추가 GPU 안 씀. KV cache 가 GPU mem 초과할 때 효과.
+    # 분산이라 추가 GPU 안 씀. flash_attn/flashinfer backend 의
+    # can_return_lse_for_decode=True 가 DCP 활성 조건 — gpt-oss-120b 의
+    # default backend 둘 다 만족 (backend 검증 source-verified).
 
   dp:
     type: categorical
@@ -113,8 +117,8 @@ feasibility_constraints:
     message: "tp × pp × dp must fit total NPUs (16 on B200 dual-node)"
 
   - id: c2_intra_pod_size
-    rule: "tp * pp * prefill_context_parallel_size <= environment.npus_per_server"
-    message: "TP × PP × PCP 가 single pod 8 GPU 안에 fit (multinode: false)"
+    rule: "tp * pp <= environment.npus_per_server"
+    message: "TP × PP 가 single pod 8 GPU 안에 fit (multinode: false)"
 
   - id: c3_pp_layers
     rule: "pp <= model.num_layers"
@@ -133,5 +137,5 @@ feasibility_constraints:
     message: "Active params + KV must fit in GPU HBM (B200: 192 GB)"
 
   - id: c11_inference_scheduling_pp
-    rule: "tp * pp * prefill_context_parallel_size <= 8"
+    rule: "tp * pp <= 8"
     message: "inference-scheduling chart multinode false — single pod 8 GPU 한정"
