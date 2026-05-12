@@ -64,9 +64,9 @@ _SIMULATOR_ONLY_KEYS: set[str] = {
     "prefill_context_parallel_size",
     "ep_strategy",  # standard/wide — chart 가 wide-ep-lws path 로 표현
     "sequence_parallel",  # vllm 0.17.1 은 compilation_config 의 pass_config 로만
-                          # 활성. TP>1 + eligible model 시 vllm 자체 auto-enable
-                          # (vllm_config.py:863). axis 로 표현하려면 compilation-config
-                          # JSON 을 generate 해야 해서 별도 PR.
+    # 활성. TP>1 + eligible model 시 vllm 자체 auto-enable
+    # (vllm_config.py:863). axis 로 표현하려면 compilation-config
+    # JSON 을 generate 해야 해서 별도 PR.
 }
 
 

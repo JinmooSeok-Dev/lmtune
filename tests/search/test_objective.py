@@ -69,7 +69,5 @@ def test_score_objective_slo_miss_is_pruned_not_crash(tmp_path, monkeypatch):
     # SLO 미달 → accepted=False (sampler 학습 신호) but error 는 None
     # (study.tell 이 CRASH 가 아닌 PRUNED 분류)
     assert r.accepted is False
-    assert r.error is None, (
-        f"R27: SLO 미달은 error 비어있어야 PRUNED 분류됨. got: {r.error}"
-    )
+    assert r.error is None, f"R27: SLO 미달은 error 비어있어야 PRUNED 분류됨. got: {r.error}"
     assert r.score == 5.0  # 측정값 보존
