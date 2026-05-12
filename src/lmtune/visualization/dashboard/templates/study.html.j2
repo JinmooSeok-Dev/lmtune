@@ -42,6 +42,64 @@
 
 <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
 
+  {% if study.space_snapshot %}
+  {% set _ss = study.space_snapshot %}
+  <section class="bg-white border border-slate-200 rounded-lg p-5">
+    <div class="flex items-baseline justify-between flex-wrap gap-2 mb-2">
+      <h2 class="text-lg font-semibold">
+        Search-space — winner 가 결정된 axis 공간
+        {% if _ss.name %}
+        <span class="ml-2 text-sm font-mono text-slate-500">{{ _ss.name }}</span>
+        {% endif %}
+      </h2>
+      <div class="text-xs text-slate-500">
+        <strong>{{ _ss.n_axes }}</strong> axes
+        {% if _ss.n_constraints %} · <strong>{{ _ss.n_constraints }}</strong> feasibility constraints{% endif %}
+        {% if _ss.name %} · <a href="../spaces.html" class="text-blue-600 hover:underline">전체 catalog →</a>{% endif %}
+      </div>
+    </div>
+    {% if _ss.description %}
+    <p class="text-xs text-slate-600 mb-3">{{ _ss.description }}</p>
+    {% endif %}
+    <p class="text-xs text-slate-500 mb-3">
+      각 row = 한 axis. <strong>winner</strong> 컬럼은 Top-1 trial 이 그 axis 에서 sample 한 값.
+      values 열은 axis 가 가질 수 있는 후보 (categorical) 또는 범위 (int/float).
+    </p>
+    <div class="overflow-x-auto">
+      <table class="text-xs w-full">
+        <thead class="bg-slate-50 text-slate-700">
+          <tr>
+            <th class="text-left p-1.5">axis</th>
+            <th class="text-left p-1.5">type</th>
+            <th class="text-left p-1.5">values</th>
+            <th class="text-left p-1.5">winner</th>
+            <th class="text-left p-1.5">notes</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for ax in _ss.axes %}
+          {% set _w = study.top_params.get(ax['name']) if study.top_params else None %}
+          {% set _vals = ax['values'] %}
+          <tr class="border-t border-slate-100">
+            <td class="p-1.5 font-mono">{{ ax['name'] }}</td>
+            <td class="p-1.5 font-mono text-slate-500">{{ ax['type'] }}</td>
+            <td class="p-1.5 font-mono text-slate-600">{% if _vals is sequence and _vals is not string %}{{ _vals|tojson }}{% else %}{{ _vals }}{% endif %}</td>
+            <td class="p-1.5 font-mono {% if _w is not none %}text-emerald-700 font-semibold{% else %}text-slate-400{% endif %}">
+              {% if _w is not none %}{% if _w is sequence and _w is not string %}{{ _w|tojson }}{% else %}{{ _w }}{% endif %}{% else %}—{% endif %}
+            </td>
+            <td class="p-1.5 text-slate-500">
+              {% if ax['active_if'] %}<span title="active_if: {{ ax['active_if']|tojson }}" class="text-amber-700">active_if</span>{% endif %}
+              {% if ax['cost_tier'] %} <span class="text-slate-500">tier={{ ax['cost_tier'] }}</span>{% endif %}
+              {% if ax['doc'] %}<span class="block">{{ ax['doc'] }}</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
   <section class="bg-white border border-slate-200 rounded-lg p-5">
     <h2 class="text-lg font-semibold mb-3">Top-1 winning params</h2>
     {% if study.top_params %}

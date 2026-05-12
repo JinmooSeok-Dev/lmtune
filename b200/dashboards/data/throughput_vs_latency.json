@@ -1,5 +1,1001 @@
 [
   {
+    "study_id": "st-01KQYN3FMWN63EB1CXB8QJGTAC",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": "minikube",
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQYN3FNB2A4PJA53YP99Q27R",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "cross_node_type": "roce",
+          "intra_node_type": "pcie",
+          "max_num_seqs": 32,
+          "node_split_strategy": "single-node",
+          "prefill_context_parallel_size": 1,
+          "tp": 1
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQYM2GSCA812J50PKP2YZKRH",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": "minikube",
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQYM2GTEHGR1J66QRWY901HQ",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "cross_node_type": "roce",
+          "intra_node_type": "pcie",
+          "max_num_seqs": 32,
+          "node_split_strategy": "single-node",
+          "prefill_context_parallel_size": 1,
+          "tp": 1
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQVS59SSQ612MYWZDVBAW1TC",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQVS59T3EFDWA3YVBMRDECT9",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "block_size": 32,
+          "dp": 1,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": true,
+          "gpu_memory_utilization": 0.8133993478393593,
+          "max_model_len": 65536,
+          "max_num_batched_tokens": 4096,
+          "max_num_seqs": 256,
+          "pp": 1,
+          "tp": 8
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVS59VE0RMHTXM7EGGVYVNM",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "block_size": 32,
+          "dp": 2,
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "ep": true,
+          "gpu_memory_utilization": 0.8433780250643843,
+          "max_model_len": 131072,
+          "max_num_batched_tokens": 2048,
+          "max_num_seqs": 32,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVS59WGY19Z6VHF55TXDEEV",
+        "seq": 3,
+        "score": 0.0,
+        "params": {
+          "block_size": 16,
+          "dp": 1,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": false,
+          "ep": false,
+          "gpu_memory_utilization": 0.8023212034757892,
+          "max_model_len": 65536,
+          "max_num_batched_tokens": 4096,
+          "max_num_seqs": 512,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVS59XPJMAQ7YPMQA3NMRGB",
+        "seq": 4,
+        "score": 0.0,
+        "params": {
+          "block_size": 32,
+          "dp": 2,
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "ep": false,
+          "gpu_memory_utilization": 0.8847061110350374,
+          "max_model_len": 131072,
+          "max_num_batched_tokens": 8192,
+          "max_num_seqs": 32,
+          "pp": 1,
+          "tp": 4
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVS59YSKFRNTNNM9JQ0JWBT",
+        "seq": 5,
+        "score": 0.0,
+        "params": {
+          "block_size": 16,
+          "dp": 1,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": false,
+          "gpu_memory_utilization": 0.821108417807115,
+          "max_model_len": 131072,
+          "max_num_batched_tokens": 16384,
+          "max_num_seqs": 512,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQVS53H6Z6H4JED3BYAS3ZYH",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQVS53HFKC9AR0HN2YRVE68F",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "block_size": 32,
+          "dp": 1,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": true,
+          "gpu_memory_utilization": 0.8133993478393593,
+          "max_model_len": 65536,
+          "max_num_batched_tokens": 4096,
+          "max_num_seqs": 256,
+          "pp": 1,
+          "tp": 8
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVS53JRGQN8HCFZF2G684ZD",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "block_size": 32,
+          "dp": 2,
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "ep": true,
+          "gpu_memory_utilization": 0.8433780250643843,
+          "max_model_len": 131072,
+          "max_num_batched_tokens": 2048,
+          "max_num_seqs": 32,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVS53MA952EX70R68JAKHMA",
+        "seq": 3,
+        "score": 0.0,
+        "params": {
+          "block_size": 16,
+          "dp": 1,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": false,
+          "ep": false,
+          "gpu_memory_utilization": 0.8023212034757892,
+          "max_model_len": 65536,
+          "max_num_batched_tokens": 4096,
+          "max_num_seqs": 512,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVS53NGJT8F49QVA0NG7DBR",
+        "seq": 4,
+        "score": 0.0,
+        "params": {
+          "block_size": 32,
+          "dp": 2,
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "ep": false,
+          "gpu_memory_utilization": 0.8847061110350374,
+          "max_model_len": 131072,
+          "max_num_batched_tokens": 8192,
+          "max_num_seqs": 32,
+          "pp": 1,
+          "tp": 4
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVS53Q3DPA9R0A7619NENZV",
+        "seq": 5,
+        "score": 0.0,
+        "params": {
+          "block_size": 16,
+          "dp": 1,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": false,
+          "gpu_memory_utilization": 0.821108417807115,
+          "max_model_len": 131072,
+          "max_num_batched_tokens": 16384,
+          "max_num_seqs": 512,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQVHBY3PW8T8QER32YJ8TMQM",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQVHBY3ZV3E3GH130R9C5713",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "dp": 1,
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "ep": false,
+          "gpu_memory_utilization": 0.8712969570071676,
+          "max_model_len": 131072,
+          "max_num_seqs": 256,
+          "pp": 1,
+          "tp": 4
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVHBY58YMW20CXY177VH9W8",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "dp": 1,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": true,
+          "gpu_memory_utilization": 0.9164219876077333,
+          "max_model_len": 131072,
+          "max_num_seqs": 256,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVHBY6FQ8MEJFS6SBDQKZ5F",
+        "seq": 3,
+        "score": 0.0,
+        "params": {
+          "dp": 2,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": false,
+          "gpu_memory_utilization": 0.9178709239435191,
+          "max_model_len": 131072,
+          "max_num_seqs": 64,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVHBY7NVA40KJF09S3FTCTR",
+        "seq": 4,
+        "score": 0.0,
+        "params": {
+          "dp": 2,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": false,
+          "ep": true,
+          "gpu_memory_utilization": 0.9061537886527828,
+          "max_model_len": 131072,
+          "max_num_seqs": 256,
+          "pp": 1,
+          "tp": 4
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVHBY8QSJAXKRCE8TNEJQHC",
+        "seq": 5,
+        "score": 0.0,
+        "params": {
+          "dp": 4,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": false,
+          "ep": true,
+          "gpu_memory_utilization": 0.8717687625200964,
+          "max_model_len": 131072,
+          "max_num_seqs": 128,
+          "pp": 1,
+          "tp": 4
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQVH9QS74E5Z4JB9CD9XXV30",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQVH9QSH40VT1Q3QTC3AQN6W",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "dp": 1,
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": true,
+          "ep": false,
+          "gpu_memory_utilization": 0.8802361513049481,
+          "max_model_len": 131072,
+          "max_num_seqs": 64,
+          "pp": 1,
+          "tp": 4
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVH9QTSPCHJAMZW3TWERM3E",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "dp": 4,
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "ep": true,
+          "gpu_memory_utilization": 0.8561944751436343,
+          "max_model_len": 131072,
+          "max_num_seqs": 128,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVH9QVW0FGW119E5C880RS2",
+        "seq": 3,
+        "score": 0.0,
+        "params": {
+          "dp": 2,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": true,
+          "gpu_memory_utilization": 0.9039677025968192,
+          "max_model_len": 131072,
+          "max_num_seqs": 128,
+          "pp": 2,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVH9QX9JQCZBW782C5BD4JK",
+        "seq": 4,
+        "score": 0.0,
+        "params": {
+          "dp": 2,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": true,
+          "gpu_memory_utilization": 0.8583905757133578,
+          "max_model_len": 131072,
+          "max_num_seqs": 256,
+          "pp": 1,
+          "tp": 4
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVH9QYFES2W4H37M4C48TA1",
+        "seq": 5,
+        "score": 0.0,
+        "params": {
+          "dp": 4,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": false,
+          "gpu_memory_utilization": 0.8669296603630317,
+          "max_model_len": 131072,
+          "max_num_seqs": 64,
+          "pp": 1,
+          "tp": 4
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQVH3TGQG176YZ1STC95YJNJ",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQVH3TH0N8S8NHG0J2BJ3QP8",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "dp": 1,
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "ep": false,
+          "gpu_memory_utilization": 0.8712969570071676,
+          "max_model_len": 131072,
+          "max_num_seqs": 256,
+          "tp": 4
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVH3TJ8A7PB9TDNXNSPYFR2",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "dp": 1,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": true,
+          "gpu_memory_utilization": 0.9164219876077333,
+          "max_model_len": 131072,
+          "max_num_seqs": 256,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVH3TKDAZA9MY3WK85H06D8",
+        "seq": 3,
+        "score": 0.0,
+        "params": {
+          "dp": 2,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": false,
+          "gpu_memory_utilization": 0.9178709239435191,
+          "max_model_len": 131072,
+          "max_num_seqs": 64,
+          "tp": 2
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQVFJD57N72HD0HJGT16ETS3",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQVFJD5MWHGSQQJKYDVSCCP3",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "dp": 1,
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "ep": false,
+          "gpu_memory_utilization": 0.8712969570071676,
+          "max_num_seqs": 256,
+          "tp": 4
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVFJD7724953RHEGPV1KDGJ",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "dp": 1,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": true,
+          "gpu_memory_utilization": 0.9164219876077333,
+          "max_num_seqs": 256,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVFJD8TFBNQJVTHE6KRQGX2",
+        "seq": 3,
+        "score": 0.0,
+        "params": {
+          "dp": 2,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "ep": false,
+          "gpu_memory_utilization": 0.9178709239435191,
+          "max_num_seqs": 64,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVFJDA6RWRWV5SBE3XPN24J",
+        "seq": 4,
+        "score": 0.0,
+        "params": {
+          "dp": 2,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": false,
+          "ep": true,
+          "gpu_memory_utilization": 0.9061537886527828,
+          "max_num_seqs": 256,
+          "tp": 4
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVFJDBNZHCK1GE6KKZCNBXM",
+        "seq": 5,
+        "score": 0.0,
+        "params": {
+          "dp": 4,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": false,
+          "ep": true,
+          "gpu_memory_utilization": 0.8717687625200964,
+          "max_num_seqs": 128,
+          "tp": 4
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQVFCG7W5T0KGZ7EV1GFT121",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQVFCG89ER4Q4JPSQR4KY11M",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "cross_node_type": "ethernet",
+          "data_parallel_size": 1,
+          "decode_context_parallel_size": 2,
+          "intra_node_type": "xgmi",
+          "node_split_strategy": "dual-node-pp2-tp8",
+          "pipeline_parallel_size": 2,
+          "prefill_context_parallel_size": 1,
+          "tensor_parallel_size": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVFCGA5AS8P36M785ZK4XWV",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "cross_node_type": "ethernet",
+          "data_parallel_size": 2,
+          "decode_context_parallel_size": 1,
+          "intra_node_type": "nvlink",
+          "node_split_strategy": "single-node-dp2-tp4",
+          "pipeline_parallel_size": 4,
+          "prefill_context_parallel_size": 2,
+          "tensor_parallel_size": 1
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQVFCGBSGSJYZDB29R49741B",
+        "seq": 3,
+        "score": 0.0,
+        "params": {
+          "cross_node_type": "ethernet",
+          "data_parallel_size": 1,
+          "decode_context_parallel_size": 4,
+          "intra_node_type": "nvlink",
+          "node_split_strategy": "dual-node-dp2-tp8",
+          "pipeline_parallel_size": 2,
+          "prefill_context_parallel_size": 1,
+          "tensor_parallel_size": 8
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQQZ92WH747X6D64JHW0N46N",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": "minikube",
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQQZ92WY95JA294QBG30KT0Z",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8155994520336203,
+          "max_num_seqs": 16
+        },
+        "metrics": {
+          "score.short": 0.0,
+          "score.aggregate": 0.0,
+          "ttft_p99.short": 4905.066728591919,
+          "throughput_tok_avg.short": 373.7154701968699,
+          "e2e_p99.short": 7.767641544342041,
+          "cv_throughput.short": 0.0
+        }
+      },
+      {
+        "trial_id": "tr-01KQQZD4Z7437ZGPN8958ZET55",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8969909852161995,
+          "max_num_seqs": 32
+        },
+        "metrics": {
+          "score.short": 0.0,
+          "score.aggregate": 0.0,
+          "ttft_p99.short": 41846.94147109985,
+          "throughput_tok_avg.short": 716.6388949414339,
+          "e2e_p99.short": 43.80714392662048,
+          "cv_throughput.short": 0.0
+        }
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQQYJS5MA9GNQQDTRWXGXW9H",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": "minikube",
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQQYJS60N5YM3QFGR7YWRSY5",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8155994520336203,
+          "max_num_seqs": 16
+        },
+        "metrics": {
+          "score.short": 0.0,
+          "score.aggregate": 0.0,
+          "ttft_p99.short": 1551.7551898956299,
+          "throughput_tok_avg.short": 527.8707654669247,
+          "e2e_p99.short": 4.146946954727173,
+          "cv_throughput.short": 0.16014846142410102
+        }
+      },
+      {
+        "trial_id": "tr-01KQQYVY3E89THZK8KRSWGG5MY",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8969909852161995,
+          "max_num_seqs": 32
+        },
+        "metrics": {
+          "score.short": 0.0,
+          "score.aggregate": 0.0,
+          "ttft_p99.short": 13934.454679489136,
+          "throughput_tok_avg.short": 764.7228447542435,
+          "e2e_p99.short": 15.446561098098755,
+          "cv_throughput.short": 0.05533635385649503
+        }
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQQY56E84W0DRMKQ9Y7QQXCD",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": "minikube",
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQQY56ER5ZD7JWJNMJR6YMAW",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8155994520336203,
+          "max_num_seqs": 16
+        },
+        "metrics": {
+          "score.aggregate": 0.0
+        }
+      },
+      {
+        "trial_id": "tr-01KQQY824A2PDT4TXNFBYD2W2S",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8969909852161995,
+          "max_num_seqs": 32
+        },
+        "metrics": {
+          "score.aggregate": 0.0
+        }
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQQY2WN6N4WANH9FMP1FWXNY",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": "minikube",
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQQY2WNMGET56WHYSKYZ6VAJ",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8155994520336203,
+          "max_num_seqs": 16
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQQY32JPHVZ6R5RXP9G8J2TG",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8969909852161995,
+          "max_num_seqs": 32
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQQXZFFQW8CYNZM05RNFYMS9",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": "minikube",
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQQXZFG3F7FN6A4MEEBXD32K",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8155994520336203,
+          "max_num_seqs": 16
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQQXZPEA5XSGGHKEV8GR00T4",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8969909852161995,
+          "max_num_seqs": 32
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQQXWR17Y4CFEQE98KDTAS5X",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": "minikube",
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQQXWR1MAD7JEP58B51PBB05",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8155994520336203,
+          "max_num_seqs": 16
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQQXWRBQMH9ANFZG22JW8JWS",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8969909852161995,
+          "max_num_seqs": 32
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQQXEQC7ZDBSHQ9HV3T3B8XW",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": "minikube",
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQQXEQCN45774H938YVX2QXN",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8155994520336203,
+          "max_num_seqs": 16
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQQXEQG5GRAFCQW96P7HKE10",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8969909852161995,
+          "max_num_seqs": 32
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQQXE4TE5G967ZXSWD8VZG1F",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": null,
+    "points": [
+      {
+        "trial_id": "tr-01KQQXE4TWKJ2Q3W8806TPJ6ZA",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8155994520336203,
+          "max_num_seqs": 16
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQQXE4WB9FQABQQ016GQN4WQ",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8969909852161995,
+          "max_num_seqs": 32
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQQXDJEK1XRG8VZV68QXZYSG",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": null,
+    "points": [
+      {
+        "trial_id": "tr-01KQQXDJF1JN9EP82WE0Q2JCWF",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "dp": 3,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": false,
+          "gpu_memory_utilization": 0.8849687093355255,
+          "kv_cache_dtype": "auto",
+          "max_model_len": 4096,
+          "max_num_seqs": 32,
+          "pp": 1,
+          "tp": 2
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQQXDJGRJ5MXFSZMSQBM2F8E",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "dp": 4,
+          "enable_chunked_prefill": false,
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.8617081326096334,
+          "kv_cache_dtype": "auto",
+          "max_model_len": 8192,
+          "max_num_seqs": 64,
+          "pp": 2,
+          "tp": 8
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
+    "study_id": "st-01KQN632MS8GB3FK5V6M15FR3S",
+    "model_id": null,
+    "framework": null,
+    "hardware_id": null,
+    "workload": "short",
+    "points": [
+      {
+        "trial_id": "tr-01KQN632N6VAPVKRJZEMYX8MR9",
+        "seq": 1,
+        "score": 0.0,
+        "params": {
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "gpu_memory_utilization": 0.8849687093355255,
+          "max_num_seqs": 128
+        },
+        "metrics": {}
+      },
+      {
+        "trial_id": "tr-01KQN632PT75EV31P7SWMXTTJ6",
+        "seq": 2,
+        "score": 0.0,
+        "params": {
+          "enable_chunked_prefill": true,
+          "enable_prefix_caching": false,
+          "gpu_memory_utilization": 0.8349474968237651,
+          "max_num_seqs": 128
+        },
+        "metrics": {}
+      }
+    ]
+  },
+  {
     "study_id": "st-01KQMYS90H4228W644KMRHRPY3",
     "model_id": null,
     "framework": "vllm",

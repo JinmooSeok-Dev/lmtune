@@ -132,6 +132,21 @@ def cmd_start(
             help="composite score 의 TTFT penalty denom (=2× 본 값). 클수록 SLO 완화.",
         ),
     ] = 500.0,
+    skip_validation: Annotated[
+        bool,
+        typer.Option(
+            "--skip-validation",
+            help="search-space pre-flight 검증을 건너뜀. 기본은 hard block (R23/R25/R26/R28 등 "
+            "이미 영속화된 결함 패턴을 study start 전에 차단). debugging 시에만 사용.",
+        ),
+    ] = False,
+    validation_n_samples: Annotated[
+        int,
+        typer.Option(
+            "--validation-n-samples",
+            help="feasibility coverage sample 수. 클수록 정확하지만 시작 지연.",
+        ),
+    ] = 200,
 ):
     sp = load_space(space)
     profile = profile or []
@@ -206,6 +221,28 @@ def cmd_start(
             f"[dim]feasibility evaluator: env={cluster_env} "
             f"model={space_context.get('model_id') or '(unknown)'}[/]"
         )
+
+    # Pre-flight validation — R23/R25/R26/R28 등 search-space 결함을
+    # study start 전에 차단. --skip-validation 으로만 우회.
+    if not skip_validation:
+        from lmtune.search.validate import validate_search_space
+
+        env_obj = (space_context or {}).get("environment") if space_context else None
+        model_id_v = (space_context or {}).get("model_id") if space_context else None
+        report = validate_search_space(
+            space_yaml_path=space,
+            environment=env_obj,
+            model_id=model_id_v,
+            n_samples=validation_n_samples,
+        )
+        _print_validation_report(report)
+        if report.blocked:
+            console.print(
+                "[bold red]validation blocked study start[/] — "
+                "결함 패턴 또는 미허용 axis 가 search-space 에 있습니다. "
+                "수정 후 재시도 또는 --skip-validation 으로 우회."
+            )
+            raise typer.Exit(2)
 
     cfg = StudyConfig(
         name=name or sp.name,
@@ -918,3 +955,95 @@ def load_space_from_text(text: str):
     from lmtune.search.space import parse_space
 
     return parse_space(yaml.safe_load(text))
+
+
+def _print_validation_report(report) -> None:
+    """ValidationReport → 사람-친화 출력. Issue 없으면 OK 한 줄."""
+    if not report.issues and report.feasibility_stats:
+        stats = report.feasibility_stats
+        n = stats.get("n_samples", 0)
+        if n:
+            console.print(
+                f"[green]validation OK[/]  feasibility: "
+                f"{stats['n_infeasible']}/{n} infeasible "
+                f"({stats['ratio'] * 100:.1f}%)"
+            )
+        else:
+            console.print("[green]validation OK[/]")
+        return
+    if not report.issues:
+        console.print("[green]validation OK[/]")
+        return
+
+    table = Table(title=f"Pre-flight validation — {report.n_block} block · {report.n_warn} warn")
+    table.add_column("severity", justify="center", no_wrap=True)
+    table.add_column("category", no_wrap=True)
+    table.add_column("axis", no_wrap=True)
+    table.add_column("ref", no_wrap=True)
+    table.add_column("msg", overflow="fold")
+    for i in report.issues:
+        sev = "[red]block[/]" if i.severity == "block" else "[yellow]warn[/]"
+        table.add_row(sev, i.category, i.axis or "-", i.ref or "-", i.msg)
+    console.print(table)
+    if report.feasibility_stats and report.feasibility_stats.get("n_samples"):
+        s = report.feasibility_stats
+        console.print(
+            f"[dim]feasibility: {s['n_infeasible']}/{s['n_samples']} infeasible "
+            f"({s['ratio'] * 100:.1f}%)  top: "
+            f"{', '.join(f'{k}({v})' for k, v in s.get('top_failures', []))}[/]"
+        )
+
+
+@app.command("validate")
+def cmd_validate(
+    space: Annotated[
+        Path, typer.Argument(exists=True, readable=True, help="SearchSpace YAML 경로")
+    ],
+    cluster_env: Annotated[
+        str | None,
+        typer.Option(
+            "--cluster-env",
+            help="b200-dual-node | b200-single-node | local-single-gpu. "
+            "feasibility coverage 측정 활성화.",
+        ),
+    ] = None,
+    model_id: Annotated[
+        str | None,
+        typer.Option(
+            "--model-id",
+            help="model registry name (예: openai/gpt-oss-120b). "
+            "R26 등 model 의존 결함 매칭에 사용.",
+        ),
+    ] = None,
+    n_samples: Annotated[int, typer.Option("--n-samples")] = 200,
+):
+    """search-space yaml 의 pre-flight 검증만 실행 (study 시작 X).
+
+    4 카테고리: schema · vllm 0.17.1 axis allowlist · known regressions (R23/R25/R26/R28 등) ·
+    feasibility coverage. block 발견 시 exit code 2, warn 만 있으면 0.
+    """
+    from lmtune.search.feasibility import Environment
+    from lmtune.search.validate import validate_search_space
+
+    env_obj = None
+    if cluster_env:
+        env_map = {
+            "b200-dual-node": Environment.b200_dual_node,
+            "b200-single-node": Environment.b200_single_node,
+            "local-single-gpu": Environment.local_single_gpu,
+        }
+        if cluster_env not in env_map:
+            raise typer.BadParameter(
+                f"--cluster-env: {cluster_env} (allowed: {', '.join(env_map)})"
+            )
+        env_obj = env_map[cluster_env]()
+
+    report = validate_search_space(
+        space_yaml_path=space,
+        environment=env_obj,
+        model_id=model_id,
+        n_samples=n_samples,
+    )
+    _print_validation_report(report)
+    if report.blocked:
+        raise typer.Exit(2)

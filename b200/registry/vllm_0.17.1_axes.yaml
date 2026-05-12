@@ -1,0 +1,162 @@
+# vllm 0.17.1 axis allowlist — search-space pre-flight validator 의 source of truth.
+#
+# 본 yaml = b200/docs/vllm_0.17.1_args_catalog.md 의 machine-readable mirror.
+# 새 axis 추가 시 4단계 source 검증 (CLAUDE.md § PR 게이트) 통과 후 본 yaml 에 entry 추가.
+# entry 가 없는 axis 는 search-space 에 사용 시 lmtune search validate 가 hard block.
+#
+# Schema:
+#   axis_name:
+#     cli_flag: vllm CLI 의 정확한 flag 이름 (--prefix 포함)
+#     type: int | float | bool | categorical | json
+#     choices: [...]                    # categorical/Literal 인 경우만
+#     applies_via: vllm-args | helmfile-derived | env-var
+#     source: 'arg_utils.py:NNN' 형식 (4단계 검증의 step 1 추적성)
+#     gates: 짧은 호환성 룰 (자유 텍스트, 사용자 가독성용)
+#     deprecated_or_unsupported: true   # 있으면 hard block + msg
+
+axes:
+  # ─── Parallelism — chart 가 vllmArgs 우회로 자동 inject ───
+  tp:
+    cli_flag: --tensor-parallel-size
+    type: int
+    applies_via: helmfile-derived
+    source: arg_utils.py:816
+  pp:
+    cli_flag: --pipeline-parallel-size
+    type: int
+    applies_via: helmfile-derived
+    source: arg_utils.py:824
+  dp:
+    cli_flag: --data-parallel-size
+    type: int
+    applies_via: helmfile-derived
+    source: arg_utils.py:838
+    gates: 'inference-scheduling adapter 에선 replica 수로 매핑 (R18 fix)'
+  ep:
+    cli_flag: --enable-expert-parallel
+    type: bool
+    applies_via: vllm-args
+    source: arg_utils.py:889
+    gates: 'PP > 1 + EP=true (gpt-oss MXFP4) 조합은 R28 로 차단'
+
+  # ─── Wide-EP / DBO / EPLB ───
+  all2all_backend:
+    cli_flag: --all2all-backend
+    type: categorical
+    choices: [naive, pplx, deepep_high_throughput, deepep_low_latency, mori, allgather_reducescatter, flashinfer_all2allv]
+    applies_via: vllm-args
+    source: arg_utils.py:894 / parallel.py:39-49
+    gates: 'enable_dbo=true 시 deepep_* 만 가능 (R16). DeepEP 미설치 환경은 R19'
+  enable_dbo:
+    cli_flag: --enable-dbo
+    type: bool
+    applies_via: vllm-args
+    source: arg_utils.py:895
+    gates: 'all2all_backend ∈ {deepep_low_latency, deepep_high_throughput} 필수 (R16)'
+  ubatch_size:
+    cli_flag: --ubatch-size
+    type: int
+    applies_via: vllm-args
+    source: arg_utils.py:896
+  dbo_decode_token_threshold:
+    cli_flag: --dbo-decode-token-threshold
+    type: int
+    applies_via: vllm-args
+    source: arg_utils.py:907
+  dbo_prefill_token_threshold:
+    cli_flag: --dbo-prefill-token-threshold
+    type: int
+    applies_via: vllm-args
+    source: arg_utils.py:911
+  enable_eplb:
+    cli_flag: --enable-eplb
+    type: bool
+    applies_via: vllm-args
+    source: arg_utils.py:915
+    gates: 'ep=true 필수. window/step 은 eplb_config JSON 안에 (R17a/b)'
+  eplb_config:
+    cli_flag: --eplb-config
+    type: json
+    applies_via: vllm-args
+    source: arg_utils.py:916
+    gates: 'window_size / step_interval / num_redundant_experts 가 본 dict 안에. 별개 axis 로 분리하면 R17 재발'
+  expert_placement_strategy:
+    cli_flag: --expert-placement-strategy
+    type: categorical
+    choices: [linear, round_robin]
+    applies_via: vllm-args
+    source: arg_utils.py:917
+
+  # ─── Scheduling / Batching ───
+  max_num_seqs:
+    cli_flag: --max-num-seqs
+    type: int
+    applies_via: vllm-args
+  max_num_batched_tokens:
+    cli_flag: --max-num-batched-tokens
+    type: int
+    applies_via: vllm-args
+  max_model_len:
+    cli_flag: --max-model-len
+    type: int
+    applies_via: vllm-args
+    gates: 'gpt-oss-120b 에선 사용자 명시로 131072 단일 값 고정 (memory note)'
+  async_scheduling:
+    cli_flag: --async-scheduling
+    type: bool
+    applies_via: vllm-args
+  enable_chunked_prefill:
+    cli_flag: --enable-chunked-prefill
+    type: bool
+    applies_via: vllm-args
+
+  # ─── KV / Compute ───
+  enable_prefix_caching:
+    cli_flag: --enable-prefix-caching
+    type: bool
+    applies_via: vllm-args
+  prefix_caching_hash_algo:
+    cli_flag: --prefix-caching-hash-algo
+    type: categorical
+    choices: [builtin, sha256]
+    applies_via: vllm-args
+  gpu_memory_utilization:
+    cli_flag: --gpu-memory-utilization
+    type: float
+    applies_via: vllm-args
+  block_size:
+    cli_flag: --block-size
+    type: categorical
+    choices: [16, 32, 64]
+    applies_via: vllm-args
+  kv_cache_dtype:
+    cli_flag: --kv-cache-dtype
+    type: categorical
+    choices: [auto, fp8, fp8_e4m3, fp8_e5m2]
+    applies_via: vllm-args
+    gates: 'B200 sm_100 fp4 미검증 — auto 권장'
+  enforce_eager:
+    cli_flag: --enforce-eager
+    type: bool
+    applies_via: vllm-args
+
+  # ─── Unsupported / deprecated (hard block) ───
+  prefill_context_parallel_size:
+    cli_flag: --prefill-context-parallel-size
+    type: int
+    applies_via: vllm-args
+    source: arg_utils.py:834
+    deprecated_or_unsupported: true
+    gates: 'R25 — vllm 0.17.1 backend 어느 것도 supports_pcp=True 가 아님 → cp_utils.py:38 assert crash. 차후 vllm release 에서 backend opt-in 시 재허용.'
+  decode_context_parallel_size:
+    cli_flag: --decode-context-parallel-size
+    type: int
+    applies_via: vllm-args
+    source: arg_utils.py:820
+    gates: 'R26 — GQA/MQA non-MLA 모델 + DCP > 1 시 tp > num_kv_heads 강제 (model.py:1072). gpt-oss-120b GQA num_kv_heads=8, single-pod max tp=8 → 본 모델 + inference-scheduling chart 에선 사용 불가. MLA 모델 (DSV3/DSR1) + tp > kv_heads 가능한 multinode chart 에서만 활성.'
+  max_num_partial_prefills:
+    cli_flag: --max-num-partial-prefills
+    type: int
+    applies_via: vllm-args
+    deprecated_or_unsupported: true
+    gates: 'R23 — vllm 0.17.1 V1 + B200 에서 _check_feature_supported 가 NotImplementedError raise (Concurrent Partial Prefill 미구현).'

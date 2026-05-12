@@ -1,0 +1,69 @@
+# Known regression patterns — search-space pre-flight 가 매칭하면 hard block.
+#
+# 각 entry 는 b200/docs/regressions.md 의 R<n> 와 1:1 대응. 새 R-id 영속화 시
+# 본 yaml 에도 entry 추가가 의무 (CLAUDE.md § PR 게이트의 보강).
+#
+# Match types (Python validator 가 해석):
+#   has_axis: <name>                       # axis 가 search-space 에 있으면 트리거
+#   has_axis_value_gt: {axis: ..., gt: N}  # axis 의 sample 가능한 값에 N 초과가 있으면
+#   has_axis_combo: [a, b]                 # 두 axis 가 동시 존재 + 둘 다 sample 가능 값 중 1 초과 있음
+#   model_has_kv_heads_le: N               # 결합 조건. 단독 사용 X
+#
+# severity:
+#   block: study start 차단. --skip-validation 으로만 우회.
+#   warn:  로그 출력 후 진행 (조건 의존 — model meta 없으면 hard 판단 불가)
+
+regressions:
+  - id: R23
+    severity: block
+    match:
+      has_axis: max_num_partial_prefills
+    msg: 'vllm 0.17.1 V1 + B200 에서 max_num_partial_prefills NotImplementedError. axis 자체가 미지원이라 search-space 에서 제거하세요.'
+    ref: b200/docs/regressions.md#R23
+
+  - id: R25
+    severity: block
+    match:
+      has_axis_value_gt:
+        axis: prefill_context_parallel_size
+        gt: 1
+    msg: 'vllm 0.17.1 backend 어느 것도 supports_pcp=True 가 아님 → cp_utils.py:38 assert. PCP > 1 sample 이 들어 있으면 모든 trial startup crash. axis 제거 또는 [1] 단일 값으로.'
+    ref: b200/docs/regressions.md#R25
+
+  - id: R26
+    severity: warn
+    match:
+      has_axis_value_gt:
+        axis: decode_context_parallel_size
+        gt: 1
+      model_has_kv_heads_le: 8
+    msg: 'GQA/MQA (non-MLA) 모델 + DCP > 1 시 vllm 이 tp > num_kv_heads 강제. gpt-oss-120b kv_heads=8 + single-pod max tp=8 → 만족 불가. MLA 모델 (DSV3/DSR1) 또는 multinode chart 로 tp=16 가능 시까지 axis 제거.'
+    ref: b200/docs/regressions.md#R26
+
+  - id: R28
+    severity: warn
+    match:
+      has_axis_combo_with_values:
+        a: {axis: pp, gt: 1}
+        b: {axis: ep, equals: true}
+    msg: 'vllm 0.17.1 의 gpt-oss-120b MXFP4 weight loader 가 PP > 1 + EP=true 조합 미지원 (gpt_oss.py:498). feasibility constraint (pp == 1) OR (NOT ep) 가 search-space 에 있는지 확인하세요. 없으면 trial 100% startup crash.'
+    ref: b200/docs/regressions.md#R28
+
+  - id: R17
+    severity: block
+    match:
+      has_any_axis:
+        - eplb_window_size
+        - eplb_step_interval
+        - eplb_num_redundant_experts
+    msg: 'EPLB 의 window/step/redundant_experts 는 별도 CLI flag 가 아니라 --eplb-config JSON 안에 들어감 (arg_utils.py:916). axis 이름을 eplb_config 으로 통일하세요.'
+    ref: b200/docs/regressions.md#R17
+
+  - id: R16
+    severity: warn
+    match:
+      has_axis_combo_with_values:
+        a: {axis: enable_dbo, equals: true}
+        b: {axis: all2all_backend, value_not_in: [deepep_low_latency, deepep_high_throughput]}
+    msg: 'DBO 활성 시 all2all_backend ∈ {deepep_low_latency, deepep_high_throughput} 필수 (vllm_config.py:1128). 다른 값과의 조합은 startup ValidationError.'
+    ref: b200/docs/regressions.md#R16

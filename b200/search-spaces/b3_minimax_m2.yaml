@@ -1,0 +1,113 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b3-minimax-m2
+
+# B3 — MiniMax-M2 16-GPU inference-scheduling autotune (b3_gpt_oss_120b_v3 fork).
+#
+# 본 search-space = b3_gpt_oss_120b_v3 의 axes/constraints 를 MiniMax-M2 의
+# vllm Recipes 공식 권장 + HF config.json 의 실측 spec 에 맞춰 조정.
+#
+# 차이점 (gpt-oss-120b v3 대비):
+#   - tp: [2, 4, 8] → [2, 4]   — MiniMax 공식: TP=8 단독 미지원 (TP4+EP4 best)
+#   - max_model_len: 131072 → 32768  — 32K baseline (native 196608 까지 가능하지만 KV 부담)
+#   - R28 (PP+EP MXFP4) 가드 c12 제거 — MiniMax 는 MXFP4 weight 아니라 미해당
+#   - 외 axes/feasibility 는 동일 (MoE + GQA num_kv_heads=8 라 R26 DCP 제약 동일)
+#
+# 사용:
+#   lmtune search start \
+#     --space b200/search-spaces/b3_minimax_m2.yaml \
+#     --endpoint b200/endpoints/b200_minimax_m2.yaml \
+#     --adapter llmd-k8s --cluster-env b200-dual-node \
+#     --strategy tpe --max-trials 30 --seed 17 \
+#     --warmstart-db data/db/lmtune.duckdb --warmstart-top-k 8 \
+#     --name b3-minimax-m2-baseline \
+#     --repeats 3 --ttft-slo-ms 2000 \
+#     -p configs/profiles/autotune/short.yaml
+
+axes:
+  # ─── Parallelism ───
+  tp:
+    type: categorical
+    values: [2, 4]
+    # MiniMax-M2 공식: pure TP=8 미지원 + TP=4+EP=4 가 best. axis 에서 8 제외.
+
+  pp:
+    type: categorical
+    values: [1, 2]
+    # vllm 0.17.1 mp executor 로 single-pod intra-node PP. multinode chart 가
+    # 아니어서 cross-node PP 불가. tp × pp <= 8 단일 노드 제약.
+
+  dp:
+    type: categorical
+    values: [1, 2]
+    # inference-scheduling: dp = independent replica count.
+
+  ep:
+    type: bool
+    # MoE 256 expert × top-8. EP 활성 시 expert 들 dp×tp group 으로 분산.
+
+  # ─── Scheduling / Batching ───
+  max_num_seqs:
+    type: categorical
+    values: [32, 64, 128, 256, 512]
+
+  max_num_batched_tokens:
+    type: categorical
+    values: [2048, 4096, 8192, 16384]
+
+  max_model_len:
+    type: categorical
+    values: [32768]
+    # MiniMax-M2 native max = 196608 (HF config). 32K baseline 으로 시작 — KV
+    # cache 가 single GPU 안 들어가면 OOM. 결과 확인 후 점진 확장.
+
+  async_scheduling:
+    type: bool
+
+  # ─── KV / Compute ───
+  enable_prefix_caching:
+    type: bool
+
+  enable_chunked_prefill:
+    type: bool
+
+  prefix_caching_hash_algo:
+    type: categorical
+    values: [builtin, sha256]
+    active_if: {enable_prefix_caching: true}
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.80
+    high: 0.92
+
+  block_size:
+    type: categorical
+    values: [16, 32, 64]
+
+
+# ─── Feasibility constraints ───
+feasibility_constraints:
+  - id: c1_npu_count
+    rule: "tp * pp * dp <= environment.total_npus"
+    message: "tp × pp × dp must fit total NPUs (16 on B200 dual-node)"
+
+  - id: c2_intra_pod_size
+    rule: "tp * pp <= environment.npus_per_server"
+    message: "TP × PP 가 single pod 8 GPU 안에 fit (multinode: false)"
+
+  - id: c3_pp_layers
+    rule: "pp <= model.num_layers"
+    message: "PP stages cannot exceed model layers (MiniMax-M2: 62)"
+
+  - id: c4_heads_div_tp
+    rule: "model.num_attention_heads % tp == 0"
+    message: "TP must divide attention heads (MiniMax-M2: 48 heads)"
+
+  - id: c6_gpu_memory
+    rule: "surrogate.simulated_total_gb <= environment.gpu_vram_gb * gpu_memory_utilization"
+    message: "Active params + KV must fit in GPU HBM (B200: 192 GB)"
+
+  - id: c11_inference_scheduling_pp
+    rule: "tp * pp <= 8"
+    message: "inference-scheduling chart multinode false — single pod 8 GPU 한정"

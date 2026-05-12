@@ -262,6 +262,39 @@ def _compute_pareto(
     return front
 
 
+def _summarize_space_snapshot(space_yaml: str | None) -> dict[str, Any] | None:
+    """Parse a SearchSpace YAML snapshot from `studies.space_yaml` into the same
+    summary shape as `_summarize_search_space()`. Used by study pages to show
+    "이 study 가 어떤 axis 위에서 winner 를 결정했나" 를 그대로 노출."""
+    if not space_yaml:
+        return None
+    try:
+        spec = yaml.safe_load(space_yaml)
+    except Exception:
+        return None
+    if not isinstance(spec, dict):
+        return None
+    axes_raw = spec.get("axes") or {}
+    axes: list[dict[str, Any]] = []
+    if isinstance(axes_raw, dict):
+        for n, s in axes_raw.items():
+            axes.append(_summarize_axis(n, s))
+    elif isinstance(axes_raw, list):
+        for entry in axes_raw:
+            if isinstance(entry, dict) and "name" in entry:
+                axes.append(_summarize_axis(entry["name"], entry))
+    n_constraints = 0
+    if isinstance(spec.get("feasibility_constraints"), list):
+        n_constraints = len(spec["feasibility_constraints"])
+    return {
+        "name": spec.get("name"),
+        "description": spec.get("description"),
+        "n_axes": len(axes),
+        "n_constraints": n_constraints,
+        "axes": axes,
+    }
+
+
 def _count_axes_in_space_yaml(space_yaml: str | None) -> int | None:
     """Count axes from a SearchSpace YAML snapshot stored in `studies.space_yaml`."""
     if not space_yaml:
@@ -334,6 +367,7 @@ class _StudyView:
     axis_importance: list[dict[str, Any]] | None = None
     pareto_front: list[dict[str, Any]] = field(default_factory=list)
     n_infeasible: int = 0  # pruned-by-feasibility (subset of n_pruned)
+    space_snapshot: dict[str, Any] | None = None  # parsed studies.space_yaml
 
     def _annotate_points(self) -> dict[str, dict[str, Any]]:
         """Compute reasoning tags per trial in seq order."""
@@ -386,6 +420,7 @@ class _StudyView:
             n_axes=self.n_axes,
             axis_importance=self.axis_importance or [],
             pareto_front=self.pareto_front,
+            space_snapshot=self.space_snapshot,
         )
         return d
 
@@ -485,6 +520,7 @@ def _build_study(store: DuckDBStore, study_id: str) -> _StudyView | None:
         n_axes=_count_axes_in_space_yaml(space_yaml),
         axis_importance=_safe_axis_importance(points),
         pareto_front=_compute_pareto(points),
+        space_snapshot=_summarize_space_snapshot(space_yaml),
     )
 
 

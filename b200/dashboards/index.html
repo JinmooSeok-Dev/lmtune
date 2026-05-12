@@ -11,12 +11,20 @@
   <div class="max-w-7xl mx-auto px-6 py-5">
     <h1 class="text-2xl font-bold tracking-tight">bench autotuner</h1>
     <p class="text-slate-500 text-sm mt-1">
-      Output G — InferenceX-style static dashboard. 25 study/studies indexed.
+      Output G — InferenceX-style static dashboard. 44 study/studies indexed.
     </p>
-    <div class="mt-3 flex gap-3 text-sm">
-      <a href="compare.html" class="text-blue-600 hover:underline">Cross-study compare</a>
+    <div class="mt-3 flex flex-wrap gap-3 text-sm">
+      <a href="matrix.html" class="text-blue-600 hover:underline font-semibold">📊 Model × HW matrix</a>
       <span class="text-slate-300">|</span>
-      <span class="text-slate-500">Schema: <code>bench/dashboard/v1alpha1-inferencex-compat</code></span>
+      <a href="compare.html" class="text-blue-600 hover:underline">Cross-study compare</a>
+      
+      <span class="text-slate-300">|</span>
+      <a href="spaces.html" class="text-blue-600 hover:underline">
+        Search-space catalog (18 spaces · 315 axes · 10 env-profiles)
+      </a>
+      
+      <span class="text-slate-300">|</span>
+      <span class="text-slate-500">Schema: <code>lmtune/dashboard/v1alpha1-inferencex-compat</code></span>
     </div>
   </div>
 </header>
@@ -27,17 +35,822 @@
     
     <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
       <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">r12-readonly-test</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>minikube</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 1 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">6</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQYN3FMWN63EB1CXB8QJGTAC">st-01KQYN3FMWN…</span>
+        <a href="studies/st-01KQYN3FMWN63EB1CXB8QJGTAC.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">sim-leak-test</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>minikube</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 1 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">6</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQYM2GSCA812J50PKP2YZKRH">st-01KQYM2GSCA…</span>
+        <a href="studies/st-01KQYM2GSCA812J50PKP2YZKRH.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">b3-gpt-oss-120b-extended</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>5 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">12</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "block_size": 16,
+  "dp": 1,
+  "enable_chunked_prefill": false,
+  "enable_prefix_caching": true,
+  "ep": false,
+  "gpu_memory_utilization": 0.821108417807115,
+  "max_model_len": 131072,
+  "max_num_batched_tokens": 16384,
+  "max_num_seqs": 512,
+  "pp": 1,
+  "tp": 2
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQVS59SSQ612MYWZDVBAW1TC">st-01KQVS59SSQ…</span>
+        <a href="studies/st-01KQVS59SSQ612MYWZDVBAW1TC.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">b3-gpt-oss-120b-extended</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>5 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">12</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "block_size": 16,
+  "dp": 1,
+  "enable_chunked_prefill": false,
+  "enable_prefix_caching": true,
+  "ep": false,
+  "gpu_memory_utilization": 0.821108417807115,
+  "max_model_len": 131072,
+  "max_num_batched_tokens": 16384,
+  "max_num_seqs": 512,
+  "pp": 1,
+  "tp": 2
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQVS53H6Z6H4JED3BYAS3ZYH">st-01KQVS53H6Z…</span>
+        <a href="studies/st-01KQVS53H6Z6H4JED3BYAS3ZYH.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">b3-gpt-oss-120b-min</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>5 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">9</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "dp": 4,
+  "enable_chunked_prefill": false,
+  "enable_prefix_caching": false,
+  "ep": true,
+  "gpu_memory_utilization": 0.8717687625200964,
+  "max_model_len": 131072,
+  "max_num_seqs": 128,
+  "pp": 1,
+  "tp": 4
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQVHBY3PW8T8QER32YJ8TMQM">st-01KQVHBY3PW…</span>
+        <a href="studies/st-01KQVHBY3PW8T8QER32YJ8TMQM.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">b3-gpt-oss-120b-min</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>5 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">9</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "dp": 4,
+  "enable_chunked_prefill": false,
+  "enable_prefix_caching": true,
+  "ep": false,
+  "gpu_memory_utilization": 0.8669296603630317,
+  "max_model_len": 131072,
+  "max_num_seqs": 64,
+  "pp": 1,
+  "tp": 4
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQVH9QS74E5Z4JB9CD9XXV30">st-01KQVH9QS74…</span>
+        <a href="studies/st-01KQVH9QS74E5Z4JB9CD9XXV30.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">b3-gpt-oss-120b-min</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">8</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "dp": 2,
+  "enable_chunked_prefill": false,
+  "enable_prefix_caching": true,
+  "ep": false,
+  "gpu_memory_utilization": 0.9178709239435191,
+  "max_model_len": 131072,
+  "max_num_seqs": 64,
+  "tp": 2
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQVH3TGQG176YZ1STC95YJNJ">st-01KQVH3TGQG…</span>
+        <a href="studies/st-01KQVH3TGQG176YZ1STC95YJNJ.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">b3-gpt-oss-120b-min</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>5 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">7</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "dp": 4,
+  "enable_chunked_prefill": false,
+  "enable_prefix_caching": false,
+  "ep": true,
+  "gpu_memory_utilization": 0.8717687625200964,
+  "max_num_seqs": 128,
+  "tp": 4
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQVFJD57N72HD0HJGT16ETS3">st-01KQVFJD57N…</span>
+        <a href="studies/st-01KQVFJD57N72HD0HJGT16ETS3.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">b3-parallelism</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">18</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "cross_node_type": "ethernet",
+  "data_parallel_size": 1,
+  "decode_context_parallel_size": 4,
+  "intra_node_type": "nvlink",
+  "node_split_strategy": "dual-node-dp2-tp8",
+  "pipeline_parallel_size": 2,
+  "prefill_context_parallel_size": 1,
+  "tensor_parallel_size": 8
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQVFCG7W5T0KGZ7EV1GFT121">st-01KQVFCG7W5…</span>
+        <a href="studies/st-01KQVFCG7W5T0KGZ7EV1GFT121.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-real-cycle-v7</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>minikube</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">2 non-dom</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQQZ92WH747X6D64JHW0N46N">st-01KQQZ92WH7…</span>
+        <a href="studies/st-01KQQZ92WH747X6D64JHW0N46N.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-real-cycle-v6</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>minikube</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">2 non-dom</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQQYJS5MA9GNQQDTRWXGXW9H">st-01KQQYJS5MA…</span>
+        <a href="studies/st-01KQQYJS5MA9GNQQDTRWXGXW9H.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-real-cycle-v5</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>minikube</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQQY56E84W0DRMKQ9Y7QQXCD">st-01KQQY56E84…</span>
+        <a href="studies/st-01KQQY56E84W0DRMKQ9Y7QQXCD.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-real-cycle-v4</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>minikube</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQQY2WN6N4WANH9FMP1FWXNY">st-01KQQY2WN6N…</span>
+        <a href="studies/st-01KQQY2WN6N4WANH9FMP1FWXNY.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-real-cycle-v3</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>minikube</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQQXZFFQW8CYNZM05RNFYMS9">st-01KQQXZFFQW…</span>
+        <a href="studies/st-01KQQXZFFQW8CYNZM05RNFYMS9.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-real-cycle-v2</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>minikube</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQQXWR17Y4CFEQE98KDTAS5X">st-01KQQXWR17Y…</span>
+        <a href="studies/st-01KQQXWR17Y4CFEQE98KDTAS5X.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-real-cycle</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>minikube</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">—</dd></div>
+      </dl>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQQXEQC7ZDBSHQ9HV3T3B8XW">st-01KQQXEQC7Z…</span>
+        <a href="studies/st-01KQQXEQC7ZDBSHQ9HV3T3B8XW.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-real-cycle</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>2 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_prefix_caching": true,
+  "gpu_memory_utilization": 0.8969909852161995,
+  "max_num_seqs": 32
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQQXE4TE5G967ZXSWD8VZG1F">st-01KQQXE4TE5…</span>
+        <a href="studies/st-01KQQXE4TE5G967ZXSWD8VZG1F.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">minikube-cycle-test</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>2 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">9</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "dp": 4,
+  "enable_chunked_prefill": false,
+  "enable_prefix_caching": true,
+  "gpu_memory_utilization": 0.8617081326096334,
+  "kv_cache_dtype": "auto",
+  "max_model_len": 8192,
+  "max_num_seqs": 64,
+  "pp": 2,
+  "tp": 8
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQQXDJEK1XRG8VZV68QXZYSG">st-01KQQXDJEK1…</span>
+        <a href="studies/st-01KQQXDJEK1XRG8VZV68QXZYSG.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">lq-validate</h3>
+        <span class="text-xs px-2 py-0.5 rounded
+          bg-green-100 text-green-800
+          ">completed</span>
+      </header>
+      <dl class="text-xs text-slate-600 space-y-0.5">
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-blue-50 text-blue-700
+              ">tpe</span>
+          </dd>
+        </div>
+        <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
+          <dd>2 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">4</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
+          <dd class="font-bold text-slate-900">0.00</dd></div>
+      </dl>
+      
+      <details class="mt-2 text-xs">
+        <summary class="cursor-pointer text-slate-500 hover:text-slate-700">top-1 params</summary>
+        <pre class="mt-1 p-2 bg-slate-50 rounded overflow-auto text-xs">{
+  "enable_chunked_prefill": true,
+  "enable_prefix_caching": false,
+  "gpu_memory_utilization": 0.8349474968237651,
+  "max_num_seqs": 128
+}</pre>
+      </details>
+      
+      <footer class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+        <span class="text-xs text-slate-400 font-mono truncate" title="st-01KQN632MS8GB3FK5V6M15FR3S">st-01KQN632MS8…</span>
+        <a href="studies/st-01KQN632MS8GB3FK5V6M15FR3S.html" class="text-xs text-blue-600 hover:underline">detail →</a>
+      </footer>
+    </article>
+    
+    <article class="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+      <header class="flex items-start justify-between mb-2">
         <h3 class="font-semibold text-slate-900">w-local-mvp</h3>
         <span class="text-xs px-2 py-0.5 rounded
           bg-green-100 text-green-800
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-blue-50 text-blue-700
+              ">tpe</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>10 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 10 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">4</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">5 non-dom</span></dd></div>
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">736.24</dd></div>
       </dl>
@@ -66,11 +879,22 @@
           ">running</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-blue-50 text-blue-700
+              ">tpe</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 1 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">4</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -89,11 +913,25 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-blue-50 text-blue-700
+              ">tpe</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>4 <span class="text-slate-400">completed</span> / 1 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">9</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">3 non-dom</span></dd></div>
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">1390.94</dd></div>
       </dl>
@@ -124,11 +962,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>2 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">4</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">0.00</dd></div>
       </dl>
@@ -157,11 +1006,25 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">nsga2</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-purple-50 text-purple-700
+              ">nsga2</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>8 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 8 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">4 non-dom</span></dd></div>
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">811.07</dd></div>
       </dl>
@@ -189,11 +1052,25 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-blue-50 text-blue-700
+              ">tpe</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>8 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 8 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">4 non-dom</span></dd></div>
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">750.78</dd></div>
       </dl>
@@ -221,11 +1098,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-blue-50 text-blue-700
+              ">tpe</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 8 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">3</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -244,11 +1132,25 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">2</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">3 non-dom</span></dd></div>
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">751.36</dd></div>
       </dl>
@@ -275,11 +1177,22 @@
           ">running</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">6</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -298,11 +1211,25 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">6</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">1 non-dom</span></dd></div>
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">775.89</dd></div>
       </dl>
@@ -333,11 +1260,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 4 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">6</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -356,11 +1294,25 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-blue-50 text-blue-700
+              ">tpe</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>12 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 12 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">6</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">7 non-dom</span></dd></div>
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">775.99</dd></div>
       </dl>
@@ -391,11 +1343,25 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">tpe</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-blue-50 text-blue-700
+              ">tpe</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">2</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">3 non-dom</span></dd></div>
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">773.82</dd></div>
       </dl>
@@ -422,11 +1388,25 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>2 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">2</span></dd></div>
+        
+        
+        <div class="flex"><dt class="w-20 text-slate-400">Pareto</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-rose-50 text-rose-700 rounded">1 non-dom</span></dd></div>
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">775.15</dd></div>
       </dl>
@@ -453,11 +1433,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">2</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -476,11 +1467,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">2</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -499,11 +1501,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">2</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -522,11 +1535,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">2</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -545,11 +1569,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">2</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -568,11 +1603,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>RTX-local</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>0 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 2 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">2</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">—</dd></div>
       </dl>
@@ -591,11 +1637,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">9</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">0.00</dd></div>
       </dl>
@@ -626,11 +1683,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>3 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 3 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">9</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">0.00</dd></div>
       </dl>
@@ -661,11 +1729,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">lhc</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-amber-50 text-amber-800
+              ">lhc</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>5 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">9</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">0.00</dd></div>
       </dl>
@@ -696,11 +1775,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">grid</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-zinc-100 text-zinc-700
+              ">grid</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>6 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 6 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">6</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">0.00</dd></div>
       </dl>
@@ -731,11 +1821,22 @@
           ">completed</span>
       </header>
       <dl class="text-xs text-slate-600 space-y-0.5">
-        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt><dd class="font-mono">random</dd></div>
+        <div class="flex"><dt class="w-20 text-slate-400">strategy</dt>
+          <dd>
+            <span class="font-mono px-1.5 py-0.5 rounded
+              bg-slate-100 text-slate-700
+              ">random</span>
+          </dd>
+        </div>
         <div class="flex"><dt class="w-20 text-slate-400">model</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">HW</dt><dd>?</dd></div>
         <div class="flex"><dt class="w-20 text-slate-400">trials</dt>
           <dd>5 <span class="text-slate-400">completed</span> / 0 <span class="text-slate-400">pruned</span> / 5 <span class="text-slate-400">total</span></dd></div>
+        
+        <div class="flex"><dt class="w-20 text-slate-400">axes</dt>
+          <dd><span class="font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded">9</span></dd></div>
+        
+        
         <div class="flex"><dt class="w-20 text-slate-400">top score</dt>
           <dd class="font-bold text-slate-900">0.00</dd></div>
       </dl>
@@ -770,7 +1871,7 @@
         
       </div>
       <ul class="list-disc list-inside text-xs text-slate-600 mt-1">
-        <li>Phase W (Walkthrough MVP) 진입: w_local_minimal (4-axis) + w_minikube_minimal (3-axis) baseline 시드</li><li>dashboard schema = bench/dashboard/v1alpha1-inferencex-compat (InferenceX-app 호환)</li><li>winner export 산출물 = winner/{params.json, values-overlay.yaml, apply.sh, README.md} 4 파일</li>
+        <li>Phase W (Walkthrough MVP) 진입: w_local_minimal (4-axis) + w_minikube_minimal (3-axis) baseline 시드</li><li>dashboard schema = lmtune/dashboard/v1alpha1-inferencex-compat (InferenceX-app 호환)</li><li>winner export 산출물 = winner/{params.json, values-overlay.yaml, apply.sh, README.md} 4 파일</li>
       </ul>
     </li>
     

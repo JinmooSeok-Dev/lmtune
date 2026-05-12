@@ -290,6 +290,24 @@ GPT_OSS_120B = normalize_model_spec(
     vocab_size=201088,
     moe=MoESpec(num_experts=128, active_experts=4, shared_experts=0),
 )
+# MiniMax-M2 — HF config.json 직접 확인 (2026-05-12).
+# 230B total / 10B active. MoE 256 experts × top-8, no shared expert. GQA 48:8.
+# attention 은 hybrid (lightning attention + softmax 교대) — vllm 0.17.1 의
+# vllm/model_executor/models/minimax_m2.py 가 1st-class 처리. R26 (GQA + DCP > 1
+# 시 tp > 8) 동일 제약 적용.
+MINIMAX_M2 = normalize_model_spec(
+    name="MiniMax-M2",
+    total_params_b=230.0,
+    active_params_b=10.0,
+    num_layers=62,
+    hidden_size=3072,
+    num_attention_heads=48,
+    num_kv_heads=8,
+    intermediate_size=1536,
+    context_length=196608,
+    vocab_size=200064,
+    moe=MoESpec(num_experts=256, active_experts=8, shared_experts=0),
+)
 
 
 MODELS: list[ModelSpec] = [
@@ -306,6 +324,7 @@ MODELS: list[ModelSpec] = [
     DEEPSEEK_V3,
     GPT_OSS_20B,
     GPT_OSS_120B,
+    MINIMAX_M2,
 ]
 
 

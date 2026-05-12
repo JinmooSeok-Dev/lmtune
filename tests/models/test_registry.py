@@ -17,8 +17,8 @@ from lmtune.models.registry import MoESpec
 
 
 def test_models_exact_count():
-    # 11 vllm-config-puzzle 1:1 + 2 OpenAI gpt-oss = 13.
-    assert len(MODELS) == 13
+    # 11 vllm-config-puzzle 1:1 + 2 OpenAI gpt-oss + 1 MiniMax-M2 = 14.
+    assert len(MODELS) == 14
 
 
 def test_normalize_derives_head_dim():
