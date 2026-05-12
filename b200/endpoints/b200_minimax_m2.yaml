@@ -1,0 +1,54 @@
+apiVersion: lmtune/v1alpha1
+slug: b200-minimax-m2
+name: "B200 — MiniMax-M2 (230B MoE / 10B active / 256 experts top-8 / FP8)"
+url: http://127.0.0.1:8011/v1
+model: MiniMaxAI/MiniMax-M2
+tokenizer: MiniMaxAI/MiniMax-M2
+api_type: openai
+
+deployment:
+  engine: vllm
+  version: "0.17.1"
+  # MiniMax-M2 공식 가이드:
+  #   - TP=4 + EP=4 가 TP=8 + EP=8 보다 우위
+  #   - **Pure TP=8 미지원** (search-space 의 tp axis 에서 8 제외)
+  # parallelism 은 chart values 가 단일 source. endpoint 에 또 두면 중복 emit.
+  engine_args:
+    enable_prefix_caching: true
+    max_num_seqs: 128
+    # MiniMax-M2 native max = 196608 (HF config.json max_position_embeddings).
+    # 16-GPU 분산이라 KV cache 단일 GPU 안 들어가면 axis 로 줄임.
+    max_model_len: 196608
+    gpu_memory_utilization: 0.90
+    kv_cache_dtype: fp8
+    dtype: bfloat16
+    trust_remote_code: true
+  helmfile_overrides:
+    helmfile_file: b200/helmfile/inference-scheduling/helmfile.yaml.gotmpl
+    environment: default
+    selector: kind=inference-stack
+    release_name: ms-infsch
+    namespace: b200-infsch
+    deployment_name: ms-infsch-llm-d-modelservice-decode
+    rollout_timeout_s: 1800   # 230B weight 다운로드/로딩 (FP8 ≈ 230 GB) 길어질 수 있음
+
+notes: |
+  MiniMax-M2 — 230B MoE / 10B active / 256 experts × top-8 (no shared) / GQA 48:8 / hybrid attention.
+  vllm 0.17.1 에 minimax_m2.py 1st-class. Lightning Attention + softmax 교대 layer.
+
+  default = TP=4 × EP=true × DP=2 = 8 GPU/replica × 2 replica = 16 GPU 활용.
+  TopologySpreadConstraint 로 노드별 1 replica 강제 (cross-node RDMA 회피).
+
+  공식 권장 parallelism (vllm Recipes):
+    - TP=4 + EP=4 best (TP=8 + EP=8 보다 우위)
+    - TP=8 단독 미지원 → search-space 의 tp ∈ {2, 4}
+
+  R26 적용: GQA + DCP > 1 시 tp > num_kv_heads(=8) 강제 → inference-scheduling
+  single-pod max tp=8 → DCP > 1 불가능 (gpt-oss-120b 와 동일 제약).
+
+  P/D disaggregation 비활성 (NIXL 별도 image 필요 — Rxx).
+
+  helmfile redeploy 전:
+    export B200_MODEL_VALUES=values-minimax-m2.yaml.gotmpl
+
+tags: [b200, minimax, minimax-m2, moe, fp8, lightning-attention, 16gpu]

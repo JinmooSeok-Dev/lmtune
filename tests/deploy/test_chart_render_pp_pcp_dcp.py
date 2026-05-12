@@ -32,25 +32,31 @@ def test_chart_gpu_count_with_pp_dcp() -> None:
     env = {**os.environ, "B200_MODEL_VALUES": "values-gpt-oss-120b.yaml.gotmpl"}
     cmd = [
         "helmfile",
-        "--environment", "default",
-        "--selector", "kind=inference-stack",
-        "-f", str(HELMFILE_GOTMPL),
+        "--environment",
+        "default",
+        "--selector",
+        "kind=inference-stack",
+        "-f",
+        str(HELMFILE_GOTMPL),
         "--state-values-set",
         "ms-infsch.decode.parallelism.tensor=4,"
         "ms-infsch.vllmArgs.pipeline-parallel-size=2,"
         "ms-infsch.vllmArgs.decode-context-parallel-size=2",
         "template",
     ]
-    result = subprocess.run(
-        cmd, env=env, capture_output=True, text=True, timeout=120
-    )
+    result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=120)
     if result.returncode != 0:
         pytest.skip(f"helmfile template fail (network or chart pull): {result.stderr[:200]}")
 
     docs = list(yaml.safe_load_all(result.stdout))
     deployment = next(
-        (d for d in docs if d and d.get("kind") == "Deployment"
-         and "modelservice" in (d.get("metadata") or {}).get("name", "")),
+        (
+            d
+            for d in docs
+            if d
+            and d.get("kind") == "Deployment"
+            and "modelservice" in (d.get("metadata") or {}).get("name", "")
+        ),
         None,
     )
     assert deployment, "modelservice Deployment not found in rendered chart"
@@ -69,7 +75,7 @@ def test_chart_gpu_count_with_pp_dcp() -> None:
     ]:
         assert flag in args, f"{flag} missing from container args"
         idx = args.index(flag)
-        assert str(args[idx + 1]) == expected, f"{flag} = {args[idx+1]}, expected {expected}"
+        assert str(args[idx + 1]) == expected, f"{flag} = {args[idx + 1]}, expected {expected}"
 
     # PCP 는 명시 inject 안 했으니 default 1 → vllm CLI 에 emit 안 됨
     # (chart 의 mergeOverwrite 는 vllmArgs key 만 emit)
@@ -91,24 +97,35 @@ def test_chart_backward_compat_pp_pcp_default_one() -> None:
     env = {**os.environ, "B200_MODEL_VALUES": "values-gpt-oss-120b.yaml.gotmpl"}
     cmd = [
         "helmfile",
-        "--environment", "default",
-        "--selector", "kind=inference-stack",
-        "-f", str(HELMFILE_GOTMPL),
-        "--state-values-set", "ms-infsch.decode.parallelism.tensor=8",
+        "--environment",
+        "default",
+        "--selector",
+        "kind=inference-stack",
+        "-f",
+        str(HELMFILE_GOTMPL),
+        "--state-values-set",
+        "ms-infsch.decode.parallelism.tensor=8",
         "template",
     ]
-    result = subprocess.run(
-        cmd, env=env, capture_output=True, text=True, timeout=120
-    )
+    result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=120)
     if result.returncode != 0:
         pytest.skip(f"helmfile template fail: {result.stderr[:200]}")
 
     docs = list(yaml.safe_load_all(result.stdout))
     deployment = next(
-        (d for d in docs if d and d.get("kind") == "Deployment"
-         and "modelservice" in (d.get("metadata") or {}).get("name", "")),
+        (
+            d
+            for d in docs
+            if d
+            and d.get("kind") == "Deployment"
+            and "modelservice" in (d.get("metadata") or {}).get("name", "")
+        ),
         None,
     )
     assert deployment
-    gpu = int(deployment["spec"]["template"]["spec"]["containers"][0]["resources"]["requests"]["nvidia.com/gpu"])
+    gpu = int(
+        deployment["spec"]["template"]["spec"]["containers"][0]["resources"]["requests"][
+            "nvidia.com/gpu"
+        ]
+    )
     assert gpu == 8, f"backward-compat: TP=8, default PP/PCP=1 → GPU=8, got {gpu}"

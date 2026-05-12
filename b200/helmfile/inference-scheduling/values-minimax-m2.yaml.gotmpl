@@ -1,0 +1,112 @@
+# MiniMax-M2 — B200 16-GPU baseline (TEMPLATED, TP=4 × EP × DP=2, monolithic)
+#
+# MiniMax-M2 (2025-Q4): 230B MoE / 10B active / 256 experts × top-8 (no shared) /
+# 62 layers / GQA 48:8 / hybrid attention (lightning + softmax 교대). FP8 native.
+# HF: MiniMaxAI/MiniMax-M2  (config.json max_position_embeddings=196608).
+#
+# 공식 권장 parallelism (vllm Recipes — MiniMax-M2):
+#   - TP=4 + EP=4 best (TP=8 + EP=8 보다 우위)
+#   - **Pure TP=8 미지원** → search-space 의 tp ∈ {2, 4}
+#   - default: TP=4 × DP=2 = 8 GPU/replica × 2 replica = 16 GPU 전부 활용
+#
+# search space (b3_minimax_m2.yaml) 의 tp/dp/ep sample → LLMDK8sAdapter 가
+# .StateValues.ms-infsch.parallelism / .replicas 로 inject → trial 마다 redeploy.
+#
+# R26 적용: GQA + DCP > 1 시 tp > num_kv_heads(=8) 강제. inference-scheduling
+# multinode false → single-pod max tp=8 → DCP 미사용 (gpt-oss-120b 와 동일).
+#
+# helmfile redeploy 전:
+#   export B200_MODEL_VALUES=values-minimax-m2.yaml.gotmpl
+
+{{- $release := "ms-infsch" -}}
+{{- $sv := index .StateValues $release | default dict -}}
+{{- $vllmArgs := index $sv "vllmArgs" | default dict -}}
+{{- $svDecode := index $sv "decode" | default dict -}}
+{{- $svPar := index $svDecode "parallelism" | default dict -}}
+{{- $tp := index $svPar "tensor" | default 4 -}}
+{{- $rep := index $svDecode "replicas" | default 2 -}}
+{{- $pp := default 1 (index $vllmArgs "pipeline-parallel-size") -}}
+{{- $totalGpu := mul $tp $pp -}}
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://MiniMaxAI/MiniMax-M2"
+  size: 260Gi    # ~230B FP8 ≈ 230 GB + overhead
+  name: "MiniMaxAI/MiniMax-M2"
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "b200-minimax-m2"
+    llm-d.ai/hardware-variant: "b200"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "minimax-m2"
+
+routing:
+  proxy:
+    enabled: false
+    targetPort: 8000
+  servicePort: 8000
+
+# P/D disaggregation 비활성 — NIXL 별도 image 필요. chart default prefill.create=true 라 명시 false.
+prefill:
+  create: false
+
+decode:
+  parallelism:
+    tensor: {{ $tp }}     # TP: lmtune StateValues 우선, default=4 (공식 권장)
+  create: true
+  replicas: {{ $rep }}    # DP: default=2 (2 노드 × 1 replica)
+  monitoring:
+    podmonitor:
+      enabled: false
+  # 노드별 1 replica 강제 — 두 replica 가 같은 노드에 몰리면 NVLink 경합
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          llm-d.ai/role: decode
+          llm-d.ai/model: minimax-m2
+  containers:
+    - name: "vllm"
+      image: vllm/vllm-openai:v0.17.1
+      modelCommand: vllmServe
+      args:
+        {{- /* tensor-parallel-size 는 chart 가 decode.parallelism.tensor 에서 자동 inject. */}}
+        {{- $defaults := dict
+              "max-num-seqs" 128
+              "max-model-len" 32768
+              "gpu-memory-utilization" 0.90
+              "dtype" "bfloat16"
+              "kv-cache-dtype" "auto"
+              "trust-remote-code" true
+        }}
+        {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
+        {{- range $k, $v := $merged }}
+        {{- if kindIs "bool" $v }}
+        {{- if $v }}
+        - "--{{ $k }}"
+        {{- end }}
+        {{- else }}
+        - "--{{ $k }}"
+        - {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+      resources:
+        requests:
+          nvidia.com/gpu: {{ $totalGpu | quote }}   # = TP × PP
+          cpu: "32"
+          memory: 384Gi
+        limits:
+          nvidia.com/gpu: {{ $totalGpu | quote }}
+          cpu: "64"
+          memory: 512Gi
+      env:
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: NCCL_NVLS_ENABLE
+          value: "1"
+        - name: NCCL_DEBUG
+          value: "WARN"
