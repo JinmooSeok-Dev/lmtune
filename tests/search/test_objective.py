@@ -35,7 +35,6 @@ def test_score_objective_slo_miss_is_pruned_not_crash(tmp_path, monkeypatch):
     """R27: SLO 미달은 정상 측정 (낮은 score) — error 미set 으로 PRUNED 흐름.
     이전엔 error="...slo_pass=False" 가 set 되어 study.tell 이 CRASH 분류 →
     breaker 가 안정성 fail 카운트 → study 빨리 halt."""
-    import json
 
     # Fake script + bench bin: ScoreObjective._run_one 을 monkeypatch 하는 게
     # 더 깨끗.
