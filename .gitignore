@@ -59,3 +59,11 @@ data/archive/**/*.duckdb*
 data/archive/**/*.jsonl
 data/archive/**/*.log
 data/archive/**/raw/
+
+# Dashboard build artifacts — reproducible from DuckDB via `lmtune dashboard build`.
+# 매 build 마다 timestamp / study 목록 / aggregated metrics 가 재계산되어 noise.
+# 외부 공유 시 GitHub Pages 또는 별도 release 로 publish.
+b200/dashboards/
+
+# B200 host 의 로컬 운영 script (사용자가 host 에서 임시 작성, repo 에 안 올림)
+launcher*.sh
