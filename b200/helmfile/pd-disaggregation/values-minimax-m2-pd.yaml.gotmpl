@@ -117,6 +117,12 @@ decode:
           value: "1"
         - name: NCCL_DEBUG
           value: "WARN"
+        # R29 — Triton JIT (vllm 0.19.1 / llm-d-cuda v0.7.0) 가 gcc 호출 시
+        # `-L/usr/lib64 -l:libcuda.so.1` 만 사용. 실제 libcuda 는 ubuntu/debian
+        # 경로 `/usr/lib/x86_64-linux-gnu/` 에 mount → `cannot find -l:libcuda.so.1`.
+        # LIBRARY_PATH 가 gcc 의 추가 link 검색 경로로 동작 → 우회.
+        - name: LIBRARY_PATH
+          value: "/usr/lib/x86_64-linux-gnu:/usr/lib64"
       ports:
         - containerPort: 8200
           name: vllm
@@ -194,6 +200,12 @@ prefill:
           value: "1"
         - name: NCCL_DEBUG
           value: "WARN"
+        # R29 — Triton JIT (vllm 0.19.1 / llm-d-cuda v0.7.0) 가 gcc 호출 시
+        # `-L/usr/lib64 -l:libcuda.so.1` 만 사용. 실제 libcuda 는 ubuntu/debian
+        # 경로 `/usr/lib/x86_64-linux-gnu/` 에 mount → `cannot find -l:libcuda.so.1`.
+        # LIBRARY_PATH 가 gcc 의 추가 link 검색 경로로 동작 → 우회.
+        - name: LIBRARY_PATH
+          value: "/usr/lib/x86_64-linux-gnu:/usr/lib64"
       ports:
         - containerPort: 8000
           name: vllm

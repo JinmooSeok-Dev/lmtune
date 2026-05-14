@@ -806,6 +806,51 @@ R23 + R25 둘 다 1-3 단계만 통과시키고 4 단계 검증 누락이 원인
 
 ---
 
+## R29 — llm-d-cuda v0.7.0 의 Triton JIT 가 `cannot find -l:libcuda.so.1` 로 EngineCore start 실패
+
+**증상**
+- P/D pod (ms-pd-llm-d-modelservice-{prefill,decode}) 가 Running 진입은 하지만 vllm container 가 model load 직전 crash:
+```
+torch._inductor.exc.InductorError: CalledProcessError: Command
+  '['/usr/bin/gcc', '/tmp/.../cuda_utils.c', '-O3', '-shared', '-fPIC', '-Wno-psabi',
+    '-o', '/tmp/.../cuda_utils.cpython-312-x86_64-linux-gnu.so',
+    '-l:libcuda.so.1', '-L/usr/lib64', ...]' returned non-zero exit status 1.
+
+/usr/bin/ld: cannot find -l:libcuda.so.1
+```
+- 결과: `EngineCore failed to start` → pod CrashLoopBackOff. routing-proxy 가 `localhost:8200` 재시도 무한 루프 (사용자 눈에 먼저 보이는 노이즈).
+
+**진단**
+양 노드 driver 580.95.05 / CUDA 13.0 정상. runtimeClassName `nvidia` 정상. libcuda 도 mount 정상:
+```
+ldconfig -p | grep libcuda
+  libcuda.so.1 (libc6,x86-64) => /usr/lib/x86_64-linux-gnu/libcuda.so.1
+ls /usr/lib/x86_64-linux-gnu/libcuda.so.580.95.05    # 96 MB
+```
+
+근본 원인: **lib path mismatch**. Triton runtime (vllm 0.19.1 bundled) 의 `triton/runtime/build.py::_build()` 가 gcc 호출 시 `-L/usr/lib64` (RHEL 패턴) 만 사용. llm-d-cuda v0.7.0 base image (rhel 계열 + nvidia-container-toolkit 의 standard mount path) 는 libcuda 를 `/usr/lib/x86_64-linux-gnu/` (ubuntu/debian 패턴) 에 둠. gcc 의 `-l:libcuda.so.1` (정확한 파일명 매칭) 은 `-L` 디렉토리만 검색 → ldconfig 등록 무시 → not found.
+
+검증 (container 안):
+| 명령 | 결과 |
+|:---|:---|
+| `gcc t.c -L/usr/lib/x86_64-linux-gnu -l:libcuda.so.1` | exit 0 |
+| `LIBRARY_PATH=/usr/lib/x86_64-linux-gnu gcc t.c -L/usr/lib64 -l:libcuda.so.1` | exit 0 ⭐ |
+| `ln -sf .../libcuda.so.1 /usr/lib64/libcuda.so.1; gcc ...` | Permission denied (rootfs readonly) |
+
+**영속화 위치**
+- Code: `b200/helmfile/pd-disaggregation/values-minimax-m2-pd.yaml.gotmpl` — prefill + decode container env 양쪽에 `LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/lib64` 추가. gcc 가 link 시 추가 검색 경로로 사용 → Triton JIT 의 `-L/usr/lib64 -l:libcuda.so.1` 통과.
+- 본 catalog R29 entry — llm-d-cuda v0.7.x (vllm 0.19.x) 기반 모든 P/D values 신설 시 동일 env 복제 의무.
+
+**관련 회귀**
+- v0.6.0 의 sm_100 Triton JIT fail (별 원인 — Triton kernel compilation 자체)
+- v0.7.0-rc.2 의 cu13/cu12 ABI mismatch (정식 v0.7.0 에서 ABI 는 해소, lib path 회귀 새로 등장)
+
+**향후**
+- llm-d-cuda 가 base image 의 libcuda mount 를 `/usr/lib64` 로 옮기거나, Triton 이 `LIBRARY_PATH` 가 아닌 ldconfig 결과 사용으로 바뀌면 본 patch 불필요.
+- 다른 모델 P/D values (gpt-oss, kimi, deepseek 등) 신설 시 동일 env 복제 의무.
+
+---
+
 ## 신규 결함 entry 추가 절차
 
 1. 결함 발견 (사용자 보고 / 운영 중 발생)
