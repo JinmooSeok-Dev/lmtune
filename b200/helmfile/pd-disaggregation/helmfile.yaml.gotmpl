@@ -11,8 +11,8 @@
 #   NS=b200-pd helmfile -f b200/helmfile/pd-disaggregation/helmfile.yaml.gotmpl --selector role=base apply
 #
 # selector:
-#   --selector role=base  → values-llama-3.1-70b-tp4-pd.yaml (B1)
-#   --selector role=large → values-qwen2.5-72b-tp8-pd.yaml (옵션)
+#   --selector role=base       → values-llama-3.1-70b-tp4-pd.yaml (B1, v0.6.0 image, deprecated)
+#   --selector role=minimax-m2 → values-minimax-m2-pd.yaml.gotmpl (v0.7.0 image, NIXL, 16-GPU ratio)
 #
 # Self-contained: peer repo 의존 없음. 패턴은 peer phase2/pd-qwen25-1.5b 참조.
 
@@ -76,7 +76,7 @@ releases:
       - {{ printf "gaie-%s" $rn | quote }}
     values:
       - ../base/values-b200-common.yaml.gotmpl
-      - values-llama-3.1-70b-tp4-pd.yaml
+      - {{ env "B200_MODEL_VALUES" | default "values-llama-3.1-70b-tp4-pd.yaml" }}
     # See inference-scheduling/helmfile.yaml.gotmpl for rationale —
     # inject runtimeClassName=nvidia into all Deployments (chart limitation).
     postRenderer: ../_postrender/postrender.sh

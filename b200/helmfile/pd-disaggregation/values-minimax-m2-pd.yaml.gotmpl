@@ -1,0 +1,223 @@
+# MiniMax-M2 — B200 16-GPU P/D disaggregation (TEMPLATED)
+#
+# 구조:
+#   - prefill replicas × prefill TP  (NixlConnector kv_role=kv_both, port 8000 + nixl 5600)
+#   - decode  replicas × decode  TP  (NixlConnector kv_role=kv_both, port 8200 + nixl 5600)
+#   - routing-sidecar v0.7.x (decode pod 안에 sidecar, connector=nixlv2)
+#
+# 제약:
+#   prefill_replicas × prefill_tp + decode_replicas × decode_tp ≤ 16   (B200 16 GPU)
+#   prefill_tp, decode_tp ∈ {1, 2, 4, 8}                                  (MiniMax-M2 num_kv_heads=8)
+#   pure TP=8 미지원 (공식 권장) → search-space 의 tp ∈ {2, 4}
+#
+# StateValues 키 (LLMDK8sAdapter 가 inject):
+#   .StateValues.ms-pd.prefill.parallelism.tensor    (int)
+#   .StateValues.ms-pd.prefill.replicas              (int)
+#   .StateValues.ms-pd.decode.parallelism.tensor     (int)
+#   .StateValues.ms-pd.decode.replicas               (int)
+#   .StateValues.ms-pd.vllmArgs                       (map, prefill+decode 공통)
+#
+# Image: ghcr.io/llm-d/llm-d-cuda:v0.7.0 (vllm 0.19.1 bundle, CUDA 13.0.2, NIXL 내장).
+#   사전 조건: host NVIDIA driver ≥ 580.
+
+{{- $release := "ms-pd" -}}
+{{- $sv := index .StateValues $release | default dict -}}
+{{- $vllmArgs := index $sv "vllmArgs" | default dict -}}
+
+{{- $svPrefill := index $sv "prefill" | default dict -}}
+{{- $svPrefillPar := index $svPrefill "parallelism" | default dict -}}
+{{- $prefillTp := index $svPrefillPar "tensor" | default 4 -}}
+{{- $prefillRep := index $svPrefill "replicas" | default 1 -}}
+
+{{- $svDecode := index $sv "decode" | default dict -}}
+{{- $svDecodePar := index $svDecode "parallelism" | default dict -}}
+{{- $decodeTp := index $svDecodePar "tensor" | default 4 -}}
+{{- $decodeRep := index $svDecode "replicas" | default 1 -}}
+
+multinode: false
+
+modelArtifacts:
+  uri: "hf://MiniMaxAI/MiniMax-M2"
+  size: 260Gi
+  name: "MiniMaxAI/MiniMax-M2"
+  authSecretName: "huggingface-token"
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/inferenceServing: "true"
+    llm-d.ai/guide: "b200-minimax-m2-pd"
+    llm-d.ai/hardware-variant: "b200"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "minimax-m2"
+
+routing:
+  servicePort: 8000
+  proxy:
+    image: ghcr.io/llm-d/llm-d-routing-sidecar:v0.7.1
+    connector: nixlv2
+    secure: false
+
+decode:
+  parallelism:
+    tensor: {{ $decodeTp }}
+  create: true
+  replicas: {{ $decodeRep }}
+  monitoring:
+    podmonitor:
+      enabled: false
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          llm-d.ai/role: decode
+          llm-d.ai/model: minimax-m2
+  containers:
+    - name: "vllm"
+      image: ghcr.io/llm-d/llm-d-cuda:v0.7.0
+      modelCommand: vllmServe
+      args:
+        - "--kv-transfer-config"
+        - '{"kv_connector":"NixlConnector", "kv_role":"kv_both"}'
+        - "--trust-remote-code"
+        {{- $defaults := dict
+              "block-size" 32
+              "max-num-seqs" 128
+              "max-model-len" 32768
+              "gpu-memory-utilization" 0.90
+              "kv-cache-dtype" "auto"
+              "enable-prefix-caching" true
+              "enable-chunked-prefill" true
+              "disable-uvicorn-access-log" true
+        }}
+        {{- $merged := mergeOverwrite (deepCopy $defaults) $vllmArgs }}
+        {{- range $k, $v := $merged }}
+        {{- if kindIs "bool" $v }}
+        {{- if $v }}
+        - "--{{ $k }}"
+        {{- end }}
+        {{- else }}
+        - "--{{ $k }}"
+        - {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+      env:
+        - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: UCX_TLS
+          value: "rc,cuda_copy,cuda_ipc"
+        - name: UCX_NET_DEVICES
+          value: "all"
+        - name: NCCL_NVLS_ENABLE
+          value: "1"
+        - name: NCCL_DEBUG
+          value: "WARN"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-token
+              key: HF_TOKEN
+              optional: true
+      ports:
+        - containerPort: 8200
+          name: vllm
+          protocol: TCP
+        - containerPort: 5600
+          name: nixl
+          protocol: TCP
+      resources:
+        requests:
+          nvidia.com/gpu: {{ $decodeTp | quote }}
+          cpu: "16"
+          memory: 192Gi
+        limits:
+          nvidia.com/gpu: {{ $decodeTp | quote }}
+          cpu: "32"
+          memory: 384Gi
+
+prefill:
+  parallelism:
+    tensor: {{ $prefillTp }}
+  create: true
+  replicas: {{ $prefillRep }}
+  monitoring:
+    podmonitor:
+      enabled: false
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          llm-d.ai/role: prefill
+          llm-d.ai/model: minimax-m2
+  containers:
+    - name: "vllm"
+      image: ghcr.io/llm-d/llm-d-cuda:v0.7.0
+      modelCommand: vllmServe
+      args:
+        - "--kv-transfer-config"
+        - '{"kv_connector":"NixlConnector", "kv_role":"kv_both"}'
+        - "--trust-remote-code"
+        {{- $defaultsP := dict
+              "block-size" 32
+              "max-num-seqs" 64
+              "max-model-len" 32768
+              "gpu-memory-utilization" 0.90
+              "kv-cache-dtype" "auto"
+              "enable-prefix-caching" true
+              "enable-chunked-prefill" true
+              "disable-uvicorn-access-log" true
+        }}
+        {{- $mergedP := mergeOverwrite (deepCopy $defaultsP) $vllmArgs }}
+        {{- range $k, $v := $mergedP }}
+        {{- if kindIs "bool" $v }}
+        {{- if $v }}
+        - "--{{ $k }}"
+        {{- end }}
+        {{- else }}
+        - "--{{ $k }}"
+        - {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+      env:
+        - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: VLLM_LOGGING_LEVEL
+          value: "INFO"
+        - name: UCX_TLS
+          value: "rc,cuda_copy,cuda_ipc"
+        - name: UCX_NET_DEVICES
+          value: "all"
+        - name: NCCL_NVLS_ENABLE
+          value: "1"
+        - name: NCCL_DEBUG
+          value: "WARN"
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-token
+              key: HF_TOKEN
+              optional: true
+      ports:
+        - containerPort: 8000
+          name: vllm
+          protocol: TCP
+        - containerPort: 5600
+          name: nixl
+          protocol: TCP
+      resources:
+        requests:
+          nvidia.com/gpu: {{ $prefillTp | quote }}
+          cpu: "16"
+          memory: 192Gi
+        limits:
+          nvidia.com/gpu: {{ $prefillTp | quote }}
+          cpu: "32"
+          memory: 384Gi

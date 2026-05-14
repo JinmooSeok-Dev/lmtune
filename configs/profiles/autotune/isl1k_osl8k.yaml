@@ -1,0 +1,38 @@
+apiVersion: lmtune/v1alpha1
+slug: autotune-isl1k-osl8k
+name: "Autotune — ISL 1k / OSL 8k (decode-heavy reasoning, InferenceX-aligned)"
+stage: 1
+description: |
+  InferenceX 표준 워크로드 — ISL 1024 / OSL 8192.
+  reasoning / long-generation chat 시나리오. decode 단계가 prefill 의 8× 시간 소비
+  → P/D ratio 1:N (N≥2) decode-heavy 가 유리할 것으로 예상.
+  ITL / TPOT / throughput_tok 가 결정적 지표.
+references:
+  - "InferenceX benchmark workload taxonomy"
+  - "DistServe (OSDI'24) — decode-heavy workloads benefit from disaggregation"
+
+runner: aiperf
+mode: concurrency
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1024
+  output_tokens_mean: 8192
+  concurrency: 16
+  request_count: 24
+  request_rate: 4.0
+  rate_type: constant
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 3000
+  e2e_p99_ms: 180000   # OSL 8k × ITL 20ms = 160s 이론 최저, margin 포함
+  checks:
+    - metric: throughput_tok
+      p: avg
+      op: ">="
+      value: 0.0
+      severity: warning
+      label: "decode throughput 대조"
+
+tags: [autotune, inferencex, decode-heavy, reasoning, isl1k, osl8k]
