@@ -40,7 +40,8 @@ modelArtifacts:
   uri: "hf://MiniMaxAI/MiniMax-M2"
   size: 260Gi
   name: "MiniMaxAI/MiniMax-M2"
-  authSecretName: "huggingface-token"
+  # MiniMax-M2 = public HF repo. monolithic values-minimax-m2.yaml.gotmpl 과 정렬
+  # (authSecretName 미명시 = chart 가 secret mount 안 함). gated 모델은 별도 추가.
   labels:
     llm-d.ai/inference-serving: "true"
     llm-d.ai/inferenceServing: "true"
@@ -116,12 +117,6 @@ decode:
           value: "1"
         - name: NCCL_DEBUG
           value: "WARN"
-        - name: HF_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: huggingface-token
-              key: HF_TOKEN
-              optional: true
       ports:
         - containerPort: 8200
           name: vllm
@@ -199,12 +194,6 @@ prefill:
           value: "1"
         - name: NCCL_DEBUG
           value: "WARN"
-        - name: HF_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: huggingface-token
-              key: HF_TOKEN
-              optional: true
       ports:
         - containerPort: 8000
           name: vllm
