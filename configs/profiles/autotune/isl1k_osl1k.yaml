@@ -1,0 +1,36 @@
+apiVersion: lmtune/v1alpha1
+slug: autotune-isl1k-osl1k
+name: "Autotune — ISL 1k / OSL 1k (balanced chat, InferenceX-aligned)"
+stage: 1
+description: |
+  InferenceX 표준 워크로드 — Input Sequence Length 1024 / Output Sequence Length 1024.
+  대표적 chat balanced 시나리오. prefill 과 decode 부하가 동등 → P/D ratio 1:1 우위 예상.
+references:
+  - "InferenceX benchmark workload taxonomy (semianalysisai.github.io/InferenceX)"
+  - "llm-d-benchmark default ISL/OSL profile"
+
+runner: aiperf
+mode: concurrency
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 1024
+  output_tokens_mean: 1024
+  concurrency: 16
+  request_count: 32
+  request_rate: 8.0
+  rate_type: constant
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 3000
+  e2e_p99_ms: 60000
+  checks:
+    - metric: throughput_req
+      p: avg
+      op: ">="
+      value: 0.0
+      severity: warning
+      label: "대조 지표"
+
+tags: [autotune, inferencex, balanced, isl1k, osl1k]

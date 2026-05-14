@@ -1,0 +1,38 @@
+apiVersion: lmtune/v1alpha1
+slug: autotune-isl8k-osl1k
+name: "Autotune — ISL 8k / OSL 1k (prefill-heavy summarization, InferenceX-aligned)"
+stage: 1
+description: |
+  InferenceX 표준 워크로드 — ISL 8192 / OSL 1024.
+  summarization / RAG / 긴 context retrieval 시나리오. prefill 단계가 decode 의 8× 부담
+  → P/D ratio N:1 (N≥2) prefill-heavy 가 유리할 것으로 예상.
+  TTFT 가 결정적 지표 (긴 prefill latency).
+references:
+  - "InferenceX benchmark workload taxonomy"
+  - "DistServe / Splitwise — prefill-heavy disaggregation patterns"
+
+runner: aiperf
+mode: concurrency
+
+workload:
+  source: synthetic
+  synthetic_input_tokens_mean: 8192
+  output_tokens_mean: 1024
+  concurrency: 8
+  request_count: 20
+  request_rate: 4.0
+  rate_type: constant
+  random_seed: 42
+
+slo:
+  ttft_p99_ms: 8000   # ISL 8k prefill 은 1k 대비 큰 cost — TTFT 완화
+  e2e_p99_ms: 60000
+  checks:
+    - metric: ttft
+      p: p99
+      op: "<="
+      value: 8000.0
+      severity: critical
+      label: "prefill latency 게이트"
+
+tags: [autotune, inferencex, prefill-heavy, summarization, isl8k, osl1k]

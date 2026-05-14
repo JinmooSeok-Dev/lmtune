@@ -1,0 +1,132 @@
+apiVersion: lmtune/search/v1alpha1
+kind: SearchSpace
+name: b3-minimax-m2-pd
+
+# B3 — MiniMax-M2 P/D disaggregation autotune (B200 16-GPU).
+#
+# 본 search-space 는 4 reference 의 교집합:
+#   1. vllm Recipes (MiniMax-M2): TP=4 best, pure TP=8 미지원, DP+EP / TP+EP only, PP 미언급
+#      https://docs.vllm.ai/projects/recipes/en/latest/MiniMax/MiniMax-M2.html
+#   2. llm-d 권장 (MoE large): MiniMax/DeepSeek/Qwen3.5/Kimi → DP=N prefill + DP=N decode 독립 스케일
+#   3. LMSYS GB200 DeepSeek P/D: prefill 4 ranks/instance, decode large-EP (2k ISL workload)
+#   4. InferenceX/B200 Qwen: 1024 ISL disaggregation +70% throughput
+#
+# 핵심 ratio axis (사용자 요청: P/D 비율 변경):
+#   prefill_replicas × prefill_tp : decode_replicas × decode_tp
+#   = {1:1, 1:2, 1:3, 2:1, 3:1} ratio + 다양한 TP 조합 + total ≤ 16 GPU
+#
+# 워크로드 (InferenceX 표준, configs/profiles/autotune/isl*_osl*.yaml):
+#   - isl1k_osl8k  decode-heavy (reasoning)        → decode 쪽 ratio 우위 예상
+#   - isl1k_osl1k  balanced (chat)                 → ratio 1:1
+#   - isl8k_osl1k  prefill-heavy (summarization)   → prefill 쪽 ratio 우위 예상
+#
+# 사용:
+#   lmtune search start \
+#     --space b200/search-spaces/b3_minimax_m2_pd.yaml \
+#     --endpoint b200/endpoints/b200_minimax_m2_pd.yaml \
+#     --adapter llmd-k8s --cluster-env b200-dual-node \
+#     --strategy tpe --max-trials 30 --seed 17 \
+#     --name b3-minimax-m2-pd-baseline \
+#     --repeats 1 --ttft-slo-ms 3000 \
+#     -p configs/profiles/autotune/isl1k_osl1k.yaml \
+#     -p configs/profiles/autotune/isl1k_osl8k.yaml \
+#     -p configs/profiles/autotune/isl8k_osl1k.yaml
+
+axes:
+  # ─── P/D Layout (핵심 ratio axes) ───
+  prefill_tp:
+    type: categorical
+    values: [2, 4]
+    # vllm Recipes: pure TP=8 미지원. TP=1 은 230B FP8 메모리 단일 GPU 안 들어감.
+    # B200 192GB HBM 기준 TP=2 (115GB weight) / TP=4 (58GB) 모두 가능.
+
+  decode_tp:
+    type: categorical
+    values: [2, 4]
+    # 동일 제약. decode 는 KV cache 도 함께 들어가므로 TP=4 가 안전.
+
+  prefill_replicas:
+    type: categorical
+    values: [1, 2, 3]
+    # 16 GPU budget 안에서 prefill_replicas × prefill_tp 가 자리 잡힘.
+
+  decode_replicas:
+    type: categorical
+    values: [1, 2, 3]
+
+  ep:
+    type: bool
+    # vllm Recipes: TP=4+EP=4 가 TP=8+EP=8 보다 우위. P/D 양쪽 동일 적용.
+    # axis 이름 = monolithic b3_minimax_m2.yaml 과 정렬 (--enable-expert-parallel flag).
+
+  # ─── NIXL / KV transfer ───
+  block_size:
+    type: categorical
+    values: [16, 32, 64]
+    # NIXL page-based KV transfer 의 page 단위. peer ms-pd default=128, b200 llama-pd=32.
+    # 32 = balanced, 16 = fine-grained (overhead), 64 = coarse (좋은 throughput).
+
+  # ─── Scheduling / Batching ───
+  max_num_seqs:
+    type: categorical
+    values: [64, 128, 256]
+    # prefill_seqs 는 prefill 의 concurrent prefill 수, decode_seqs 는 decode 의 batch.
+    # 일단 공통값으로 시작 (split 은 후속 study).
+
+  max_model_len:
+    type: categorical
+    values: [32768]
+    # InferenceX 1k/8k → 9216, 8k/1k → 9216, 1k/1k → 2048. 32K margin.
+    # MiniMax-M2 native 196608 까지 가능하지만 KV 메모리 부담.
+
+  gpu_memory_utilization:
+    type: float
+    low: 0.85
+    high: 0.92
+
+  kv_cache_dtype:
+    type: categorical
+    values: [auto, fp8]
+    # fp8 = B200 native, KV memory 절반. peer ms-pd minimax fp8 검증 X — auto baseline 우선.
+
+  enable_prefix_caching:
+    type: bool
+    # P/D 에서 prefix cache 는 prefill 쪽이 주로 활용. NIXL 호환 검증 — peer 가 켬.
+
+  enable_chunked_prefill:
+    type: bool
+
+
+# ─── Feasibility constraints (P/D 전용) ───
+feasibility_constraints:
+  - id: c_pd1_gpu_budget
+    rule: "(prefill_replicas * prefill_tp) + (decode_replicas * decode_tp) <= environment.total_npus"
+    message: "Combined prefill + decode GPU 가 total NPUs 초과 (B200 16-GPU)"
+
+  - id: c_pd2_single_pod_tp_prefill
+    rule: "prefill_tp <= environment.npus_per_server"
+    message: "Prefill TP 가 single pod 8 GPU 초과 (multinode: false)"
+
+  - id: c_pd3_single_pod_tp_decode
+    rule: "decode_tp <= environment.npus_per_server"
+    message: "Decode TP 가 single pod 8 GPU 초과 (multinode: false)"
+
+  - id: c_pd4_heads_div_prefill_tp
+    rule: "model.num_attention_heads % prefill_tp == 0"
+    message: "Prefill TP must divide attention heads (MiniMax-M2: 48 heads)"
+
+  - id: c_pd5_heads_div_decode_tp
+    rule: "model.num_attention_heads % decode_tp == 0"
+    message: "Decode TP must divide attention heads (MiniMax-M2: 48 heads)"
+
+  - id: c_pd6_kv_heads_div_prefill_tp
+    rule: "model.num_kv_heads >= prefill_tp"
+    message: "Prefill TP > num_kv_heads(=8) — GQA 분할 불가"
+
+  - id: c_pd7_kv_heads_div_decode_tp
+    rule: "model.num_kv_heads >= decode_tp"
+    message: "Decode TP > num_kv_heads(=8) — GQA 분할 불가"
+
+  - id: c_pd8_min_gpu
+    rule: "(prefill_replicas * prefill_tp) + (decode_replicas * decode_tp) >= 4"
+    message: "Combined GPU < 4 — P/D smoke 도 의미 없음"

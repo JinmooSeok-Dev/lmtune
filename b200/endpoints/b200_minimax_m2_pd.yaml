@@ -1,0 +1,56 @@
+apiVersion: lmtune/v1alpha1
+slug: b200-minimax-m2-pd
+name: "B200 — MiniMax-M2 P/D disaggregation (NIXLv2 / llm-d-cuda v0.7.0 / vllm 0.19.1)"
+url: http://127.0.0.1:8011/v1
+model: MiniMaxAI/MiniMax-M2
+tokenizer: MiniMaxAI/MiniMax-M2
+api_type: openai
+
+deployment:
+  engine: vllm
+  version: "0.19.1"     # llm-d-cuda v0.7.0 bundled vllm
+  # P/D 에선 prefill / decode 둘 다 같은 vllm 인스턴스 (kv_role=kv_both).
+  # parallelism + replicas 는 search-space 의 prefill_*/decode_* axis 가 결정.
+  # 여기 engine_args 는 prefill+decode 공통 default.
+  engine_args:
+    block_size: 32
+    enable_prefix_caching: true
+    enable_chunked_prefill: true
+    max_num_seqs: 128
+    max_model_len: 32768
+    gpu_memory_utilization: 0.90
+    kv_cache_dtype: auto
+    trust_remote_code: true
+  helmfile_overrides:
+    helmfile_file: b200/helmfile/pd-disaggregation/helmfile.yaml.gotmpl
+    environment: default
+    selector: kind=inference-stack
+    release_name: ms-pd
+    namespace: b200-pd
+    # P/D 의 진입 service 는 routing-sidecar 가 띄우는 prefill service.
+    deployment_name: ms-pd-llm-d-modelservice-prefill
+    rollout_timeout_s: 2400   # prefill + decode 두 deployment 동시 rollout (230B FP8 weight × 2 set)
+
+notes: |
+  MiniMax-M2 — P/D disaggregation, B200 16-GPU.
+
+  Image stack:
+    - vLLM container: ghcr.io/llm-d/llm-d-cuda:v0.7.0 (vllm 0.19.1, CUDA 13.0.2)
+    - Routing sidecar: ghcr.io/llm-d/llm-d-routing-sidecar:v0.7.1 (connector=nixlv2)
+    - Host driver 사전 조건: NVIDIA driver ≥ 580 (CUDA 13 요구). v0.6.0 / v0.7.0-rc.2 호환 회귀 회피.
+
+  Layout:
+    - prefill deployment × replicas, each TP=prefill_tp, port 8000 + nixl 5600
+    - decode  deployment × replicas, each TP=decode_tp,  port 8200 + nixl 5600
+    - routing-sidecar 가 decode pod 안에 들어 prefill ↔ decode KV transfer
+    - KV transfer: NixlConnector, kv_role=kv_both, UCX_TLS=rc,cuda_copy,cuda_ipc
+    - GPU 제약: prefill_replicas × prefill_tp + decode_replicas × decode_tp ≤ 16
+
+  TP 제약 (MiniMax-M2):
+    - num_kv_heads=8 → prefill_tp / decode_tp ∈ {1, 2, 4, 8}
+    - Pure TP=8 단독 미지원 (vllm Recipes) — search-space 의 default 는 {2, 4} 만
+
+  helmfile redeploy 전:
+    export B200_MODEL_VALUES=values-minimax-m2-pd.yaml.gotmpl
+
+tags: [b200, minimax, minimax-m2, pd, nixl, llm-d-cuda-v0.7, vllm-0.19.1, 16gpu]

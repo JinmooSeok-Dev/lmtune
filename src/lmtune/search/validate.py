@@ -187,6 +187,12 @@ _LMTUNE_META_AXES = {
     "sequence_parallel",  # vllm 0.17.1 에서 별도 flag 없이 auto
     "intra_node_type",
     "cross_node_type",
+    # P/D disaggregation layout axes — vllm CLI 가 아니라 LLMDK8sAdapter 가
+    # helmfile values (prefill.parallelism.tensor / replicas, decode.* 동일) 로 변환.
+    "prefill_tp",
+    "decode_tp",
+    "prefill_replicas",
+    "decode_replicas",
 }
 
 
