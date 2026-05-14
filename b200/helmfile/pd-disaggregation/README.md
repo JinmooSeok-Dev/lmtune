@@ -29,13 +29,40 @@ Prefill 과 Decode 를 별도 pod 으로 분리해 NIXL v2 (UCX/RDMA) 로 KV cac
 # B0 통과 후 → B1 P/D baseline (Llama-3.1-70B TP=4)
 NS=b200-pd helmfile -f helmfile.yaml.gotmpl --selector role=base apply
 
-# HTTPRoute (kgateway 환경)
+# HTTPRoute (모든 gateway provider 공통)
 kubectl apply -f httproute.yaml
-
-# 또는 agentgateway 면 InferencePool 미지원 → decode pod 직접 port-forward
-DECODE_POD=$(kubectl get pods -n b200-pd -l llm-d.ai/role=decode -o jsonpath='{.items[0].metadata.name}')
-kubectl port-forward -n b200-pd pod/$DECODE_POD 8011:8000
 ```
+
+## Endpoint 진입 — port-forward 는 inference-gateway 에 ❗
+
+llm-d 의 외부 진입은 **반드시 Gateway service 에 port-forward**. ms-* (modelservice) pod / service 에 직접 port-forward 금지 — EPP (External Processing Pipeline / Endpoint Picker), GAIE prefix-cache aware routing, routing-sidecar 의 prefill/decode 선택 로직을 모두 우회해 측정 결과가 무의미해진다.
+
+HTTPRoute (httproute.yaml) 가 가리키는 진입:
+
+```
+Gateway: infra-pd-inference-gateway
+  └─ HTTPRoute path / → InferencePool gaie-pd:8000
+       └─ EPP 선택 → prefill pod (routing-sidecar) → decode pod (NIXL)
+```
+
+```bash
+# 1. service 이름 / listener port 확인 (gateway controller 별로 다를 수 있음)
+kubectl get gateway -n b200-pd
+kubectl get svc     -n b200-pd | grep inference-gateway
+kubectl get gateway infra-pd-inference-gateway -n b200-pd \
+  -o jsonpath='{.spec.listeners[0].port}{"\n"}'   # 보통 80
+
+# 2. auto-restart port-forward (매 trial helmfile apply 시 endpoint 변경 대비)
+while true; do
+  kubectl port-forward -n b200-pd svc/infra-pd-inference-gateway 8011:80
+  sleep 2
+done
+
+# 3. 검증
+curl -s http://127.0.0.1:8011/v1/models | jq .
+```
+
+endpoint YAML 의 `url: http://127.0.0.1:8011/v1` 는 위 port-forward 와 매핑되는 host loopback. lmtune 의 `LLMDK8sAdapter` 가 자동 port-forward 를 띄우지 않으므로 별도 terminal 필요.
 
 ## 측정 시 주목
 
